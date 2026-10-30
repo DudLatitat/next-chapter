@@ -10,11 +10,28 @@ import com.dudlatitat.nextchapter.data.Srs
 import com.dudlatitat.nextchapter.data.Store
 import com.dudlatitat.nextchapter.data.today
 import kotlinx.coroutines.flow.StateFlow
+import com.dudlatitat.nextchapter.notify.Reminder
+import com.dudlatitat.nextchapter.widget.PhraseWidget
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private val store = Store(app)
+    val store = Store.get(app)
     val state: StateFlow<AppState> = store.state
     val speaker = Speaker(app)
+
+    init {
+        store.onChange = { PhraseWidget.refresh(app, it) }
+        PhraseWidget.refresh(app, store.state.value)
+        Reminder.schedule(app, store.state.value)
+    }
+
+    fun setReminder(on: Boolean, minutes: Int) {
+        store.edit { it.copy(reminderOn = on, reminderMinutes = minutes) }
+        Reminder.schedule(getApplication(), store.state.value)
+    }
+
+    fun restore(text: String): Boolean = store.restore(text).also {
+        if (it) Reminder.schedule(getApplication(), store.state.value)
+    }
 
     fun grade(card: Card, grade: Grade) = store.edit { s ->
         s.copy(cards = s.cards.map { if (it.id == card.id) Srs.grade(it, grade) else it })

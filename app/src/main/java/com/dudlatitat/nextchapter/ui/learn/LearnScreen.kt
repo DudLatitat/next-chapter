@@ -64,6 +64,7 @@ import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.Pill
+import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ScreenTitle
 import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
@@ -72,6 +73,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var openDeck by rememberSaveable { mutableStateOf<String?>(null) }
+    var tool by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
 
     LaunchedEffect(startReview) {
@@ -80,15 +82,17 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
 
     when {
         reviewing -> Review(state, vm, onClose = { reviewing = false })
+        tool == "tones" -> ToneTrainer(vm, onBack = { tool = null })
+        tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
-        else -> Overview(state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true })
+        else -> Overview(state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it })
     }
 
     if (adding) AddPhraseDialog(onDismiss = { adding = false }) { h, p, e -> vm.addCard(h, p, e); adding = false }
 }
 
 @Composable
-private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit) {
+private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit, onTool: (String) -> Unit) {
     val queue = Srs.queue(state)
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -112,6 +116,12 @@ private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> 
                         colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
                     ) { Text("Review") }
                 }
+            }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ToolCard("声调", "Tone trainer", "Hear it, pick the tone", Night.violet, Modifier.weight(1f)) { onTool("tones") }
+                ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
             }
         }
         item {
@@ -178,7 +188,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(card.hanzi, fontSize = 22.sp, color = Night.ink)
-                            Text(card.pinyin, style = MaterialTheme.typography.bodyMedium, color = Night.sun)
+                            PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
                             Text(card.english, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                         }
                         when {
@@ -206,7 +216,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
 }
 
 /** Which side of the card you're quizzed on. */
-private enum class Direction { READ, SAY }
+private enum class Direction { READ, SAY, LISTEN }
 
 @Composable
 private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
@@ -222,7 +232,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
 
     LaunchedEffect(card?.id) {
         if (card == null) vm.finishedSession()
-        else if (direction == Direction.READ) vm.speaker.say(card.hanzi)
+        else if (direction != Direction.SAY) vm.speaker.say(card.hanzi)
     }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
@@ -235,6 +245,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DirChip("Read 读", direction == Direction.READ) { direction = Direction.READ; shown = false }
             DirChip("Say 说", direction == Direction.SAY) { direction = Direction.SAY; shown = false }
+            DirChip("Listen 听", direction == Direction.LISTEN) { direction = Direction.LISTEN; shown = false }
         }
 
         if (card == null) {
@@ -245,6 +256,60 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
                 Text("Session done · $done phrases", style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = onClose, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Back") }
+            }
+            return@Column
+        }
+
+        if (direction == Direction.LISTEN) {
+            val options = remember(card.id) {
+                (state.cards.filter { it.id != card.id && it.english != card.english }.shuffled().take(3).map { it.english } + card.english).shuffled()
+            }
+            var picked by remember(card.id) { mutableStateOf<String?>(null) }
+            Spacer(Modifier.height(16.dp))
+            GlassCard(Modifier.weight(1f), highlight = true) {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("What did you hear?", style = MaterialTheme.typography.titleMedium, color = Night.muted)
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { vm.speaker.say(card.hanzi) }, modifier = Modifier.height(72.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Night.sun.copy(alpha = 0.2f), contentColor = Night.sun),
+                    ) { Icon(Icons.Rounded.PlayArrow, null); Text("  Play again", style = MaterialTheme.typography.titleMedium) }
+                    TextButton(onClick = { vm.speaker.say(card.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
+                    if (picked != null) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(card.hanzi, fontSize = 36.sp, color = Night.ink)
+                        PinyinText(card.pinyin, style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { option ->
+                    val right = option == card.english
+                    val color = when {
+                        picked == null -> Night.ink
+                        right -> Night.jade
+                        option == picked -> Night.coral
+                        else -> Night.muted
+                    }
+                    Button(
+                        onClick = {
+                            if (picked == null) picked = option
+                            else {
+                                val g = if (picked == card.english) Grade.GOOD else Grade.AGAIN
+                                vm.grade(card, g)
+                                queue.removeAt(0)
+                                if (g == Grade.AGAIN) queue.add(card.id) else done++
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = color.copy(alpha = 0.14f), contentColor = color),
+                    ) { Text(option, style = MaterialTheme.typography.titleSmall) }
+                }
+                if (picked != null) Text(
+                    if (picked == card.english) "Right! Tap any answer to continue." else "Not quite. Tap any answer to continue.",
+                    style = MaterialTheme.typography.bodySmall, color = Night.muted, modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
             }
             return@Column
         }
@@ -263,7 +328,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
                 Spacer(Modifier.height(20.dp))
                 Column(Modifier.alpha(reveal), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (direction == Direction.SAY) Text(card.hanzi, fontSize = 40.sp, color = Night.ink, textAlign = TextAlign.Center)
-                    Text(card.pinyin, style = MaterialTheme.typography.titleLarge, color = Night.sun, textAlign = TextAlign.Center)
+                    PinyinText(card.pinyin, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                     if (direction == Direction.READ) Text(card.english, style = MaterialTheme.typography.titleMedium, color = Night.muted, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(16.dp))
@@ -318,9 +383,9 @@ private fun DirChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AddPhraseDialog(onDismiss: () -> Unit, onAdd: (String, String, String) -> Unit) {
-    var hanzi by remember { mutableStateOf("") }
-    var pinyin by remember { mutableStateOf("") }
+fun AddPhraseDialog(initialHanzi: String = "", onDismiss: () -> Unit, onAdd: (String, String, String) -> Unit) {
+    var hanzi by remember { mutableStateOf(initialHanzi) }
+    var pinyin by remember { mutableStateOf(com.dudlatitat.nextchapter.data.Pinyin.fromHanzi(initialHanzi) ?: "") }
     var english by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -329,7 +394,12 @@ private fun AddPhraseDialog(onDismiss: () -> Unit, onAdd: (String, String, Strin
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Paste a line from WeChat you want to learn.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                 OutlinedTextField(hanzi, { hanzi = it }, label = { Text("Chinese 中文") }, singleLine = false)
-                OutlinedTextField(pinyin, { pinyin = it }, label = { Text("Pinyin (optional)") }, singleLine = true)
+                OutlinedTextField(
+                    pinyin, { pinyin = it }, label = { Text("Pinyin") }, singleLine = true,
+                    trailingIcon = {
+                        TextButton(onClick = { com.dudlatitat.nextchapter.data.Pinyin.fromHanzi(hanzi)?.let { pinyin = it } }, enabled = hanzi.isNotBlank()) { Text("Auto") }
+                    },
+                )
                 OutlinedTextField(english, { english = it }, label = { Text("Meaning") }, singleLine = false)
             }
         },
@@ -338,4 +408,14 @@ private fun AddPhraseDialog(onDismiss: () -> Unit, onAdd: (String, String, Strin
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun ToolCard(zh: String, title: String, blurb: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    GlassCard(modifier, onClick = onClick) {
+        Text(zh, fontSize = 22.sp, color = color)
+        Spacer(Modifier.height(4.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
+        Text(blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    }
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -34,13 +35,14 @@ import com.dudlatitat.nextchapter.data.moveReady
 import com.dudlatitat.nextchapter.data.phraseOfTheDay
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.Pill
+import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ProgressRing
 import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
 import java.time.LocalTime
 
 @Composable
-fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit) {
+fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit) {
     val queue = Srs.queue(state)
     val streak = Srs.streak(state.studyDays)
     val studiedToday = com.dudlatitat.nextchapter.data.today() in state.studyDays
@@ -62,6 +64,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
                 Text("$hello, Rudy", style = MaterialTheme.typography.headlineLarge, color = Night.ink)
             }
             if (streak > 0) Pill("🔥 $streak", Night.sun)
+            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.muted) }
         }
 
         // Countdowns
@@ -106,7 +109,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(card.hanzi, fontSize = 30.sp, color = Night.ink, fontWeight = FontWeight.Medium)
-                        Text(card.pinyin, style = MaterialTheme.typography.titleMedium, color = Night.sun)
+                        PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium)
                         Text(card.english, style = MaterialTheme.typography.bodyLarge, color = Night.muted)
                     }
                     IconButton(onClick = { vm.speaker.say(card.hanzi) }) {

@@ -19,6 +19,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,6 +35,7 @@ import com.dudlatitat.nextchapter.ui.progress.ProgressScreen
 import com.dudlatitat.nextchapter.ui.theme.Night
 import com.dudlatitat.nextchapter.ui.theme.StarryBackdrop
 import com.dudlatitat.nextchapter.ui.today.TodayScreen
+import com.dudlatitat.nextchapter.ui.settings.SettingsScreen
 
 enum class Tab(val label: String, val icon: ImageVector) {
     TODAY("Today", Icons.Rounded.Home),
@@ -43,11 +45,24 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun NextChapterApp(vm: MainViewModel) {
+fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened: () -> Unit = {}) {
     val state by vm.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
     // Opening a review straight from Today.
     var startReview by rememberSaveable { mutableStateOf(false) }
+    var settings by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(openStudy) {
+        if (openStudy) { settings = false; startReview = true; tab = Tab.LEARN; onStudyOpened() }
+    }
+
+    if (settings) {
+        Box(Modifier.fillMaxSize()) {
+            StarryBackdrop()
+            SettingsScreen(state, vm, onBack = { settings = false })
+        }
+        return
+    }
 
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
@@ -75,7 +90,7 @@ fun NextChapterApp(vm: MainViewModel) {
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE })
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true })
                     Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false })
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.PROGRESS -> ProgressScreen(state)

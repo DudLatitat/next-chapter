@@ -18,7 +18,7 @@ import java.io.File
  * Everything the app knows, kept in one JSON file on the phone. No account, no server:
  * it works offline and in China without a VPN.
  */
-class Store(context: Context) {
+class Store private constructor(context: Context) {
     private val file = File(context.filesDir, "state.json")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -47,9 +47,21 @@ class Store(context: Context) {
         ).also { save(it) }
     }
 
+    /** Called after every change (the widget listens). */
+    var onChange: ((AppState) -> Unit)? = null
+
     fun edit(change: (AppState) -> AppState) {
         _state.update(change)
         save(_state.value)
+        onChange?.invoke(_state.value)
+    }
+
+    /** Replaces everything with a backup; false if the text isn't a Next Chapter backup. */
+    fun restore(text: String): Boolean {
+        val s = try { json.decodeFromString(AppState.serializer(), text) } catch (_: Exception) { return false }
+        if (s.cards.isEmpty() && s.tasks.isEmpty()) return false
+        edit { seed(s.copy(seeded = 0)) }
+        return true
     }
 
     private fun save(s: AppState) {
@@ -64,4 +76,13 @@ class Store(context: Context) {
 
     /** The whole state as text, for a manual backup. */
     fun export(): String = json.encodeToString(AppState.serializer(), _state.value)
+
+    companion object {
+        @Volatile private var instance: Store? = null
+
+        /** One store for the whole app (the main screen, quick-add, widget and reminder share it). */
+        fun get(context: Context): Store = instance ?: synchronized(this) {
+            instance ?: Store(context.applicationContext).also { instance = it }
+        }
+    }
 }

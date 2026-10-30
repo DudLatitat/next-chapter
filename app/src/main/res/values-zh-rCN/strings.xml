@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">新篇章</string>
+    <string name="widget_description">倒计时、今日短语和待复习</string>
+    <string name="quick_add">加到新篇章</string>
 </resources>

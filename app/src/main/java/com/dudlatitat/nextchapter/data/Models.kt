@@ -73,4 +73,10 @@ data class AppState(
     /** Days you finished a review session. */
     val studyDays: List<Long> = emptyList(),
     val seeded: Int = 0,
+    /** Daily practice reminder, and when (minutes after midnight). */
+    val reminderOn: Boolean = false,
+    val reminderMinutes: Int = 7 * 60 + 30,
+    /** Shown big in the phrasebook: your address there, and an allergy, both in Chinese. */
+    val addressZh: String = "",
+    val allergyZh: String = "",
 )
