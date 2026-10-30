@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Next Chapter</string>
-    <string name="widget_description">Countdown, today's phrase and reviews due</string>
+    <string name="widget_description">Countdown, today\'s phrase and reviews due</string>
     <string name="quick_add">Add to Next Chapter</string>
 </resources>
