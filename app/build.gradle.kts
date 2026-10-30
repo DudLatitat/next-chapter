@@ -23,19 +23,22 @@ android {
     }
 
     // One lasting key, so each new build installs over the old one and keeps your progress.
+    // The key is kept encrypted in signing/; CI unlocks it with the NC_KEY_PASSWORD secret.
+    val keystore = System.getenv("NC_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
+    val keyPassword = System.getenv("NC_KEY_PASSWORD")
     signingConfigs {
-        create("shared") {
-            storeFile = file(System.getenv("NC_KEYSTORE") ?: "../signing/next-chapter.jks")
-            storePassword = System.getenv("NC_KEY_PASSWORD") ?: "Mqi7FZ2cIA8B548erFqF5v"
+        if (keystore != null && keyPassword != null) create("shared") {
+            storeFile = keystore
+            storePassword = keyPassword
             keyAlias = "next-chapter"
-            keyPassword = System.getenv("NC_KEY_PASSWORD") ?: "Mqi7FZ2cIA8B548erFqF5v"
+            this.keyPassword = keyPassword
         }
     }
 
     buildTypes {
-        debug { signingConfig = signingConfigs.getByName("shared") }
+        debug { signingConfigs.findByName("shared")?.let { signingConfig = it } }
         release {
-            signingConfig = signingConfigs.getByName("shared")
+            signingConfigs.findByName("shared")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

@@ -22,7 +22,18 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - name: Unlock signing key
+        env:
+          NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}
+        run: |
+          if [ -z "$NC_KEY_PASSWORD" ]; then
+            echo "::error::Add the NC_KEY_PASSWORD secret (Settings → Secrets and variables → Actions)."; exit 1
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in signing/next-chapter.jks.enc -out "$RUNNER_TEMP/nc.jks" -pass env:NC_KEY_PASSWORD
       - name: Build
+        env:
+          NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}
+          NC_KEYSTORE: ${{ runner.temp }}/nc.jks
         run: ./gradlew :app:assembleRelease --stacktrace
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk next-chapter-1.${{ github.run_number }}.apk
