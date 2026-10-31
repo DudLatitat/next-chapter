@@ -56,9 +56,27 @@ object FareWatch {
     fun key(context: Context): String? = prefs(context).getString("serpapi_key", null)?.takeIf { it.isNotBlank() }
     fun setKey(context: Context, key: String) { prefs(context).edit().putString("serpapi_key", key.trim()).apply(); schedule(context) }
 
-    /** Checks per day: 1 or 2. */
-    fun perDay(context: Context): Int = prefs(context).getInt("per_day", 2)
-    fun setPerDay(context: Context, n: Int) { prefs(context).edit().putInt("per_day", n.coerceIn(1, 2)).apply(); schedule(context, replace = true) }
+    const val MONTHLY_FREE = 250
+    /** Kept back each month for tapping "Check now". */
+    private const val RESERVE = 30
+
+    /** Searches per day, spread over two runs (morning and evening). */
+    fun perDay(context: Context): Int = prefs(context).getInt("searches_per_day", 6)
+    fun setPerDay(context: Context, n: Int) { prefs(context).edit().putInt("searches_per_day", n.coerceIn(2, 8)).apply(); schedule(context, replace = true) }
+
+    /**
+     * Searches to spend on this scheduled run: half the daily amount, slowed down if the month's
+     * free searches would otherwise run out before the month ends.
+     */
+    fun runBudget(context: Context): Int {
+        val now = YearMonth.now()
+        val daysLeft = now.lengthOfMonth() - LocalDate.now().dayOfMonth + 1
+        val left = MONTHLY_FREE - RESERVE - usedThisMonth(context)
+        if (left <= 0) return 0
+        val affordablePerDay = left / daysLeft.coerceAtLeast(1)
+        val perRun = (minOf(perDay(context), affordablePerDay) + 1) / 2
+        return perRun.coerceAtLeast(if (left >= 2) 1 else 0)
+    }
 
     /** Searches used this month (the free plan has a monthly cap). */
     fun usedThisMonth(context: Context): Int {
@@ -76,8 +94,7 @@ object FareWatch {
         val wm = WorkManager.getInstance(context)
         val active = key(context) != null && Store.get(context).state.value.alerts.any { it.enabled }
         if (!active) { wm.cancelUniqueWork(WORK); return }
-        val hours = if (perDay(context) >= 2) 12L else 24L
-        val req = PeriodicWorkRequestBuilder<FareWorker>(hours, TimeUnit.HOURS)
+        val req = PeriodicWorkRequestBuilder<FareWorker>(12L, TimeUnit.HOURS)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build()
         wm.enqueueUniquePeriodicWork(WORK, if (replace) ExistingPeriodicWorkPolicy.UPDATE else ExistingPeriodicWorkPolicy.KEEP, req)
@@ -99,34 +116,71 @@ object FareWatch {
         return out
     }
 
-    /** How many days it takes to check every pair once, at the current pace. */
+    /** How many days it takes to check every pair once, at the current pace (searches shared between alerts). */
     fun daysToCover(context: Context, a: FareAlert): Int {
         val n = pairs(a).size
-        return if (n == 0) 0 else (n + perDay(context) - 1) / perDay(context)
+        val alerts = Store.get(context).state.value.alerts.count { it.enabled }.coerceAtLeast(1)
+        val perAlertDay = (perDay(context).toFloat() / alerts).coerceAtLeast(0.5f)
+        return if (n == 0) 0 else kotlin.math.ceil(n / perAlertDay).toInt()
+    }
+
+    /**
+     * Which date pairs to check next. First every pair gets one look (in order); after that,
+     * every other search goes back to the cheapest pairs seen so far, since that's where a
+     * price drop under your limit is most likely, and the rest keep sweeping the window.
+     */
+    private fun nextPairs(context: Context, a: FareAlert, count: Int): List<Pair<LocalDate, LocalDate>> {
+        val all = pairs(a)
+        if (all.isEmpty()) return emptyList()
+        val seen = Store.get(context).state.value.fares.filter { it.alertId == a.id }
+        val hot = seen.groupBy { it.depart to it.returnDate }
+            .mapNotNull { (k, v) -> parseDate(k.first)?.let { d -> parseDate(k.second)?.let { r -> Triple(d to r, v.minOf { it.price }, v.maxOf { it.checkedAt }) } } }
+            .filter { it.first in all }
+            .sortedBy { it.second }.take(3)
+            .sortedBy { it.third } // least recently checked of the cheapest three
+            .map { it.first }
+        val out = mutableListOf<Pair<LocalDate, LocalDate>>()
+        var c = a.cursor
+        for (i in 0 until count) {
+            val useHot = a.passes >= 1 && i % 2 == 1 && hot.isNotEmpty()
+            val p = if (useHot) hot[(i / 2) % hot.size] else all[c++ % all.size]
+            if (p !in out) out += p
+        }
+        return out
     }
 
     /**
      * Runs one check for each enabled alert (one search each). Returns a short status for
      * "Check now", or null if there was nothing to do.
      */
-    suspend fun checkAll(context: Context): String? = withContext(Dispatchers.IO) {
+    suspend fun checkAll(context: Context, searches: Int = -1): String? = withContext(Dispatchers.IO) {
         val key = key(context) ?: return@withContext "Add your SerpApi key first"
         val store = Store.get(context)
         val alerts = store.state.value.alerts.filter { it.enabled }
         if (alerts.isEmpty()) return@withContext null
         val notes = mutableListOf<String>()
-        for (a in alerts) {
-            val pairs = pairs(a)
+        // Manual "Check now": one search per alert. Scheduled: the run's budget, shared out.
+        val budget = if (searches < 0) alerts.size else searches
+        if (budget == 0) return@withContext "This month's free searches are used up; checks resume next month"
+        val shares = alerts.indices.map { i -> budget / alerts.size + if (i < budget % alerts.size) 1 else 0 }
+        for ((ai, a0) in alerts.withIndex()) {
+            val fresh = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: continue
+            val pairs = pairs(fresh)
             if (pairs.isEmpty()) { notes += "Window has passed"; continue }
-            val (out, back) = pairs[a.cursor % pairs.size]
-            val result = try { search(key, a, out, back) } catch (e: Exception) { notes += "Couldn't reach SerpApi (${e.message?.take(60)})"; null }
+            for ((out, back) in nextPairs(context, fresh, shares[ai])) {
+            val a = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: break
+            val fromSweep = pairs[a.cursor % pairs.size] == (out to back)
+            val result = try { search(key, a, out, back) } catch (e: Exception) { notes += "Couldn't reach SerpApi (${e.message?.take(80)})"; null }
+            // A failed search (bad key, no internet) isn't charged and isn't worth repeating this run.
+            if (result == null) break
             countSearch(context)
             val found = result?.let { bestFit(a, out, back, it) }
             store.edit { s ->
                 val updated = s.alerts.map {
                     if (it.id != a.id) it
                     else it.copy(
-                        cursor = (a.cursor + 1) % pairs.size,
+                        cursor = if (fromSweep) (a.cursor + 1) % pairs.size else a.cursor,
+                        passes = if (fromSweep && a.cursor + 1 >= pairs.size) a.passes + 1 else a.passes,
                         lastChecked = System.currentTimeMillis(),
                         bestPrice = if (found != null && found.fits && (a.bestPrice == 0 || found.price < a.bestPrice)) found.price else a.bestPrice,
                     )
@@ -143,6 +197,7 @@ object FareWatch {
                     if (a.bestPrice == 0 || found.price < a.bestPrice) notify(context, a, found)
                 }
                 else -> notes += "${money(found.price)} for ${short(out)}–${short(back)} (doesn't fit yet)"
+            }
             }
         }
         notes.joinToString("\n")
@@ -229,7 +284,7 @@ object FareWatch {
 
 class FareWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        FareWatch.checkAll(applicationContext)
+        FareWatch.checkAll(applicationContext, FareWatch.runBudget(applicationContext))
         return Result.success()
     }
 }

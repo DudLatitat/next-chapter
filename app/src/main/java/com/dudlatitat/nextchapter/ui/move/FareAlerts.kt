@@ -82,7 +82,7 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Fare alerts 🔔", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                Text("Checks Google Flights prices ${if (perDay == 2) "twice" else "once"} a day and notifies you when one fits", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                Text("Checks Google Flights twice a day ($perDay searches) and notifies you when a fare fits", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
         }
         if (!hasKey) {
@@ -118,13 +118,13 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
         status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.ink, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Checks a day:", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            listOf(1, 2).forEach { n -> FilterChip(selected = perDay == n, onClick = { perDay = n; FareWatch.setPerDay(context, n) }, label = { Text("$n") }) }
+            Text("Searches a day:", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            listOf(2, 4, 6, 8).forEach { n -> FilterChip(selected = perDay == n, onClick = { perDay = n; FareWatch.setPerDay(context, n) }, label = { Text("$n") }) }
         }
-        val monthly = perDay * 30 * state.alerts.count { it.enabled }
         Text(
-            "$used of 250 free searches used this month · about $monthly a month at this pace" + if (monthly > 250) ". That's over the free plan; use 1 check a day or fewer alerts." else "",
-            style = MaterialTheme.typography.bodySmall, color = if (monthly > 250 || used > 220) Night.sun else Night.muted,
+            "$used of ${FareWatch.MONTHLY_FREE} free searches used this month · about ${perDay * 30} a month at this pace. " +
+                "It slows down automatically so the month never runs out, and keeps 30 back for Check now.",
+            style = MaterialTheme.typography.bodySmall, color = if (used > 220) Night.sun else Night.muted,
         )
         TextButton(onClick = { editingKey = true }) { Text("Change API key", color = Night.muted) }
     }
@@ -184,7 +184,8 @@ private fun AlertRow(state: AppState, a: FareAlert, onEdit: () -> Unit, onToggle
         val pairs = FareWatch.pairs(a).size
         Text(
             (if (a.lastChecked > 0) "Last checked ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.lastChecked))} · " else "") +
-                "checks all $pairs date pairs every ${FareWatch.daysToCover(context, a)} days",
+                "sweeps all $pairs date pairs every ${FareWatch.daysToCover(context, a)} days" +
+                if (a.passes >= 1) ", and re-checks the cheapest ones more often" else "",
             style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 4.dp),
         )
     }

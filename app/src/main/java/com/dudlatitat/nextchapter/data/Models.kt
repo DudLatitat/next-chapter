@@ -94,6 +94,8 @@ data class FareAlert(
     val enabled: Boolean = true,
     /** Which date pair the next check looks at (they're checked in turn). */
     val cursor: Int = 0,
+    /** Full passes through every date pair so far. */
+    val passes: Int = 0,
     val lastChecked: Long = 0,
     /** Cheapest fitting fare found so far, for not repeating the same alert. */
     val bestPrice: Int = 0,
