@@ -74,10 +74,31 @@ class Speaker(context: Context) {
         start()
     }
 
-    fun setVoice(name: String) {
-        prefs.edit().putString("voice", name).apply()
-        tts?.voices?.firstOrNull { it.name == name }?.let { tts?.voice = it }
+    /**
+     * Uses one of the phone's voices for everything (turns the recordings off). Returns false if
+     * the engine wouldn't switch to it (some, like Samsung's, ignore the choice).
+     */
+    fun setVoice(name: String): Boolean {
+        prefs.edit().putString("voice", name).putBoolean("recorded", false).apply()
+        val ok = applyVoice()
         sayWithPhone("你好，我们一起学中文吧", slow = false)
+        return ok
+    }
+
+    /** Back to the recorded natural voice for built-in phrases. */
+    fun useNatural() {
+        prefs.edit().putBoolean("recorded", true).apply()
+        say("我想你")
+    }
+
+    /** Sets the picked voice on the engine again (engines can drop it between phrases). */
+    private fun applyVoice(): Boolean {
+        val t = tts ?: return false
+        val name = voice ?: return true
+        if (t.voice?.name == name) return true
+        val v = try { t.voices?.firstOrNull { it.name == name } } catch (_: Exception) { null } ?: return false
+        t.voice = v
+        return t.voice?.name == name
     }
 
     fun say(text: String, slow: Boolean = false) {
@@ -90,6 +111,7 @@ class Speaker(context: Context) {
         val t = tts ?: return
         if (!_ready.value) return
         player?.stop()
+        applyVoice()
         t.setSpeechRate(if (slow) 0.55f else 0.85f)
         t.speak(text, TextToSpeech.QUEUE_FLUSH, null, text)
     }

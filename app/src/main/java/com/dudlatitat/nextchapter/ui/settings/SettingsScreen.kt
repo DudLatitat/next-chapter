@@ -180,52 +180,42 @@ private fun VoiceCard(vm: MainViewModel) {
     val ready by speaker.ready.collectAsState()
     val voices by speaker.voices.collectAsState()
     val engines by speaker.engines.collectAsState()
-    var recorded by remember { mutableStateOf(speaker.useRecordings) }
+    var recorded by remember { mutableStateOf(speaker.useRecordings && speaker.hasRecordings) }
     var engine by remember { mutableStateOf(speaker.engine) }
     var voice by remember { mutableStateOf(speaker.voice) }
 
-    GlassCard {
-        if (speaker.hasRecordings) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Natural voice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                    Text("Recorded neural voice for the built-in phrases. Your own phrases use the phone voice below.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                }
-                Switch(
-                    checked = recorded, onCheckedChange = { recorded = it; speaker.useRecordings = it },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
-                )
-            }
-            TextButton(onClick = { speaker.say("我想你") }) { Text("▶  Hear it: 我想你", color = Night.sun) }
-            Spacer(Modifier.height(8.dp))
-        }
+    var refused by remember { mutableStateOf(false) }
 
-        Text("Phone voice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Text(
-            if (ready) "Ready ✓" else "No Chinese voice found. Pick another engine, or install Chinese (Mandarin) in text-to-speech settings.",
-            style = MaterialTheme.typography.bodySmall, color = if (ready) Night.jade else Night.coral,
+    GlassCard {
+        Text("Voice for phrases", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+        Text("Tap one to hear it and use it", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        Spacer(Modifier.height(6.dp))
+        if (speaker.hasRecordings) {
+            VoiceRow("Natural · Xiaoxiao", "Recorded, most natural (built-in phrases; yours use the phone voice)", recorded) {
+                recorded = true; refused = false; speaker.useNatural()
+            }
+        }
+        voices.forEach { v ->
+            VoiceRow(v.label, if (v.online) "Phone voice · needs internet" else "Phone voice", !recorded && voice == v.name) {
+                recorded = false; voice = v.name; refused = !speaker.setVoice(v.name)
+            }
+        }
+        if (refused) Text(
+            "This engine ignored that voice. Switch the engine to Google below.",
+            style = MaterialTheme.typography.bodySmall, color = Night.coral,
+        )
+        if (!ready) Text(
+            "No Chinese phone voice found. Pick another engine, or install Chinese (Mandarin) in text-to-speech settings.",
+            style = MaterialTheme.typography.bodySmall, color = Night.coral,
         )
         if (engines.size > 1) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Text("Engine", style = MaterialTheme.typography.labelMedium, color = Night.muted)
             engines.forEach { e ->
                 val selected = engine == e.pkg || (engine == null && e == engines.first())
-                Row(Modifier.fillMaxWidth().clickable { engine = e.pkg; voice = null; speaker.setEngine(e.pkg) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = selected, onClick = { engine = e.pkg; voice = null; speaker.setEngine(e.pkg) })
+                Row(Modifier.fillMaxWidth().clickable { engine = e.pkg; voice = null; refused = false; speaker.setEngine(e.pkg) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = selected, onClick = { engine = e.pkg; voice = null; refused = false; speaker.setEngine(e.pkg) })
                     Text(e.label, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
-                }
-            }
-        }
-        if (voices.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Text("Voice · tap to preview", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-            voices.forEach { v ->
-                Row(Modifier.fillMaxWidth().clickable { voice = v.name; speaker.setVoice(v.name) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = voice == v.name, onClick = { voice = v.name; speaker.setVoice(v.name) })
-                    Column {
-                        Text(v.label, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
-                        if (v.online) Text("Needs internet", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                    }
                 }
             }
         }
@@ -233,5 +223,16 @@ private fun VoiceCard(vm: MainViewModel) {
             try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
         }) { Text("Open text-to-speech settings", color = Night.sun) }
         Text("Tip: Google's \"Speech Recognition & Synthesis\" app from the Play Store has the most natural Mandarin voices.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    }
+}
+
+@Composable
+private fun VoiceRow(title: String, sub: String, selected: Boolean, onPick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onPick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = onPick)
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+            Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
     }
 }
