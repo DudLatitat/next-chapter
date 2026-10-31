@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -59,7 +60,7 @@ private fun shortDate(iso: String) = parseDate(iso)?.format(DateTimeFormatter.of
 
 /** Fare alerts: set the trip you want, and the app checks prices for you once or twice a day. */
 @Composable
-fun FareAlertsCard(state: AppState, vm: MainViewModel) {
+fun FareAlertsCard(state: AppState, vm: MainViewModel, onOpen: (FareAlert) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var hasKey by remember { mutableStateOf(FareWatch.key(context) != null) }
@@ -68,7 +69,8 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
     var checking by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var perDay by remember { mutableIntStateOf(FareWatch.perDay(context)) }
-    var used by remember { mutableIntStateOf(FareWatch.usedThisMonth(context)) }
+    // Read fresh whenever a check (background or manual) adds a fare or log entry.
+    val used = remember(state.fares.size, state.fareLog.size) { FareWatch.usedThisMonth(context) }
     val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     fun newAlert() = FareAlert(
@@ -102,7 +104,7 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
 
         state.alerts.forEach { a ->
             Spacer(Modifier.height(10.dp))
-            AlertRow(state, a, onEdit = { editing = a }, onToggle = { vm.saveAlert(a.copy(enabled = !a.enabled)) })
+            AlertRow(state, a, onEdit = { onOpen(a) }, onToggle = { vm.saveAlert(a.copy(enabled = !a.enabled)) })
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -111,7 +113,7 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
                 editing = newAlert()
             }, modifier = Modifier.weight(1f)) { Text("+ New alert", color = Night.sun, maxLines = 1) }
             if (state.alerts.any { it.enabled }) OutlinedButton(
-                onClick = { scope.launch { checking = true; status = FareWatch.checkAll(context); used = FareWatch.usedThisMonth(context); checking = false } },
+                onClick = { scope.launch { checking = true; status = FareWatch.checkAll(context); checking = false } },
                 enabled = !checking, modifier = Modifier.weight(1f),
             ) { Text(if (checking) "Checking…" else "Check now", color = Night.sun, maxLines = 1) }
         }
@@ -119,7 +121,9 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Searches a day:", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            listOf(2, 4, 6, 8).forEach { n -> FilterChip(selected = perDay == n, onClick = { perDay = n; FareWatch.setPerDay(context, n) }, label = { Text("$n") }) }
+            listOf(2, 4, 6, 8).forEach { n ->
+                FilterChip(selected = perDay == n, onClick = { perDay = n; FareWatch.setPerDay(context, n) }, label = { Text("$n", maxLines = 1, softWrap = false) }, modifier = Modifier.widthIn(min = 44.dp))
+            }
         }
         Text(
             "$used of ${FareWatch.MONTHLY_FREE} free searches used this month · about ${perDay * 30} a month at this pace. " +
@@ -181,6 +185,7 @@ private fun AlertRow(state: AppState, a: FareAlert, onEdit: () -> Unit, onToggle
             cheapest != null -> Pill("Cheapest seen ${money(cheapest.price)} · none fit yet", Night.sun)
             else -> Pill("Not checked yet", Night.muted)
         }
+        Text("Tap for fares, flight details and links →", style = MaterialTheme.typography.labelSmall, color = Night.sun, modifier = Modifier.padding(top = 4.dp))
         val pairs = FareWatch.pairs(a).size
         Text(
             (if (a.lastChecked > 0) "Last checked ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(a.lastChecked))} · " else "") +
@@ -190,6 +195,10 @@ private fun AlertRow(state: AppState, a: FareAlert, onEdit: () -> Unit, onToggle
         )
     }
 }
+
+@Composable
+fun FareAlertDialog(alert: FareAlert, isNew: Boolean, onDismiss: () -> Unit, onSave: (FareAlert) -> Unit, onDelete: () -> Unit) =
+    AlertDialog(alert, isNew, onDismiss, onSave, onDelete)
 
 @Composable
 private fun AlertDialog(alert: FareAlert, isNew: Boolean, onDismiss: () -> Unit, onSave: (FareAlert) -> Unit, onDelete: () -> Unit) {

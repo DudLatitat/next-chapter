@@ -28,6 +28,7 @@ import com.dudlatitat.nextchapter.data.Store
 import com.dudlatitat.nextchapter.data.parseDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.intOrNull
@@ -129,7 +130,7 @@ object FareWatch {
      * every other search goes back to the cheapest pairs seen so far, since that's where a
      * price drop under your limit is most likely, and the rest keep sweeping the window.
      */
-    private fun nextPairs(context: Context, a: FareAlert, count: Int): List<Pair<LocalDate, LocalDate>> {
+    fun nextPairs(context: Context, a: FareAlert, count: Int): List<Pair<LocalDate, LocalDate>> {
         val all = pairs(a)
         if (all.isEmpty()) return emptyList()
         val seen = Store.get(context).state.value.fares.filter { it.alertId == a.id }
@@ -149,66 +150,103 @@ object FareWatch {
         return out
     }
 
+    private val lock = kotlinx.coroutines.sync.Mutex()
+
+    /** When the next scheduled check runs (null if none is scheduled). */
+    fun nextRun(context: Context): Long? = try {
+        WorkManager.getInstance(context).getWorkInfosForUniqueWork(WORK).get()
+            .firstOrNull { !it.state.isFinished }?.nextScheduleTimeMillis?.takeIf { it > 0 && it < Long.MAX_VALUE }
+    } catch (_: Exception) { null }
+
+    private fun log(context: Context, alertId: String?, kind: String, text: String) {
+        Store.get(context).edit { s -> s.copy(fareLog = (s.fareLog + com.dudlatitat.nextchapter.data.FareLog(System.currentTimeMillis(), alertId, kind, text)).takeLast(300)) }
+    }
+
     /**
-     * Runs one check for each enabled alert (one search each). Returns a short status for
-     * "Check now", or null if there was nothing to do.
+     * Runs a check: [searches] spread over the enabled alerts (scheduled), or one per alert
+     * (manual, searches = −1). Returns a short summary for "Check now".
      */
-    suspend fun checkAll(context: Context, searches: Int = -1): String? = withContext(Dispatchers.IO) {
-        val key = key(context) ?: return@withContext "Add your SerpApi key first"
+    suspend fun checkAll(context: Context, searches: Int = -1): String? = lock.withLock {
+        withContext(Dispatchers.IO) { runChecks(context, searches) }
+    }
+
+    private fun runChecks(context: Context, searches: Int): String? {
+        val trigger = if (searches < 0) "manual" else "scheduled"
+        val key = key(context) ?: return "Add your SerpApi key first"
         val store = Store.get(context)
         val alerts = store.state.value.alerts.filter { it.enabled }
-        if (alerts.isEmpty()) return@withContext null
-        val notes = mutableListOf<String>()
-        // Manual "Check now": one search per alert. Scheduled: the run's budget, shared out.
+        if (alerts.isEmpty()) return null
         val budget = if (searches < 0) alerts.size else searches
-        if (budget == 0) return@withContext "This month's free searches are used up; checks resume next month"
+        if (budget == 0) {
+            log(context, null, "skip", "Skipped a $trigger check: this month's free searches are used up (${usedThisMonth(context)}/$MONTHLY_FREE, 30 kept for Check now)")
+            return "This month's free searches are used up; checks resume next month"
+        }
+        log(context, null, "run", "${trigger.replaceFirstChar { it.uppercase() }} check started: $budget search${if (budget > 1) "es" else ""} for ${alerts.size} alert${if (alerts.size > 1) "s" else ""} · ${usedThisMonth(context)}/$MONTHLY_FREE used this month")
+        val notes = mutableListOf<String>()
         val shares = alerts.indices.map { i -> budget / alerts.size + if (i < budget % alerts.size) 1 else 0 }
-        for ((ai, a0) in alerts.withIndex()) {
-            val fresh = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: continue
-            val pairs = pairs(fresh)
-            if (pairs.isEmpty()) { notes += "Window has passed"; continue }
-            for ((out, back) in nextPairs(context, fresh, shares[ai])) {
-            val a = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: break
-            val fromSweep = pairs[a.cursor % pairs.size] == (out to back)
-            val result = try { search(key, a, out, back) } catch (e: Exception) { notes += "Couldn't reach SerpApi (${e.message?.take(80)})"; null }
-            // A failed search (bad key, no internet) isn't charged and isn't worth repeating this run.
-            if (result == null) break
-            countSearch(context)
-            val found = result?.let { bestFit(a, out, back, it) }
-            store.edit { s ->
-                val updated = s.alerts.map {
-                    if (it.id != a.id) it
-                    else it.copy(
-                        cursor = if (fromSweep) (a.cursor + 1) % pairs.size else a.cursor,
-                        passes = if (fromSweep && a.cursor + 1 >= pairs.size) a.passes + 1 else a.passes,
-                        lastChecked = System.currentTimeMillis(),
-                        bestPrice = if (found != null && found.fits && (a.bestPrice == 0 || found.price < a.bestPrice)) found.price else a.bestPrice,
-                    )
+        alerts@ for ((ai, a0) in alerts.withIndex()) {
+            val first = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: continue
+            val pairs = pairs(first)
+            if (pairs.isEmpty()) { notes += "Window has passed"; log(context, a0.id, "skip", "Departure window has passed; nothing to check"); continue }
+            for ((out, back) in nextPairs(context, first, shares[ai])) {
+                val a = store.state.value.alerts.firstOrNull { it.id == a0.id } ?: break
+                val fromSweep = pairs[a.cursor % pairs.size] == (out to back)
+                val why = if (fromSweep) "sweep ${a.cursor % pairs.size + 1}/${pairs.size}" else "re-check of a cheap pair"
+                val result = try { search(key, a, out, back) } catch (e: Exception) {
+                    val msg = e.message?.take(120) ?: e.javaClass.simpleName
+                    notes += "Couldn't reach SerpApi ($msg)"
+                    log(context, a.id, "error", "${short(out)}–${short(back)}: $msg. Stopped this run (failed searches aren't charged).")
+                    break@alerts
                 }
-                val fares = if (found != null) (s.fares + found).takeLast(200) else s.fares
-                // Every fare seen also goes into the price tracker's history.
-                val prices = if (found != null) (s.prices + PriceSeen("price:${System.currentTimeMillis()}", LocalDate.now().toString(), found.price, "auto · ${short(out)}–${short(back)}")).takeLast(300) else s.prices
-                s.copy(alerts = updated, fares = fares, prices = prices)
-            }
-            when {
-                found == null -> if (result != null) notes += "No flights found for ${short(out)}–${short(back)}"
-                found.fits -> {
-                    notes += "✓ ${money(found.price)} for ${short(out)}–${short(back)}"
-                    if (a.bestPrice == 0 || found.price < a.bestPrice) notify(context, a, found)
+                countSearch(context)
+                val found = evaluate(a, out, back, result, trigger)
+                val isNewBest = found != null && found.fits && (a.bestPrice == 0 || found.price < a.bestPrice)
+                store.edit { s ->
+                    val updated = s.alerts.map {
+                        if (it.id != a.id) it
+                        else it.copy(
+                            cursor = if (fromSweep) (a.cursor + 1) % pairs.size else a.cursor,
+                            passes = if (fromSweep && a.cursor + 1 >= pairs.size) a.passes + 1 else a.passes,
+                            lastChecked = System.currentTimeMillis(),
+                            bestPrice = if (isNewBest) found!!.price else a.bestPrice,
+                        )
+                    }
+                    val fares = if (found != null) (s.fares + found.copy(notified = isNewBest)).takeLast(200) else s.fares
+                    val prices = if (found != null) (s.prices + PriceSeen("price:${System.currentTimeMillis()}", LocalDate.now().toString(), found.price, "auto · ${short(out)}–${short(back)}")).takeLast(300) else s.prices
+                    s.copy(alerts = updated, fares = fares, prices = prices)
                 }
-                else -> notes += "${money(found.price)} for ${short(out)}–${short(back)} (doesn't fit yet)"
-            }
+                val line = when {
+                    found == null -> "${short(out)}–${short(back)} ($why): no flights returned"
+                    found.fits -> "${short(out)}–${short(back)} ($why): ✓ ${money(found.price)} fits · ${result.options.size} options" + if (isNewBest) " · new best, notified you" else " · not cheaper than the best already found (${money(a.bestPrice)}), no notification"
+                    else -> "${short(out)}–${short(back)} ($why): cheapest ${money(found.price)}, ${result.options.size} options, none fit (" + reasons(a, result.options) + ")"
+                }
+                log(context, a.id, if (found?.fits == true) "fit" else "search", line)
+                notes += line.substringBefore(" (") + ": " + (found?.let { money(it.price) + if (it.fits) " ✓" else "" } ?: "none")
+                if (isNewBest) notify(context, a, found!!)
             }
         }
-        notes.joinToString("\n")
+        return notes.joinToString("\n")
+    }
+
+    /** Why nothing fit, e.g. "all over $800" or "cheaper ones had 2 stops". */
+    private fun reasons(a: FareAlert, options: List<Opt>): String {
+        val r = mutableListOf<String>()
+        if (options.all { it.price > a.maxPrice }) r += "all over ${money(a.maxPrice)}"
+        else {
+            val cheap = options.filter { it.price <= a.maxPrice }
+            if (a.maxStops >= 0 && cheap.all { it.stops > a.maxStops }) r += "the ones under ${money(a.maxPrice)} have too many stops"
+            if (a.maxHours > 0 && cheap.all { it.minutes > a.maxHours * 60 }) r += "the ones under ${money(a.maxPrice)} take over ${a.maxHours}h"
+        }
+        return r.joinToString("; ").ifBlank { "outside your limits" }
     }
 
     private fun short(d: LocalDate) = d.format(DateTimeFormatter.ofPattern("MMM d"))
     private fun money(n: Int) = "$" + "%,d".format(n)
 
-    private data class Option(val price: Int, val stops: Int, val minutes: Int, val airline: String)
+    private data class Opt(val price: Int, val stops: Int, val minutes: Int, val airline: String, val legs: List<String>, val layovers: List<String>)
+    private data class SearchResult(val options: List<Opt>, val url: String)
 
-    private fun search(key: String, a: FareAlert, out: LocalDate, back: LocalDate): List<Option> {
+    private fun search(key: String, a: FareAlert, out: LocalDate, back: LocalDate): SearchResult {
         fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
         val params = buildMap {
             put("engine", "google_flights")
@@ -231,30 +269,54 @@ object FareWatch {
         val body = (if (code in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
         val json = Json.parseToJsonElement(body).jsonObject
         json["error"]?.jsonPrimitive?.content?.let { if (!it.contains("hasn't returned any results", true)) throw IllegalStateException(it) }
-        return listOf("best_flights", "other_flights").flatMap { k ->
+        val page = (json["search_metadata"] as? JsonObject)?.get("google_flights_url")?.jsonPrimitive?.content ?: ""
+        fun time(t: String?) = t?.substringAfter(' ', t) ?: ""
+        val options = listOf("best_flights", "other_flights").flatMap { k ->
             json[k]?.jsonArray.orEmpty().mapNotNull { el ->
                 val o = el.jsonObject
                 val price = o["price"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null
-                val legs = o["flights"]?.jsonArray.orEmpty()
-                Option(
+                val legs = o["flights"]?.jsonArray.orEmpty().map { it.jsonObject }
+                fun JsonObject.str(k: String) = this[k]?.jsonPrimitive?.content
+                fun JsonObject.obj(k: String) = this[k] as? JsonObject
+                Opt(
                     price = price,
                     stops = (legs.size - 1).coerceAtLeast(0),
                     minutes = o["total_duration"]?.jsonPrimitive?.intOrNull ?: 0,
-                    airline = legs.mapNotNull { (it as? JsonObject)?.get("airline")?.jsonPrimitive?.content }.distinct().joinToString(" / "),
+                    airline = legs.mapNotNull { it.str("airline") }.distinct().joinToString(" / "),
+                    legs = legs.map { l ->
+                        val dep = l.obj("departure_airport"); val arr = l.obj("arrival_airport")
+                        "${l.str("flight_number") ?: l.str("airline") ?: ""} · ${dep?.str("id") ?: ""} ${time(dep?.str("time"))} → ${arr?.str("id") ?: ""} ${time(arr?.str("time"))}"
+                    },
+                    layovers = o["layovers"]?.jsonArray.orEmpty().map { it.jsonObject }.map { l ->
+                        val m = l["duration"]?.jsonPrimitive?.intOrNull ?: 0
+                        "${m / 60}h ${m % 60}m in ${l.str("id") ?: l.str("name") ?: "?"}" + if (l["overnight"]?.jsonPrimitive?.content == "true") " (overnight)" else ""
+                    },
                 )
             }
-        }
+        }.sortedBy { it.price }
+        return SearchResult(options, page)
     }
 
     /** The cheapest option that fits the alert, or the cheapest overall (marked as not fitting). */
-    private fun bestFit(a: FareAlert, out: LocalDate, back: LocalDate, options: List<Option>): FareFound? {
-        if (options.isEmpty()) return null
-        fun fits(o: Option) = o.price <= a.maxPrice &&
+    private fun evaluate(a: FareAlert, out: LocalDate, back: LocalDate, r: SearchResult, trigger: String): FareFound? {
+        if (r.options.isEmpty()) return null
+        fun fits(o: Opt) = o.price <= a.maxPrice &&
             (a.maxStops < 0 || o.stops <= a.maxStops) &&
             (a.maxHours <= 0 || o.minutes == 0 || o.minutes <= a.maxHours * 60)
-        val fit = options.filter(::fits).minByOrNull { it.price }
-        val pick = fit ?: options.minBy { it.price }
-        return FareFound(a.id, System.currentTimeMillis(), out.toString(), back.toString(), pick.price, pick.stops, pick.minutes, pick.airline, fits = fit != null)
+        val fit = r.options.filter(::fits).minByOrNull { it.price }
+        val pick = fit ?: r.options.first()
+        val kept = (listOfNotNull(fit) + r.options).distinct().take(6).map {
+            com.dudlatitat.nextchapter.data.FareOption(it.price, it.stops, it.minutes, it.airline, it.legs, it.layovers, fits(it))
+        }
+        return FareFound(
+            a.id, System.currentTimeMillis(), out.toString(), back.toString(), pick.price, pick.stops, pick.minutes, pick.airline,
+            fits = fit != null, url = r.url.ifBlank { googleFlightsUrl(a, out.toString(), back.toString()) }, options = kept, trigger = trigger,
+        )
+    }
+
+    fun googleFlightsUrl(a: FareAlert, depart: String, ret: String): String {
+        val q = "Flights from ${a.from.substringBefore(',')} to ${a.to.replace(",", " or ")} on $depart through $ret"
+        return "https://www.google.com/travel/flights?q=" + URLEncoder.encode(q, "UTF-8")
     }
 
     private fun notify(context: Context, a: FareAlert, f: FareFound) {
@@ -262,20 +324,21 @@ object FareWatch {
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Fare alerts", NotificationManager.IMPORTANCE_HIGH))
         val out = LocalDate.parse(f.depart); val back = LocalDate.parse(f.returnDate)
-        val q = "Flights from ${a.from.substringBefore(',')} to ${a.to.replace(",", " or ")} on ${f.depart} through ${f.returnDate}"
         val search = PendingIntent.getActivity(
-            context, 10, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/travel/flights?q=" + URLEncoder.encode(q, "UTF-8"))),
+            context, 10, Intent(Intent.ACTION_VIEW, Uri.parse(f.url.ifBlank { googleFlightsUrl(a, f.depart, f.returnDate) })),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val open = PendingIntent.getActivity(context, 11, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val hours = if (f.minutes > 0) " · ${f.minutes / 60}h${(f.minutes % 60).toString().padStart(2, '0')}" else ""
         val stops = if (f.stops == 0) "nonstop" else "${f.stops} stop${if (f.stops > 1) "s" else ""}"
+        val legs = f.options.firstOrNull { it.fits }?.legs.orEmpty().joinToString("\n")
         val note = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle("✈ ${money(f.price)} to Chengdu · ${short(out)}–${short(back)}")
             .setContentText("$stops$hours · ${f.airline}".trim())
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$stops$hours · ${f.airline}\n$legs".trim()))
             .setContentIntent(open)
-            .addAction(0, "Search & book", search)
+            .addAction(0, "Open in Google Flights", search)
             .setAutoCancel(true)
             .build()
         NotificationManagerCompat.from(context).notify(("fare" + a.id).hashCode(), note)
@@ -288,4 +351,3 @@ class FareWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         return Result.success()
     }
 }
-

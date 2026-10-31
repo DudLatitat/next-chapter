@@ -101,6 +101,24 @@ data class FareAlert(
     val bestPrice: Int = 0,
 )
 
+/** One itinerary from a search: the outbound flights, with the round-trip price. */
+@Serializable
+data class FareOption(
+    val price: Int,
+    val stops: Int,
+    val minutes: Int,
+    val airline: String,
+    /** One line per flight: "UA 2119 · LAX 11:40 → SFO 13:05". */
+    val legs: List<String> = emptyList(),
+    /** "2h 10m in SFO", one per layover. */
+    val layovers: List<String> = emptyList(),
+    val fits: Boolean = false,
+)
+
+/** Something the background checker did, for the activity log. */
+@Serializable
+data class FareLog(val time: Long, val alertId: String?, val kind: String, val text: String)
+
 /** A fare a check found. */
 @Serializable
 data class FareFound(
@@ -113,6 +131,12 @@ data class FareFound(
     val minutes: Int,
     val airline: String,
     val fits: Boolean,
+    /** The Google Flights results page for this exact search. */
+    val url: String = "",
+    /** Cheapest few itineraries the search returned. */
+    val options: List<FareOption> = emptyList(),
+    val trigger: String = "",
+    val notified: Boolean = false,
 )
 
 /** A fare you saw, for tracking prices before booking. */
@@ -168,4 +192,5 @@ data class AppState(
     val days: Map<Long, DayLog> = emptyMap(),
     val alerts: List<FareAlert> = emptyList(),
     val fares: List<FareFound> = emptyList(),
+    val fareLog: List<FareLog> = emptyList(),
 )

@@ -74,6 +74,14 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     var editing by remember { mutableStateOf<Trip?>(null) }
     var loggingPrice by remember { mutableStateOf(false) }
     var deletingPrice by remember { mutableStateOf<PriceSeen?>(null) }
+    var openAlert by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var editAlert by remember { mutableStateOf(false) }
+    state.alerts.firstOrNull { it.id == openAlert }?.let { a ->
+        AlertDetail(state, vm, a, onEdit = { editAlert = true }, onBack = { openAlert = null })
+        if (editAlert) FareAlertDialog(a, isNew = false, onDismiss = { editAlert = false },
+            onSave = { vm.saveAlert(it); editAlert = false }, onDelete = { vm.deleteAlert(a); editAlert = false; openAlert = null })
+        return
+    }
     val now = today()
     val upcoming = state.trips.filter { (parseDate(it.returnDate ?: it.depart)?.toEpochDay() ?: 0) >= now }
     val past = state.trips.filter { it !in upcoming }.reversed()
@@ -139,7 +147,7 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         }
 
         // Fare alerts
-        item { FareAlertsCard(state, vm) }
+        item { FareAlertsCard(state, vm, onOpen = { openAlert = it.id }) }
 
         // Price tracker
         item {
