@@ -1,5 +1,6 @@
 package com.dudlatitat.nextchapter.ui.today
 
+import com.dudlatitat.nextchapter.data.nextTripDate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +44,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 import java.time.LocalTime
 
 @Composable
-fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit) {
+fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit) {
     val queue = Srs.queue(state)
     val streak = Srs.streak(state.studyDays)
     val studiedToday = com.dudlatitat.nextchapter.data.today() in state.studyDays
@@ -70,15 +71,19 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
 
         // Countdowns
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Countdown("Next trip", "成都", daysUntil(state.tripDate), Night.rose, Modifier.weight(1f), onOpenMove)
+            Countdown("Next trip", "成都", daysUntil(state.nextTripDate()), Night.rose, Modifier.weight(1f), onOpenMove)
             Countdown("The move", "搬家", daysUntil(state.moveDate), Night.sun, Modifier.weight(1f), onOpenMove)
         }
 
+        // Monday: a look back at last week.
+        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
+            com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true)
+        }
         val wide = LocalConfiguration.current.screenWidthDp >= 600
         if (wide) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Practice(state, queue, studiedToday, onStudy, Modifier)
+                    Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
                     MoveStep(state, onOpenMove, Modifier)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -86,7 +91,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
                 }
             }
         } else {
-            Practice(state, queue, studiedToday, onStudy, Modifier)
+            Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
             PhraseOfDay(state, vm, Modifier)
             MoveStep(state, onOpenMove, Modifier)
         }
@@ -112,7 +117,7 @@ private fun Countdown(label: String, zh: String, days: Long?, color: androidx.co
 }
 
 @Composable
-private fun Practice(state: AppState, queue: List<com.dudlatitat.nextchapter.data.Card>, studiedToday: Boolean, onStudy: () -> Unit, modifier: Modifier) {
+private fun Practice(state: AppState, queue: List<com.dudlatitat.nextchapter.data.Card>, studiedToday: Boolean, onStudy: () -> Unit, onRedo: () -> Unit, modifier: Modifier) {
     val doneToday = com.dudlatitat.nextchapter.data.today().let { d -> state.cards.count { it.last == d && it.due > d } }
     val total = doneToday + queue.size
         // Today's practice
@@ -141,6 +146,12 @@ private fun Practice(state: AppState, queue: List<com.dudlatitat.nextchapter.dat
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
                 ) { Text(if (doneToday > 0) "Keep going" else "Start", style = MaterialTheme.typography.titleMedium) }
+            }
+            if (queue.isEmpty() && doneToday > 0) {
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.material3.OutlinedButton(onClick = onRedo, modifier = Modifier.fillMaxWidth()) {
+                    Text("↻  Redo today's lesson", color = Night.sun)
+                }
             }
         }
 

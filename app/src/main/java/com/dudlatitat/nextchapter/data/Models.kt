@@ -37,6 +37,7 @@ data class Deck(val id: String, val title: String, val hanzi: String, val blurb:
 
 val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
+    Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
     Deck("daily", "Everyday", "日常", "Getting by, asking for help"),
     Deck("food", "Eating out", "吃饭", "Ordering in Sichuan, spice levels"),
@@ -58,6 +59,39 @@ data class MoveTask(
 )
 
 val TaskGroups = listOf("Documents", "Money", "School & certs", "Life in China")
+
+/** A trip to China: dates, flights, what it cost. */
+@Serializable
+data class Trip(
+    val id: String,
+    val depart: String,
+    val returnDate: String? = null,
+    val airline: String = "",
+    val flights: String = "",
+    val price: Int = 0,
+    val booked: Boolean = false,
+    val confirmation: String = "",
+    val notes: String = "",
+)
+
+/** A fare you saw, for tracking prices before booking. */
+@Serializable
+data class PriceSeen(val id: String, val day: String, val price: Int, val source: String = "")
+
+@Serializable
+data class PackItem(val id: String, val title: String, val done: Boolean = false)
+
+/** One line of the monthly budget for life there, in yuan. */
+@Serializable
+data class BudgetItem(val id: String, val name: String, val zh: String = "", val rmb: Int = 0)
+
+/** One tone attempt: the tone it should have been, and what you heard or said. */
+@Serializable
+data class ToneEvent(val day: Long, val target: Int, val got: Int, val spoken: Boolean = false)
+
+/** Practice done on one day. */
+@Serializable
+data class DayLog(val reviews: Int = 0, val seconds: Int = 0)
 
 @Serializable
 data class AppState(
@@ -81,4 +115,14 @@ data class AppState(
     /** Shown big in the phrasebook: your address there, and an allergy, both in Chinese. */
     val addressZh: String = "",
     val allergyZh: String = "",
+    val trips: List<Trip> = emptyList(),
+    val prices: List<PriceSeen> = emptyList(),
+    val packing: List<PackItem> = emptyList(),
+    val budget: List<BudgetItem> = emptyList(),
+    /** Yuan per US dollar, and when it was last updated (ISO date). */
+    val rate: Double = 6.75,
+    val rateDate: String? = null,
+    val toneEvents: List<ToneEvent> = emptyList(),
+    /** Practice per day, keyed by day number. */
+    val days: Map<Long, DayLog> = emptyMap(),
 )

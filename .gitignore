@@ -5,3 +5,4 @@ local.properties
 *.iml
 .kotlin/
 app/src/main/assets/voice/
+app/src/main/assets/strokes.json

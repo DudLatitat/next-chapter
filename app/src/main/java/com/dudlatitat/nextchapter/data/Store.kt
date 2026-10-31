@@ -41,8 +41,10 @@ class Store private constructor(context: Context) {
         val haveCards = s.cards.map { it.id }.toSet()
         val haveTasks = s.tasks.map { it.id }.toSet()
         return s.copy(
-            cards = s.cards + Seed.cards.filter { it.id !in haveCards },
+            cards = s.cards + (Seed.cards + Vocab.cards).filter { it.id !in haveCards },
             tasks = s.tasks + Seed.tasks.filter { it.id !in haveTasks },
+            packing = s.packing.ifEmpty { Seed.packing },
+            budget = s.budget.ifEmpty { Seed.budget },
             seeded = Seed.VERSION,
         ).also { save(it) }
     }

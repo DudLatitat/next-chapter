@@ -35,15 +35,23 @@ object Pinyin {
 
     /**
      * Splits a run of pinyin letters ("nánpéngyou") into syllable ranges, or one range for the
-     * whole run if it can't be split.
+     * whole run if it can't be split. Handles erhua ("yǒudiǎnr" → yǒu + diǎnr).
      */
     fun split(word: String): List<IntRange> {
+        splitExact(word)?.let { return it }
+        if (word.length > 2 && plain(word.last()) == 'r') {
+            splitExact(word.dropLast(1))?.let { inner -> return inner.dropLast(1) + listOf(inner.last().first..word.lastIndex) }
+        }
+        return listOf(word.indices)
+    }
+
+    private fun splitExact(word: String): List<IntRange>? {
         val p = word.map(::plain).joinToString("")
         val memo = HashMap<Int, List<IntRange>?>()
         fun go(at: Int): List<IntRange>? {
             if (at == p.length) return emptyList()
-            memo[at]?.let { return it }
-            if (memo.containsKey(at)) return null
+            if (memo.containsKey(at)) return memo[at]
+            memo[at] = null
             var result: List<IntRange>? = null
             for (len in minOf(6, p.length - at) downTo 1) {
                 if (p.substring(at, at + len) in syllables) {
@@ -54,7 +62,7 @@ object Pinyin {
             memo[at] = result
             return result
         }
-        return go(0) ?: listOf(word.indices)
+        return go(0)
     }
 
     /** Every syllable in a pinyin line, with where it sits in the line. */

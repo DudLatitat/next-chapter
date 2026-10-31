@@ -46,7 +46,17 @@ object Srs {
         val due = state.cards.filter { !it.isNew && it.due <= day }.sortedBy { it.due }
         val introducedToday = state.cards.count { it.firstSeen == day }
         val room = max(0, state.newPerDay - introducedToday)
-        val fresh = state.cards.filter { it.isNew }.sortedWith(compareBy({ !it.custom }, { deckOrder(it.deck) })).take(room)
+        val newCards = state.cards.filter { it.isNew }
+        val mine = newCards.filter { it.custom }
+        val words = newCards.filter { !it.custom && it.deck == "core" }
+        val phrases = newCards.filter { !it.custom && it.deck != "core" }.sortedBy { deckOrder(it.deck) }
+        // Your own phrases first, then phrases and core words taking turns.
+        val mixed = buildList {
+            addAll(mine)
+            val n = maxOf(words.size, phrases.size)
+            for (i in 0 until n) { phrases.getOrNull(i)?.let(::add); words.getOrNull(i)?.let(::add) }
+        }
+        val fresh = mixed.take(room)
         return due + fresh
     }
 

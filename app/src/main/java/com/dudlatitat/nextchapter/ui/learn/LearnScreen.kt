@@ -72,31 +72,45 @@ import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 @Composable
-fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit) {
+fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
+    var redoing by rememberSaveable { mutableStateOf(false) }
+    var drill by rememberSaveable { mutableStateOf<String?>(null) }
     var openDeck by rememberSaveable { mutableStateOf<String?>(null) }
     var tool by rememberSaveable { mutableStateOf<String?>(null) }
     var calibrating by rememberSaveable { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
 
-    LaunchedEffect(startReview) {
+    LaunchedEffect(startReview, startRedo) {
         if (startReview) { reviewing = true; onReviewStarted() }
+        if (startRedo) { redoing = true; onReviewStarted() }
     }
 
     when {
         calibrating -> CalibrateScreen(vm, onDone = { calibrating = false })
         reviewing -> Review(state, vm, onClose = { reviewing = false }, onCalibrate = { calibrating = true })
+        redoing -> Review(state, vm, onClose = { redoing = false }, onCalibrate = { calibrating = true }, practice = true)
+        drill != null -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = drill!!.split(",").map { it.toInt() }.toSet())
+        tool == "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
+        tool == "writing" -> WritingScreen(state, vm, onBack = { tool = null })
         tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
-        else -> Overview(state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it })
+        else -> Overview(
+            state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
+            onRedo = { redoing = true }, onDrill = { a, b -> drill = "$a,$b" },
+        )
     }
 
     if (adding) AddPhraseDialog(onDismiss = { adding = false }) { h, p, e -> vm.addCard(h, p, e); adding = false }
 }
 
 @Composable
-private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit, onTool: (String) -> Unit) {
+private fun Overview(
+    state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit, onTool: (String) -> Unit,
+    onRedo: () -> Unit, onDrill: (Int, Int) -> Unit,
+) {
+    val doneToday = today().let { d -> state.cards.count { it.last == d } }
     val queue = Srs.queue(state)
     val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
@@ -121,14 +135,25 @@ private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> 
                         colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
                     ) { Text("Review") }
                 }
+                if (doneToday > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    TextButton(onClick = onRedo) { Text("↻  Redo today's lesson ($doneToday phrases, won't change your schedule)", color = Night.sun) }
+                }
             }
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ToolCard("声调", "Tone trainer", "Hear it, pick the tone", Night.violet, Modifier.weight(1f)) { onTool("tones") }
-                ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ToolCard("声调", "Tone trainer", "Hear it or say it", Night.violet, Modifier.weight(1f)) { onTool("tones") }
+                    ToolCard("对话", "Dialogues", "Real scenes, answer out loud", Night.jade, Modifier.weight(1f)) { onTool("dialogues") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ToolCard("写字", "Writing", "Trace with stroke order", Night.sun, Modifier.weight(1f)) { onTool("writing") }
+                    ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
+                }
             }
         }
+        item { WeakTones(state, onDrill) }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionLabel("Decks", Modifier.weight(1f))
@@ -232,10 +257,20 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
 private enum class Direction { READ, SAY, LISTEN }
 
 @Composable
-private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCalibrate: () -> Unit) {
+private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCalibrate: () -> Unit, practice: Boolean = false) {
     BackHandler(onBack = onClose)
-    // The queue as it was when the session started; misses go back to the end.
-    val queue = remember { mutableStateListOf<String>().apply { addAll(Srs.queue(state).map { it.id }) } }
+    // The queue as it was when the session started; misses go back to the end. Practice mode
+    // replays today's cards without touching their schedule.
+    val queue = remember {
+        mutableStateListOf<String>().apply {
+            addAll(if (practice) today().let { d -> state.cards.filter { it.last == d }.shuffled().map { it.id } } else Srs.queue(state).map { it.id })
+        }
+    }
+    val startedAt = remember { System.currentTimeMillis() }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { vm.logSeconds(((System.currentTimeMillis() - startedAt) / 1000).toInt()) }
+    }
+    fun gradeCard(card: Card, g: Grade) { if (!practice) vm.grade(card, g) }
     val total = remember { queue.size.coerceAtLeast(1) }
     var done by remember { mutableIntStateOf(0) }
     var shown by remember { mutableStateOf(false) }
@@ -247,7 +282,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     val card = queue.firstOrNull()?.let { id -> state.cards.firstOrNull { it.id == id } }
 
     LaunchedEffect(card?.id) {
-        if (card == null) vm.finishedSession()
+        if (card == null && !practice) vm.finishedSession()
         else if (direction != Direction.SAY) vm.speaker.say(card.hanzi)
     }
 
@@ -335,7 +370,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                             if (picked == null) picked = option
                             else {
                                 val g = if (picked == card.english) Grade.GOOD else Grade.AGAIN
-                                vm.grade(card, g)
+                                gradeCard(card, g)
                                 queue.removeAt(0)
                                 if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
                             }
@@ -389,7 +424,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     Button(
                         onClick = {
                             if (direction == Direction.SAY && g != Grade.AGAIN) vm.speaker.say(card.hanzi)
-                            vm.grade(card, g)
+                            gradeCard(card, g)
                             queue.removeAt(0)
                             if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
                             shown = false
@@ -472,5 +507,33 @@ private fun ToolCard(zh: String, title: String, blurb: String, color: Color, mod
         Spacer(Modifier.height(4.dp))
         Text(title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
         Text(blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    }
+}
+
+/** Accuracy for each tone lately, and a drill for the pair you mix up most. */
+@Composable
+private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
+    val acc = com.dudlatitat.nextchapter.data.Stats.toneAccuracy(state)
+    if (acc.values.all { it == null }) return
+    val pair = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
+    GlassCard {
+        Text("Your tones · last 30 days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            (1..4).forEach { t ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val a = acc[t]
+                    Text(if (a == null) "–" else "${(a * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = com.dudlatitat.nextchapter.ui.components.toneColor(t))
+                    Text("tone $t", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                }
+            }
+        }
+        if (pair != null) {
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = { onDrill(pair.first, pair.second) }, modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Night.violet.copy(alpha = 0.2f), contentColor = Night.violet),
+            ) { Text("Drill tones ${pair.first} & ${pair.second}: you mix these up most") }
+        }
     }
 }

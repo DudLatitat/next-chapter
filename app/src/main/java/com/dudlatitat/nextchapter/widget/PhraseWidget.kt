@@ -1,5 +1,6 @@
 package com.dudlatitat.nextchapter.widget
 
+import com.dudlatitat.nextchapter.data.nextTripDate
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -36,7 +37,7 @@ class PhraseWidget : AppWidgetProvider() {
         private fun views(context: Context, state: AppState): RemoteViews {
             val v = RemoteViews(context.packageName, R.layout.widget_phrase)
             val move = daysUntil(state.moveDate)
-            val trip = daysUntil(state.tripDate)
+            val trip = daysUntil(state.nextTripDate())
             v.setTextViewText(
                 R.id.countdown,
                 when {

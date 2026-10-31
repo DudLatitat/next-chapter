@@ -34,6 +34,11 @@ jobs:
           pip install --quiet edge-tts
           python3 tools/make_voice.py
           ls app/src/main/assets/voice | wc -l
+      # Stroke order for handwriting practice (hanzi-writer-data, Arphic Public License).
+      - name: Stroke data
+        run: |
+          mkdir -p /tmp/hw && cd /tmp/hw && npm pack hanzi-writer-data@2.0.1 --silent && tar xzf hanzi-writer-data-*.tgz
+          cd "$GITHUB_WORKSPACE" && python3 tools/make_strokes.py /tmp/hw/package
       - name: Unlock signing key
         env:
           NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}

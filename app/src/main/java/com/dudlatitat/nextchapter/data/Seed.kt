@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 1
+    const val VERSION = 2
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
         Card(id = "$deck:$hanzi", hanzi = hanzi, pinyin = pinyin, english = english, deck = deck)
@@ -108,6 +108,22 @@ object Seed {
         c("sichuan", "巴适", "bāshì", "Great, comfy (Sichuanese)"),
         c("sichuan", "要得", "yào de", "Okay, sure (Sichuanese)"),
         c("sichuan", "摆龙门阵", "bǎi lóngménzhèn", "To chit-chat (Sichuanese)"),
+    )
+
+    private fun p(title: String) = PackItem(id = "pack:$title", title = title)
+
+    val packing = listOf(
+        p("Passport"), p("Visa / entry documents"), p("Flight confirmations"), p("Phone + charger"),
+        p("Power bank"), p("Plug adapter"), p("Gifts for her family"), p("Some cash in yuan"),
+        p("Card that works with Alipay / WeChat Pay"), p("VPN set up and tested"), p("Medicine"),
+        p("Clothes for Sichuan weather"), p("Toiletries"), p("Her address in Chinese (phrasebook)"),
+    )
+
+    private fun b(name: String, zh: String) = BudgetItem(id = "budget:$name", name = name, zh = zh)
+
+    val budget = listOf(
+        b("Rent", "房租"), b("Food", "吃饭"), b("Car & gas", "车和油费"), b("Phone & internet", "话费网费"),
+        b("Utilities", "水电费"), b("Insurance", "保险"), b("Fun & going out", "娱乐"), b("Other", "其他"),
     )
 
     private fun t(group: String, title: String) = MoveTask(id = "$group:$title", title = title, group = group)

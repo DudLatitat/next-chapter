@@ -50,6 +50,7 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
     // Opening a review straight from Today.
     var startReview by rememberSaveable { mutableStateOf(false) }
+    var startRedo by rememberSaveable { mutableStateOf(false) }
     var settings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(openStudy) {
@@ -90,8 +91,8 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true })
-                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false })
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN })
+                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false }, startRedo = startRedo)
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.PROGRESS -> ProgressScreen(state)
                 }

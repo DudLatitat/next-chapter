@@ -3,6 +3,8 @@
 
     <!-- Optional daily reminder to practice. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only for fetching today's dollar-to-yuan rate when you tap Update. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Speaking practice: recorded on the phone, checked on the phone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Set the reminder again after the phone restarts. -->

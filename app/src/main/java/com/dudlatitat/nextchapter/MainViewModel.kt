@@ -3,6 +3,12 @@ package com.dudlatitat.nextchapter
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import com.dudlatitat.nextchapter.data.AppState
+import com.dudlatitat.nextchapter.data.BudgetItem
+import com.dudlatitat.nextchapter.data.DayLog
+import com.dudlatitat.nextchapter.data.PackItem
+import com.dudlatitat.nextchapter.data.PriceSeen
+import com.dudlatitat.nextchapter.data.ToneEvent
+import com.dudlatitat.nextchapter.data.Trip
 import com.dudlatitat.nextchapter.data.Card
 import com.dudlatitat.nextchapter.data.Grade
 import com.dudlatitat.nextchapter.data.MoveTask
@@ -35,7 +41,60 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun grade(card: Card, grade: Grade) = store.edit { s ->
-        s.copy(cards = s.cards.map { if (it.id == card.id) Srs.grade(it, grade) else it })
+        s.copy(cards = s.cards.map { if (it.id == card.id) Srs.grade(it, grade) else it }).logDay { it.copy(reviews = it.reviews + 1) }
+    }
+
+    /** Adds practice time to today (called when a session ends or closes). */
+    fun logSeconds(seconds: Int) {
+        if (seconds <= 0) return
+        store.edit { s -> s.logDay { it.copy(seconds = it.seconds + seconds.coerceAtMost(3600)) } }
+    }
+
+    private fun AppState.logDay(change: (DayLog) -> DayLog): AppState {
+        val d = today()
+        val kept = days.filterKeys { it > d - 400 }
+        return copy(days = kept + (d to change(kept[d] ?: DayLog())))
+    }
+
+    /** Remembers one tone attempt, for weak-tone drills and the weekly recap. */
+    fun logTone(target: Int, got: Int, spoken: Boolean) {
+        if (target !in 1..4 || got !in 1..4) return
+        store.edit { s -> s.copy(toneEvents = (s.toneEvents + ToneEvent(today(), target, got, spoken)).takeLast(800)) }
+    }
+
+    // Flights
+    fun saveTrip(trip: Trip) = store.edit { s ->
+        s.copy(trips = (s.trips.filterNot { it.id == trip.id } + trip).sortedBy { it.depart })
+    }
+    fun deleteTrip(trip: Trip) = store.edit { s -> s.copy(trips = s.trips.filterNot { it.id == trip.id }) }
+    fun addPrice(price: Int, source: String) = store.edit { s ->
+        s.copy(prices = (s.prices + PriceSeen("price:${System.currentTimeMillis()}", java.time.LocalDate.now().toString(), price, source.trim())).takeLast(300))
+    }
+    fun deletePrice(p: PriceSeen) = store.edit { s -> s.copy(prices = s.prices.filterNot { it.id == p.id }) }
+
+    // Packing
+    fun togglePack(item: PackItem) = store.edit { s -> s.copy(packing = s.packing.map { if (it.id == item.id) it.copy(done = !it.done) else it }) }
+    fun addPack(title: String) = store.edit { s -> s.copy(packing = s.packing + PackItem("pack:${System.currentTimeMillis()}", title.trim())) }
+    fun deletePack(item: PackItem) = store.edit { s -> s.copy(packing = s.packing.filterNot { it.id == item.id }) }
+    fun resetPacking() = store.edit { s -> s.copy(packing = s.packing.map { it.copy(done = false) }) }
+
+    // Money
+    fun saveBudget(item: BudgetItem) = store.edit { s ->
+        s.copy(budget = if (s.budget.any { it.id == item.id }) s.budget.map { if (it.id == item.id) item else it } else s.budget + item)
+    }
+    fun deleteBudget(item: BudgetItem) = store.edit { s -> s.copy(budget = s.budget.filterNot { it.id == item.id }) }
+    fun setRate(rate: Double, date: String?) = store.edit { it.copy(rate = rate, rateDate = date) }
+
+    /** Fetches today's USD → CNY rate; false without internet. */
+    suspend fun refreshRate(): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val c = java.net.URL("https://open.er-api.com/v6/latest/USD").openConnection() as java.net.HttpURLConnection
+            c.connectTimeout = 8000; c.readTimeout = 8000
+            val text = c.inputStream.bufferedReader().use { it.readText() }
+            val rate = Regex("\"CNY\"\\s*:\\s*([0-9.]+)").find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: return@withContext false
+            setRate(rate, java.time.LocalDate.now().toString())
+            true
+        } catch (_: Exception) { false }
     }
 
     /** Marks today as a study day (after finishing a session). */

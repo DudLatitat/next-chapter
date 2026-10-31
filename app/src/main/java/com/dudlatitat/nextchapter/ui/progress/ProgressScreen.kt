@@ -50,6 +50,7 @@ fun ProgressScreen(state: AppState) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenTitle("Progress", "进步 · every day counts")
+        WeeklyRecap(state)
 
         GlassCard(highlight = true) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {

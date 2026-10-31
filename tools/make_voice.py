@@ -14,7 +14,7 @@ CJK = re.compile(r"[一-鿿]")
 
 def phrases():
     found = []
-    for name in ("Seed.kt", "Phrasebook.kt", "Pinyin.kt"):
+    for name in ("Seed.kt", "Vocab.kt", "Dialogues.kt", "Phrasebook.kt", "Pinyin.kt"):
         for s in re.findall(r'"((?:[^"\\]|\\.)*)"', (SRC / name).read_text(encoding="utf-8")):
             if CJK.search(s) and "$" not in s and s not in found:
                 found.append(s.strip())

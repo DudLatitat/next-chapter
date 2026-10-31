@@ -10,6 +10,13 @@ fun parseDate(iso: String?): LocalDate? = try { iso?.let(LocalDate::parse) } cat
 /** Days from today to an ISO date (negative once it's past), or null if unset. */
 fun daysUntil(iso: String?): Long? = parseDate(iso)?.let { it.toEpochDay() - today() }
 
+/** The next trip: the earliest upcoming one in the flight planner, else the date set by hand. */
+fun AppState.nextTripDate(): String? {
+    val now = today()
+    return trips.mapNotNull { parseDate(it.depart) }.filter { it.toEpochDay() >= now }.minOrNull()?.toString()
+        ?: tripDate
+}
+
 fun prettyDate(iso: String?): String? = parseDate(iso)?.format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
 
 fun money(n: Int): String = NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(n)

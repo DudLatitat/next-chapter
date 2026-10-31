@@ -113,8 +113,10 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
             recording = true; stopNow = false; liveChars = null
             val clip: Clip = Recorder.record(stop = { stopNow }, level = { level = it })
             recording = false; busy = true
-            attempt = vm.coach.check(clip, hanzi, pinyin)
+            val a = vm.coach.check(clip, hanzi, pinyin)
+            attempt = a
             busy = false
+            logTones(vm, a, pinyin)
         }
     }
 
@@ -156,6 +158,20 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                 }
             }
             if (!vm.coach.calibrated) TextButton(onClick = onCalibrate) { Text("Set up your voice for more accurate tones →", color = Night.violet) }
+        }
+    }
+}
+
+/** Feeds what a speaking check found into the tone history (weak-tone drills, weekly recap). */
+private fun logTones(vm: MainViewModel, a: Attempt, pinyin: String) {
+    val P = com.dudlatitat.nextchapter.data.Pinyin
+    a.tone?.let { t -> P.syllablesIn(pinyin).firstOrNull()?.second?.let { aimed -> vm.logTone(aimed, t.tone, spoken = true) } }
+    if (a.tone == null) a.chars?.forEach { c ->
+        val target = P.tone(c.target)
+        when (c.mark) {
+            Mark.RIGHT -> vm.logTone(target, target, spoken = true)
+            Mark.TONE -> c.heard?.let { vm.logTone(target, P.tone(it), spoken = true) }
+            else -> {}
         }
     }
 }

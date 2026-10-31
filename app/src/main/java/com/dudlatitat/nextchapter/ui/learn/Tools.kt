@@ -61,14 +61,15 @@ private val toneNames = listOf("1  ˉ  high", "2  ˊ  rising", "3  ˇ  dip", "4 
 
 /** Hear a character, pick its tone. */
 @Composable
-fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit) {
+fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit, focus: Set<Int>? = null) {
     BackHandler(onBack = onBack)
     var sayMode by rememberSaveable { mutableStateOf(false) }
     if (sayMode) { SayTones(vm, onBack, onCalibrate, onHear = { sayMode = false }); return }
     var round by remember { mutableIntStateOf(0) }
     var right by remember { mutableIntStateOf(0) }
     var tried by remember { mutableIntStateOf(0) }
-    val item = remember(round) { Pinyin.toneQuiz.random() }
+    val pool = remember(focus) { Pinyin.toneQuiz.filter { focus == null || Pinyin.tone(it.second) in focus } }
+    val item = remember(round) { pool.random() }
     val tone = Pinyin.tone(item.second)
     var picked by remember(round) { mutableStateOf<Int?>(null) }
 
@@ -77,10 +78,10 @@ fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit) 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
-            Text("Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
+            Text(if (focus != null) "Drill: tones ${focus.sorted().joinToString(" & ")}" else "Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
             if (tried > 0) Pill("$right/$tried", Night.jade)
         }
-        ModeRow(say = false, onHear = {}, onSay = { sayMode = true })
+        if (focus == null) ModeRow(say = false, onHear = {}, onSay = { sayMode = true })
         GlassCard(Modifier.weight(1f), highlight = true) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(
@@ -109,6 +110,7 @@ fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit) 
                     onClick = {
                         if (picked == null) {
                             picked = t; tried++; if (t == tone) right++
+                            vm.logTone(tone, t, spoken = false)
                         } else round++
                     },
                     modifier = Modifier.fillMaxWidth().height(54.dp),

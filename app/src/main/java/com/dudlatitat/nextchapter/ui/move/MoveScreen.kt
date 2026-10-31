@@ -1,5 +1,6 @@
 package com.dudlatitat.nextchapter.ui.move
 
+import com.dudlatitat.nextchapter.data.nextTripDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,12 @@ private enum class DateField { MOVE, TRIP }
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MoveScreen(state: AppState, vm: MainViewModel) {
+    var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    when (page) {
+        "flights" -> { FlightsScreen(state, vm, onBack = { page = null }); return }
+        "money" -> { MoneyScreen(state, vm, onBack = { page = null }); return }
+        "packing" -> { PackingScreen(state, vm, onBack = { page = null }); return }
+    }
     var picking by remember { mutableStateOf<DateField?>(null) }
     var editingMoney by remember { mutableStateOf(false) }
     var addingTask by remember { mutableStateOf(false) }
@@ -85,7 +92,16 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DateCard("Move date", state.moveDate, Night.sun, Modifier.weight(1f)) { picking = DateField.MOVE }
-                DateCard("Next trip", state.tripDate, Night.rose, Modifier.weight(1f)) { picking = DateField.TRIP }
+                DateCard("Next trip", state.nextTripDate(), Night.rose, Modifier.weight(1f)) { picking = DateField.TRIP }
+            }
+        }
+
+        // Flights, money, packing
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MoveTool("✈", "Flights", "机票", Modifier.weight(1f)) { page = "flights" }
+                MoveTool("¥", "Money", "人民币", Modifier.weight(1f)) { page = "money" }
+                MoveTool("🧳", "Packing", "${state.packing.count { it.done }}/${state.packing.size}", Modifier.weight(1f)) { page = "packing" }
             }
         }
 
@@ -201,7 +217,7 @@ private fun DateCard(label: String, iso: String?, color: androidx.compose.ui.gra
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PickDate(initial: String?, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
+internal fun PickDate(initial: String?, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
     val start = (parseDate(initial) ?: LocalDate.now().plusMonths(1)).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     val picker = rememberDatePickerState(initialSelectedDateMillis = start)
     DatePickerDialog(
@@ -294,5 +310,14 @@ private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewMode
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MoveTool(icon: String, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
+    GlassCard(modifier, onClick = onClick) {
+        Text(icon, style = MaterialTheme.typography.headlineSmall, color = Night.sun)
+        Text(title, style = MaterialTheme.typography.titleSmall, color = Night.ink)
+        Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
     }
 }
