@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,67 +74,21 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
             Countdown("The move", "搬家", daysUntil(state.moveDate), Night.sun, Modifier.weight(1f), onOpenMove)
         }
 
-        // Today's practice
-        GlassCard(highlight = true) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Today's practice", style = MaterialTheme.typography.titleLarge, color = Night.ink)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        when {
-                            queue.isNotEmpty() -> "${queue.size} phrases · about ${maxOf(1, queue.size / 3)} min"
-                            studiedToday -> "All done for today. 太棒了!"
-                            else -> "Nothing due. Add your own phrases in Learn."
-                        },
-                        style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-                    )
+        val wide = LocalConfiguration.current.screenWidthDp >= 600
+        if (wide) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Practice(state, queue, studiedToday, onStudy, Modifier)
+                    MoveStep(state, onOpenMove, Modifier)
                 }
-                ProgressRing(if (queue.isEmpty()) 1f else 0f, 56.dp, Night.jade, stroke = 6.dp) {
-                    Text(if (queue.isEmpty()) "✓" else "${queue.size}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    PhraseOfDay(state, vm, Modifier)
                 }
             }
-            if (queue.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                Button(
-                    onClick = onStudy,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-                ) { Text("Start", style = MaterialTheme.typography.titleMedium) }
-            }
-        }
-
-        // Phrase of the day
-        state.phraseOfTheDay()?.let { card ->
-            SectionLabel("Phrase of the day")
-            GlassCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(card.hanzi, fontSize = 30.sp, color = Night.ink, fontWeight = FontWeight.Medium)
-                        PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium)
-                        Text(card.english, style = MaterialTheme.typography.bodyLarge, color = Night.muted)
-                    }
-                    IconButton(onClick = { vm.speaker.say(card.hanzi) }) {
-                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Listen", tint = Night.ink)
-                    }
-                }
-            }
-        }
-
-        // Next move step
-        SectionLabel("Toward the move")
-        GlassCard(onClick = onOpenMove) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(state.moveReady(), 64.dp, Night.sun, stroke = 7.dp) {
-                    Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    val next = state.tasks.firstOrNull { !it.done }
-                    Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    Text(next?.title ?: "Every step checked off!", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                    if (next != null) Text("Next step · ${next.group}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                }
-            }
+        } else {
+            Practice(state, queue, studiedToday, onStudy, Modifier)
+            PhraseOfDay(state, vm, Modifier)
+            MoveStep(state, onOpenMove, Modifier)
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -152,6 +107,86 @@ private fun Countdown(label: String, zh: String, days: Long?, color: androidx.co
         } else {
             Text(friendlySpan(days), style = MaterialTheme.typography.headlineSmall, color = color)
             Text("$days days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        }
+    }
+}
+
+@Composable
+private fun Practice(state: AppState, queue: List<com.dudlatitat.nextchapter.data.Card>, studiedToday: Boolean, onStudy: () -> Unit, modifier: Modifier) {
+    val doneToday = com.dudlatitat.nextchapter.data.today().let { d -> state.cards.count { it.last == d && it.due > d } }
+    val total = doneToday + queue.size
+        // Today's practice
+        GlassCard(modifier, highlight = true) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Today's practice", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        when {
+                            queue.isNotEmpty() -> if (doneToday > 0) "$doneToday done · ${queue.size} to go" else "${queue.size} phrases · about ${maxOf(1, queue.size / 3)} min"
+                            studiedToday -> "All done for today. 太棒了!"
+                            else -> "Nothing due. Add your own phrases in Learn."
+                        },
+                        style = MaterialTheme.typography.bodyMedium, color = Night.muted,
+                    )
+                }
+                ProgressRing(if (total == 0) 1f else doneToday.toFloat() / total, 56.dp, Night.jade, stroke = 6.dp) {
+                    Text(if (queue.isEmpty()) "✓" else "$doneToday/$total", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                }
+            }
+            if (queue.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                Button(
+                    onClick = onStudy,
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
+                ) { Text(if (doneToday > 0) "Keep going" else "Start", style = MaterialTheme.typography.titleMedium) }
+            }
+        }
+
+}
+
+@Composable
+private fun PhraseOfDay(state: AppState, vm: MainViewModel, modifier: Modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Phrase of the day
+        state.phraseOfTheDay()?.let { card ->
+            SectionLabel("Phrase of the day")
+            GlassCard(modifier) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(card.hanzi, fontSize = 30.sp, color = Night.ink, fontWeight = FontWeight.Medium)
+                        PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium)
+                        Text(card.english, style = MaterialTheme.typography.bodyLarge, color = Night.muted)
+                    }
+                    IconButton(onClick = { vm.speaker.say(card.hanzi) }) {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Listen", tint = Night.ink)
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun MoveStep(state: AppState, onOpenMove: () -> Unit, modifier: Modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Next move step
+        SectionLabel("Toward the move")
+        GlassCard(modifier, onClick = onOpenMove) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ProgressRing(state.moveReady(), 64.dp, Night.sun, stroke = 7.dp) {
+                    Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    val next = state.tasks.firstOrNull { !it.done }
+                    Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                    Text(next?.title ?: "Every step checked off!", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    if (next != null) Text("Next step · ${next.group}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+            }
         }
     }
 }

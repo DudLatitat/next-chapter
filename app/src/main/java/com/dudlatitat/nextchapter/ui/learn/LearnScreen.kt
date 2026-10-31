@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -94,6 +96,7 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
 @Composable
 private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit, onTool: (String) -> Unit) {
     val queue = Srs.queue(state)
+    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -134,24 +137,32 @@ private fun Overview(state: AppState, onReview: () -> Unit, onDeck: (String) -> 
                 }
             }
         }
-        items(Decks, key = { it.id }) { deck ->
-            val cards = state.cards.filter { it.deck == deck.id }
-            if (deck.id == "mine" && cards.isEmpty()) return@items
-            val known = cards.count { it.isKnown }
-            val started = cards.count { !it.isNew }
-            GlassCard(onClick = { onDeck(deck.id) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(deck.hanzi, fontSize = 22.sp, color = Night.sun, modifier = Modifier.width(76.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(deck.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                        Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                        Spacer(Modifier.height(8.dp))
-                        Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Text("$known/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
-                }
+        val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
+        items(visible.chunked(if (wide) 2 else 1), key = { row -> row.first().id }) { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { deck -> DeckCard(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
+                if (row.size == 1 && wide) Spacer(Modifier.weight(1f))
             }
+        }
+    }
+}
+
+@Composable
+private fun DeckCard(deck: Deck, state: AppState, modifier: Modifier, onClick: () -> Unit) {
+    val cards = state.cards.filter { it.deck == deck.id }
+    val known = cards.count { it.isKnown }
+    val started = cards.count { !it.isNew }
+    GlassCard(modifier, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(deck.hanzi, fontSize = 22.sp, color = Night.sun, modifier = Modifier.width(76.dp))
+            Column(Modifier.weight(1f)) {
+                Text(deck.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                Spacer(Modifier.height(8.dp))
+                Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("$known/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
         }
     }
 }
@@ -227,6 +238,8 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
     var done by remember { mutableIntStateOf(0) }
     var shown by remember { mutableStateOf(false) }
     var direction by rememberSaveable { mutableStateOf(Direction.READ) }
+    // Phrases missed at least once this session, for the summary at the end.
+    val missed = remember { mutableStateListOf<String>() }
 
     val card = queue.firstOrNull()?.let { id -> state.cards.firstOrNull { it.id == id } }
 
@@ -249,11 +262,31 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
         }
 
         if (card == null) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🎉", fontSize = 56.sp)
                 Spacer(Modifier.height(12.dp))
                 Text("做得好！", style = MaterialTheme.typography.headlineMedium, color = Night.sun)
                 Text("Session done · $done phrases", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Text(
+                    if (missed.isEmpty()) "No misses. 完美!" else "${done - missed.size} right first try · ${missed.size} to keep an eye on",
+                    style = MaterialTheme.typography.bodyMedium, color = Night.muted,
+                )
+                if (missed.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    GlassCard {
+                        Text("Tricky ones", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        missed.mapNotNull { id -> state.cards.firstOrNull { it.id == id } }.forEach { c ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                                    Text(c.hanzi, fontSize = 20.sp, color = Night.ink)
+                                    PinyinText(c.pinyin, style = MaterialTheme.typography.bodyMedium)
+                                    Text(c.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                                }
+                                IconButton(onClick = { vm.speaker.say(c.hanzi) }) { Icon(Icons.Rounded.PlayArrow, "Listen", tint = Night.ink) }
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = onClose, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Back") }
             }
@@ -299,7 +332,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
                                 val g = if (picked == card.english) Grade.GOOD else Grade.AGAIN
                                 vm.grade(card, g)
                                 queue.removeAt(0)
-                                if (g == Grade.AGAIN) queue.add(card.id) else done++
+                                if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -352,7 +385,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
                             if (direction == Direction.SAY && g != Grade.AGAIN) vm.speaker.say(card.hanzi)
                             vm.grade(card, g)
                             queue.removeAt(0)
-                            if (g == Grade.AGAIN) queue.add(card.id) else done++
+                            if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
                             shown = false
                         },
                         modifier = Modifier.weight(1f).height(64.dp),

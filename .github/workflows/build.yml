@@ -22,6 +22,18 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      # Natural voice for the built-in phrases: recorded once, kept between builds.
+      - uses: actions/cache@v4
+        with:
+          path: app/src/main/assets/voice
+          key: voice-xiaoxiao-${{ hashFiles('app/src/main/java/com/dudlatitat/nextchapter/data/*.kt', 'tools/make_voice.py') }}
+          restore-keys: voice-xiaoxiao-
+      - name: Record phrases
+        continue-on-error: true
+        run: |
+          pip install --quiet edge-tts
+          python3 tools/make_voice.py
+          ls app/src/main/assets/voice | wc -l
       - name: Unlock signing key
         env:
           NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}

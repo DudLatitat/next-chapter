@@ -32,7 +32,7 @@ fun AppState.phraseOfTheDay(): Card? {
 fun friendlySpan(days: Long): String = when {
     days < 0 -> "passed"
     days == 0L -> "today"
-    days < 60 -> "$days days"
+    days < 100 -> if (days == 1L) "1 day" else "$days days"
     days < 365 -> "${days / 30} months"
     else -> {
         val y = days / 365

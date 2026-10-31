@@ -73,6 +73,7 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
     var addingTask by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<MoveTask?>(null) }
 
+    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -92,20 +93,25 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProgressRing(state.savingsProgress(), 88.dp, Night.jade, stroke = 9.dp) {
-                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    ProgressRing(state.savingsProgress(), 72.dp, Night.jade, stroke = 8.dp) {
+                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
                     }
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Savings · 存钱", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                        Text(money(state.saved), style = MaterialTheme.typography.headlineMedium, color = Night.ink)
-                        Text(
-                            if (state.savingsGoal > 0) "of ${money(state.savingsGoal)} · ${money((state.savingsGoal - state.saved).coerceAtLeast(0))} to go" else "Set a goal",
-                            style = MaterialTheme.typography.bodySmall, color = Night.muted,
-                        )
-                        perMonth(state)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.jade) }
+                        Text(money(state.saved), style = MaterialTheme.typography.headlineMedium, color = Night.ink, maxLines = 1)
                     }
                     IconButton(onClick = { editingMoney = true }) { Icon(Icons.Rounded.Edit, "Edit", tint = Night.muted) }
+                }
+                Spacer(Modifier.height(10.dp))
+                if (state.savingsGoal > 0) {
+                    Row {
+                        Text("Goal ${money(state.savingsGoal)}", style = MaterialTheme.typography.bodyMedium, color = Night.muted, modifier = Modifier.weight(1f))
+                        Text("${money((state.savingsGoal - state.saved).coerceAtLeast(0))} to go", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+                    }
+                    perMonth(state)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Night.jade) }
+                } else {
+                    Text("Tap ✏️ to set a goal", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -132,36 +138,12 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
                 }
             }
         }
-        val groups = (TaskGroups + state.tasks.map { it.group }).distinct()
-        groups.forEach { group ->
-            val tasks = state.tasks.filter { it.group == group }
-            if (tasks.isEmpty()) return@forEach
-            item(key = "g:$group") {
-                GlassCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(group, style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-                        Text("${tasks.count { it.done }}/${tasks.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Bar(tasks.count { it.done }.toFloat() / tasks.size, Night.sun)
-                    Spacer(Modifier.height(6.dp))
-                    tasks.forEach { task ->
-                        Row(
-                            Modifier.fillMaxWidth().combinedClickable(onClick = { vm.toggleTask(task) }, onLongClick = { deleting = task }),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(
-                                checked = task.done, onCheckedChange = { vm.toggleTask(task) },
-                                colors = CheckboxDefaults.colors(checkedColor = Night.sun, uncheckedColor = Night.muted, checkmarkColor = MaterialTheme.colorScheme.onPrimary),
-                            )
-                            Text(
-                                task.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (task.done) Night.muted else Night.ink,
-                                textDecoration = if (task.done) TextDecoration.LineThrough else null,
-                            )
-                        }
-                    }
+        val groups = (TaskGroups + state.tasks.map { it.group }).distinct().filter { g -> state.tasks.any { it.group == g } }
+        groups.chunked(if (wide) 2 else 1).forEach { row ->
+            item(key = "g:${row.first()}") {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { group -> TaskGroupCard(group, state.tasks.filter { it.group == group }, vm, Modifier.weight(1f)) { deleting = it } }
+                    if (row.size == 1 && wide) Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -282,4 +264,35 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit
         confirmButton = { TextButton(onClick = { onAdd(title, group) }, enabled = title.isNotBlank()) { Text("Add") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewModel, modifier: Modifier, onDelete: (MoveTask) -> Unit) {
+    GlassCard(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(group, style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
+            Text("${tasks.count { it.done }}/${tasks.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        }
+        Spacer(Modifier.height(6.dp))
+        Bar(tasks.count { it.done }.toFloat() / tasks.size, Night.sun)
+        Spacer(Modifier.height(6.dp))
+        tasks.forEach { task ->
+            Row(
+                Modifier.fillMaxWidth().combinedClickable(onClick = { vm.toggleTask(task) }, onLongClick = { onDelete(task) }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = task.done, onCheckedChange = { vm.toggleTask(task) },
+                    colors = CheckboxDefaults.colors(checkedColor = Night.sun, uncheckedColor = Night.muted, checkmarkColor = MaterialTheme.colorScheme.onPrimary),
+                )
+                Text(
+                    task.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (task.done) Night.muted else Night.ink,
+                    textDecoration = if (task.done) TextDecoration.LineThrough else null,
+                )
+            }
+        }
+    }
 }

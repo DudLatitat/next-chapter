@@ -24,6 +24,8 @@ data class Card(
     val ease: Double = 2.5,
     val reps: Int = 0,
     val lapses: Int = 0,
+    /** The day it was last answered. */
+    val last: Long? = null,
 ) {
     val isNew get() = firstSeen == null
     /** Remembered for a week or more. */

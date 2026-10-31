@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,13 +28,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,16 +125,10 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 Text("${state.newPerDay}", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 TextButton(onClick = { vm.updatePlan { it.copy(newPerDay = (it.newPerDay + 1).coerceAtMost(30)) } }) { Text("+", style = MaterialTheme.typography.titleLarge) }
             }
-            Spacer(Modifier.height(12.dp))
-            Text("Chinese voice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-            Text(
-                if (vm.speaker.available) "Ready ✓" else "Not found. Install Chinese (Mandarin) in your phone's text-to-speech settings.",
-                style = MaterialTheme.typography.bodySmall, color = if (vm.speaker.available) Night.jade else Night.coral,
-            )
-            TextButton(onClick = {
-                try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
-            }) { Text("Open text-to-speech settings", color = Night.sun) }
         }
+
+        SectionLabel("Voice")
+        VoiceCard(vm)
 
         SectionLabel("Backup")
         GlassCard {
@@ -174,3 +172,66 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
 private fun timeLabel(minutes: Int): String =
     LocalTime.of(minutes / 60, minutes % 60).format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
+
+@Composable
+private fun VoiceCard(vm: MainViewModel) {
+    val context = LocalContext.current
+    val speaker = vm.speaker
+    val ready by speaker.ready.collectAsState()
+    val voices by speaker.voices.collectAsState()
+    val engines by speaker.engines.collectAsState()
+    var recorded by remember { mutableStateOf(speaker.useRecordings) }
+    var engine by remember { mutableStateOf(speaker.engine) }
+    var voice by remember { mutableStateOf(speaker.voice) }
+
+    GlassCard {
+        if (speaker.hasRecordings) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Natural voice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("Recorded neural voice for the built-in phrases. Your own phrases use the phone voice below.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Switch(
+                    checked = recorded, onCheckedChange = { recorded = it; speaker.useRecordings = it },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
+            }
+            TextButton(onClick = { speaker.say("我想你") }) { Text("▶  Hear it: 我想你", color = Night.sun) }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Text("Phone voice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+        Text(
+            if (ready) "Ready ✓" else "No Chinese voice found. Pick another engine, or install Chinese (Mandarin) in text-to-speech settings.",
+            style = MaterialTheme.typography.bodySmall, color = if (ready) Night.jade else Night.coral,
+        )
+        if (engines.size > 1) {
+            Spacer(Modifier.height(8.dp))
+            Text("Engine", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            engines.forEach { e ->
+                val selected = engine == e.pkg || (engine == null && e == engines.first())
+                Row(Modifier.fillMaxWidth().clickable { engine = e.pkg; voice = null; speaker.setEngine(e.pkg) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = selected, onClick = { engine = e.pkg; voice = null; speaker.setEngine(e.pkg) })
+                    Text(e.label, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+                }
+            }
+        }
+        if (voices.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text("Voice · tap to preview", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            voices.forEach { v ->
+                Row(Modifier.fillMaxWidth().clickable { voice = v.name; speaker.setVoice(v.name) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = voice == v.name, onClick = { voice = v.name; speaker.setVoice(v.name) })
+                    Column {
+                        Text(v.label, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+                        if (v.online) Text("Needs internet", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    }
+                }
+            }
+        }
+        TextButton(onClick = {
+            try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+        }) { Text("Open text-to-speech settings", color = Night.sun) }
+        Text("Tip: Google's \"Speech Recognition & Synthesis\" app from the Play Store has the most natural Mandarin voices.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    }
+}

@@ -11,7 +11,9 @@ enum class Grade(val label: String) { AGAIN("Again"), HARD("Hard"), GOOD("Good")
  * a miss brings it back today and makes it come back sooner from then on.
  */
 object Srs {
-    fun grade(card: Card, grade: Grade, day: Long = today()): Card {
+    fun grade(card: Card, grade: Grade, day: Long = today()): Card = gradeInner(card, grade, day).copy(last = day)
+
+    private fun gradeInner(card: Card, grade: Grade, day: Long): Card {
         val first = card.firstSeen ?: day
         return when (grade) {
             Grade.AGAIN -> card.copy(
