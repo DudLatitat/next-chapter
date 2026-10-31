@@ -3,6 +3,8 @@
 
     <!-- Optional daily reminder to practice. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Speaking practice: recorded on the phone, checked on the phone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Set the reminder again after the phone restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -10,6 +12,10 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <!-- The phone's speech recognizer, for checking what you said. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 

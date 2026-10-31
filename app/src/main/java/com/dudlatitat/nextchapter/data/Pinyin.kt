@@ -25,6 +25,9 @@ object Pinyin {
     /** A letter with its tone mark removed, lower-cased (same length, so positions line up). */
     private fun plain(c: Char): Char = (marks[c]?.first ?: c).lowercaseChar()
 
+    /** A syllable without its tone mark, lower-case ("Mǎ" → "ma"). */
+    fun bare(syllable: String): String = syllable.map(::plain).joinToString("").replace("v", "ü")
+
     fun isLetter(c: Char) = c in marks || c.isLetter() && c.code < 0x250
 
     /** Tone of one syllable: 1–4, or 5 for neutral. */

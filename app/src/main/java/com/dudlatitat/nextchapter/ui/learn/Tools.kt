@@ -35,6 +35,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -56,8 +61,10 @@ private val toneNames = listOf("1  ˉ  high", "2  ˊ  rising", "3  ˇ  dip", "4 
 
 /** Hear a character, pick its tone. */
 @Composable
-fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit) {
+fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit) {
     BackHandler(onBack = onBack)
+    var sayMode by rememberSaveable { mutableStateOf(false) }
+    if (sayMode) { SayTones(vm, onBack, onCalibrate, onHear = { sayMode = false }); return }
     var round by remember { mutableIntStateOf(0) }
     var right by remember { mutableIntStateOf(0) }
     var tried by remember { mutableIntStateOf(0) }
@@ -73,6 +80,7 @@ fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit) {
             Text("Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
             if (tried > 0) Pill("$right/$tried", Night.jade)
         }
+        ModeRow(say = false, onHear = {}, onSay = { sayMode = true })
         GlassCard(Modifier.weight(1f), highlight = true) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Button(
@@ -214,5 +222,56 @@ private fun LineCard(line: Survival, onClick: () -> Unit) {
                 Text(line.english, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
             }
         }
+    }
+}
+
+@Composable
+private fun ModeRow(say: Boolean, onHear: () -> Unit, onSay: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Hear 听" to !say, "Say 说" to say).forEachIndexed { i, (label, selected) ->
+            FilterChip(
+                selected = selected, onClick = if (i == 0) onHear else onSay, label = { Text(label) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Night.sun.copy(alpha = 0.18f), selectedLabelColor = Night.sun,
+                    labelColor = Night.muted, containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
+            )
+        }
+    }
+}
+
+/** See a character, say it, and find out which tone you actually made. */
+@Composable
+private fun SayTones(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit, onHear: () -> Unit) {
+    var round by remember { mutableIntStateOf(0) }
+    val item = remember(round) { Pinyin.toneQuiz.random() }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            Text("Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
+        }
+        ModeRow(say = true, onHear = onHear, onSay = {})
+        if (!vm.coach.calibrated) {
+            GlassCard(onClick = onCalibrate) {
+                Text("First: set up your voice (10 seconds)", style = MaterialTheme.typography.titleMedium, color = Night.violet)
+                Text("Say 妈 麻 马 骂 once so the app learns your pitch range. Tone checks are much more accurate after.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            }
+        }
+        GlassCard(highlight = true) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(item.first, fontSize = 72.sp, color = Night.ink)
+                PinyinText(item.second, style = MaterialTheme.typography.headlineMedium)
+                Text(item.third, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                TextButton(onClick = { vm.speaker.say(item.first, slow = true) }) { Icon(Icons.Rounded.PlayArrow, null, tint = Night.sun); Text(" Hear it", color = Night.sun) }
+                SpeakPanel(item.first, item.second, vm, onCalibrate)
+            }
+        }
+        Button(
+            onClick = { round++ }, modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Night.sun.copy(alpha = 0.18f), contentColor = Night.sun),
+        ) { Text("Next character", style = MaterialTheme.typography.titleMedium) }
     }
 }

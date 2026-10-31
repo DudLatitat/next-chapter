@@ -76,6 +76,7 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var openDeck by rememberSaveable { mutableStateOf<String?>(null) }
     var tool by rememberSaveable { mutableStateOf<String?>(null) }
+    var calibrating by rememberSaveable { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
 
     LaunchedEffect(startReview) {
@@ -83,8 +84,9 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
     }
 
     when {
-        reviewing -> Review(state, vm, onClose = { reviewing = false })
-        tool == "tones" -> ToneTrainer(vm, onBack = { tool = null })
+        calibrating -> CalibrateScreen(vm, onDone = { calibrating = false })
+        reviewing -> Review(state, vm, onClose = { reviewing = false }, onCalibrate = { calibrating = true })
+        tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
         else -> Overview(state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it })
@@ -230,7 +232,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
 private enum class Direction { READ, SAY, LISTEN }
 
 @Composable
-private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
+private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCalibrate: () -> Unit) {
     BackHandler(onBack = onClose)
     // The queue as it was when the session started; misses go back to the end.
     val queue = remember { mutableStateListOf<String>().apply { addAll(Srs.queue(state).map { it.id }) } }
@@ -238,6 +240,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
     var done by remember { mutableIntStateOf(0) }
     var shown by remember { mutableStateOf(false) }
     var direction by rememberSaveable { mutableStateOf(Direction.READ) }
+    var speaking by remember { mutableStateOf(false) }
     // Phrases missed at least once this session, for the summary at the end.
     val missed = remember { mutableStateListOf<String>() }
 
@@ -247,6 +250,8 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
         if (card == null) vm.finishedSession()
         else if (direction != Direction.SAY) vm.speaker.say(card.hanzi)
     }
+
+    if (speaking && card != null) SpeakSheet(card, vm, onCalibrate, onDismiss = { speaking = false })
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -370,6 +375,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
                         Icon(Icons.Rounded.PlayArrow, null, tint = Night.ink); Text("Listen", color = Night.ink)
                     }
                     TextButton(onClick = { vm.speaker.say(card.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
+                    if (shown) TextButton(onClick = { speaking = true }) { Text("🎤 Say it", color = Night.sun) }
                 }
                 if (!shown) Text("Tap to reveal", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
@@ -401,6 +407,22 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit) {
             }
         }
         if (!shown) Spacer(Modifier.height(64.dp))
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SpeakSheet(card: Card, vm: MainViewModel, onCalibrate: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Night.ground1) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(card.hanzi, fontSize = 34.sp, color = Night.ink, textAlign = TextAlign.Center)
+            PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            TextButton(onClick = { vm.speaker.say(card.hanzi) }) { Icon(Icons.Rounded.PlayArrow, null, tint = Night.sun); Text(" Hear it first", color = Night.sun) }
+            SpeakPanel(card.hanzi, card.pinyin, vm, onCalibrate = { onDismiss(); onCalibrate() })
+        }
     }
 }
 

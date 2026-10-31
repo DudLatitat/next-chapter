@@ -131,6 +131,11 @@ class Speaker(context: Context) {
         true
     } catch (_: Exception) { false }
 
+    fun stop() {
+        tts?.stop()
+        try { player?.stop() } catch (_: Exception) {}
+    }
+
     fun close() {
         tts?.shutdown()
         player?.release()

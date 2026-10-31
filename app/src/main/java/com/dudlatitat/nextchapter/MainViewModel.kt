@@ -17,6 +17,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val store = Store.get(app)
     val state: StateFlow<AppState> = store.state
     val speaker = Speaker(app)
+    val coach = com.dudlatitat.nextchapter.speech.Coach(app)
 
     init {
         store.onChange = { PhraseWidget.refresh(app, it) }
