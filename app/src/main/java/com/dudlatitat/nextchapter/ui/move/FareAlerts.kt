@@ -123,8 +123,8 @@ fun FareAlertsCard(state: AppState, vm: MainViewModel) {
         }
         val monthly = perDay * 30 * state.alerts.count { it.enabled }
         Text(
-            "$used searches used this month · about $monthly a month at this pace. SerpApi's free plan covers roughly 100–250.",
-            style = MaterialTheme.typography.bodySmall, color = if (monthly > 100) Night.sun else Night.muted,
+            "$used of 250 free searches used this month · about $monthly a month at this pace" + if (monthly > 250) ". That's over the free plan; use 1 check a day or fewer alerts." else "",
+            style = MaterialTheme.typography.bodySmall, color = if (monthly > 250 || used > 220) Night.sun else Night.muted,
         )
         TextButton(onClick = { editingKey = true }) { Text("Change API key", color = Night.muted) }
     }
