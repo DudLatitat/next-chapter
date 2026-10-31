@@ -74,6 +74,45 @@ data class Trip(
     val notes: String = "",
 )
 
+/** Watch fares for a date window and get a notification when one fits. */
+@Serializable
+data class FareAlert(
+    val id: String,
+    val from: String = "LAX",
+    val to: String = "CTU,TFU",
+    /** Earliest and latest day to leave (ISO). */
+    val departStart: String,
+    val departEnd: String,
+    /** How long to stay, in days. */
+    val minDays: Int = 12,
+    val maxDays: Int = 18,
+    val maxPrice: Int = 750,
+    /** Most stops allowed each way (0 = nonstop only); −1 for any. */
+    val maxStops: Int = 1,
+    /** Longest acceptable travel time one way, in hours; 0 for any. */
+    val maxHours: Int = 0,
+    val enabled: Boolean = true,
+    /** Which date pair the next check looks at (they're checked in turn). */
+    val cursor: Int = 0,
+    val lastChecked: Long = 0,
+    /** Cheapest fitting fare found so far, for not repeating the same alert. */
+    val bestPrice: Int = 0,
+)
+
+/** A fare a check found. */
+@Serializable
+data class FareFound(
+    val alertId: String,
+    val checkedAt: Long,
+    val depart: String,
+    val returnDate: String,
+    val price: Int,
+    val stops: Int,
+    val minutes: Int,
+    val airline: String,
+    val fits: Boolean,
+)
+
 /** A fare you saw, for tracking prices before booking. */
 @Serializable
 data class PriceSeen(val id: String, val day: String, val price: Int, val source: String = "")
@@ -125,4 +164,6 @@ data class AppState(
     val toneEvents: List<ToneEvent> = emptyList(),
     /** Practice per day, keyed by day number. */
     val days: Map<Long, DayLog> = emptyMap(),
+    val alerts: List<FareAlert> = emptyList(),
+    val fares: List<FareFound> = emptyList(),
 )

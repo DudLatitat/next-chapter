@@ -29,6 +29,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         store.onChange = { PhraseWidget.refresh(app, it) }
         PhraseWidget.refresh(app, store.state.value)
         Reminder.schedule(app, store.state.value)
+        com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
+    }
+
+    // Fare alerts
+    fun saveAlert(a: com.dudlatitat.nextchapter.data.FareAlert) {
+        store.edit { s -> s.copy(alerts = if (s.alerts.any { it.id == a.id }) s.alerts.map { if (it.id == a.id) a else it } else s.alerts + a) }
+        com.dudlatitat.nextchapter.notify.FareWatch.schedule(getApplication())
+    }
+    fun deleteAlert(a: com.dudlatitat.nextchapter.data.FareAlert) {
+        store.edit { s -> s.copy(alerts = s.alerts.filterNot { it.id == a.id }, fares = s.fares.filterNot { it.alertId == a.id }) }
+        com.dudlatitat.nextchapter.notify.FareWatch.schedule(getApplication())
     }
 
     fun setReminder(on: Boolean, minutes: Int) {

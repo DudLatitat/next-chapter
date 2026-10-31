@@ -138,6 +138,9 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        // Fare alerts
+        item { FareAlertsCard(state, vm) }
+
         // Price tracker
         item {
             GlassCard {
