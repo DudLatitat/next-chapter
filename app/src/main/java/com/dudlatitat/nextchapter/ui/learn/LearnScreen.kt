@@ -137,7 +137,7 @@ private fun Overview(
                 }
                 if (doneToday > 0) {
                     Spacer(Modifier.height(6.dp))
-                    TextButton(onClick = onRedo) { Text("↻  Redo today's lesson ($doneToday phrases, won't change your schedule)", color = Night.sun) }
+                    TextButton(onClick = onRedo) { Text("↻  Redo today ($doneToday)", color = Night.sun) }
                 }
             }
         }
@@ -187,9 +187,14 @@ private fun DeckCard(deck: Deck, state: AppState, modifier: Modifier, onClick: (
                 Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                 Spacer(Modifier.height(8.dp))
                 Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (started == 0) "Not started" else "${started - known} learning · $known known",
+                    style = MaterialTheme.typography.labelSmall, color = Night.muted,
+                )
             }
             Spacer(Modifier.width(12.dp))
-            Text("$known/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
+            Text("$started/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
         }
     }
 }

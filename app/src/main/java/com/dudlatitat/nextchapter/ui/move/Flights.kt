@@ -77,7 +77,9 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     val now = today()
     val upcoming = state.trips.filter { (parseDate(it.returnDate ?: it.depart)?.toEpochDay() ?: 0) >= now }
     val past = state.trips.filter { it !in upcoming }.reversed()
-    val next = upcoming.firstOrNull()
+    // A date set by hand on the Move tab counts as the next trip until it has details.
+    val manual = state.tripDate?.takeIf { (daysUntil(it) ?: -1) >= 0 }?.let { Trip(id = "trip:${System.currentTimeMillis()}", depart = it) }
+    val next = upcoming.firstOrNull() ?: manual
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -115,6 +117,7 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                         Pill(if (next.booked) "Booked ✓" else "Not booked", if (next.booked) Night.jade else Night.sun)
                     }
                     if (next.confirmation.isNotBlank()) Text("Confirmation: ${next.confirmation}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+                    if (state.trips.none { it.depart == next.depart }) Text("Tap to add flights, price and return date", style = MaterialTheme.typography.bodySmall, color = Night.sun)
                 }
             }
         }
@@ -129,8 +132,8 @@ fun FlightsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = { open(context, googleFlights(next)) }, modifier = Modifier.weight(1f)) { Text("Google Flights", color = Night.sun) }
-                    OutlinedButton(onClick = { open(context, skyscanner(next)) }, modifier = Modifier.weight(1f)) { Text("Skyscanner", color = Night.sun) }
+                    OutlinedButton(onClick = { open(context, googleFlights(next)) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Google Flights", color = Night.sun, maxLines = 1, softWrap = false) }
+                    OutlinedButton(onClick = { open(context, skyscanner(next)) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Skyscanner", color = Night.sun, maxLines = 1, softWrap = false) }
                 }
             }
         }
