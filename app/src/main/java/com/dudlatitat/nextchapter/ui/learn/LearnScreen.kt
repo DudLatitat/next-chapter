@@ -282,7 +282,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     val card = queue.firstOrNull()?.let { id -> state.cards.firstOrNull { it.id == id } }
 
     LaunchedEffect(card?.id) {
-        if (card == null && !practice) vm.finishedSession()
+        if (card == null) { if (!practice) vm.finishedSession() }
         else if (direction != Direction.SAY) vm.speaker.say(card.hanzi)
     }
 
