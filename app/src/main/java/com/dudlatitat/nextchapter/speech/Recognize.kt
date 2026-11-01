@@ -62,6 +62,42 @@ object Recognize {
         return r
     }
 
+    /**
+     * Asks Google to download Chinese for on-device recognition (Android 13+), which is what
+     * one-take mode needs. Android shows its own download prompt or notification.
+     */
+    fun downloadChinese(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 33) return false
+        return try {
+            val sr = if (SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context) else SpeechRecognizer.createSpeechRecognizer(context)
+            sr.triggerModelDownload(intent(offline = true))
+            // Give the request a moment before releasing the recognizer.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ sr.destroy() }, 3000)
+            true
+        } catch (_: Exception) { false }
+    }
+
+    /** Whether Chinese is installed for on-device recognition, if Android can say (13+). */
+    suspend fun chineseInstalled(context: Context): Boolean? {
+        if (Build.VERSION.SDK_INT < 33) return null
+        return withContext(Dispatchers.Main) {
+            withTimeoutOrNull(5000) {
+                suspendCancellableCoroutine { cont ->
+                    try {
+                        val sr = if (SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context) else SpeechRecognizer.createSpeechRecognizer(context)
+                        sr.checkRecognitionSupport(intent(offline = true), context.mainExecutor, object : android.speech.RecognitionSupportCallback {
+                            override fun onSupportResult(support: android.speech.RecognitionSupport) {
+                                val ok = support.installedOnDeviceLanguages.any { it.startsWith("zh") || it.startsWith("cmn") }
+                                sr.destroy(); if (cont.isActive) cont.resume(ok)
+                            }
+                            override fun onError(error: Int) { sr.destroy(); if (cont.isActive) cont.resume(null) }
+                        })
+                    } catch (_: Exception) { if (cont.isActive) cont.resume(null) }
+                }
+            }
+        }
+    }
+
     private suspend fun runClip(context: Context, clip: Clip, offline: Boolean): Heard {
         val pipe = ParcelFileDescriptor.createPipe()
         val i = intent(offline).apply {

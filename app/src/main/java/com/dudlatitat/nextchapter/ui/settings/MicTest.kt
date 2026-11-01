@@ -87,6 +87,9 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     var clipResult by remember { mutableStateOf<Heard?>(null) }
     var mode by remember { mutableStateOf(vm.coach.mode) }
     val service = remember { Recognize.service(context) }
+    var installed by remember { mutableStateOf<Boolean?>(null) }
+    var downloadAsked by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { installed = Recognize.chineseInstalled(context) }
 
     val measureRoom = rememberMic {
         scope.launch {
@@ -160,7 +163,19 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text("4 · Recognizer, one take (recording)", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text("The app records you, then hands the recording to the recognizer. It gives the pitch graph too, but not every phone accepts it.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             ResultLine(clipResult)
-            OutlinedButton(onClick = testClip, enabled = busy == null) { Text(when (busy) { "clip" -> "Recording… pause to finish"; "clipcheck" -> "Recognizing…"; else -> "Test one take" }, color = Night.sun) }
+            installed?.let { Text(if (it) "Offline Chinese: installed ✓" else "Offline Chinese: not downloaded (one take needs it)", style = MaterialTheme.typography.bodySmall, color = if (it) Night.jade else Night.sun) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = testClip, enabled = busy == null) { Text(when (busy) { "clip" -> "Recording… pause to finish"; "clipcheck" -> "Recognizing…"; else -> "Test one take" }, color = Night.sun) }
+                if (installed != true && Build.VERSION.SDK_INT >= 33) OutlinedButton(onClick = {
+                    downloadAsked = Recognize.downloadChinese(context)
+                    scope.launch { kotlinx.coroutines.delay(4000); installed = Recognize.chineseInstalled(context) }
+                }) { Text("Download Chinese", color = Night.jade) }
+            }
+            if (downloadAsked) Text(
+                "Asked Google to download Chinese. Watch for a prompt or notification; it can take a few minutes on Wi-Fi. Then test again. " +
+                    "If nothing happens: Google app → Settings → Voice → Offline speech recognition → Chinese.",
+                style = MaterialTheme.typography.bodySmall, color = Night.muted,
+            )
         }
 
         GlassCard(highlight = true) {
