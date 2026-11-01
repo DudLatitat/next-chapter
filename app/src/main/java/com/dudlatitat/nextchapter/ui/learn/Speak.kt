@@ -147,6 +147,7 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                 a.heardText?.let { Text("Heard: $it", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center) }
             } else {
                 Text("Word check: ${a.recognizerError ?: "not available"}", style = MaterialTheme.typography.bodySmall, color = Night.coral, textAlign = TextAlign.Center)
+                if (vm.coach.mode != "live") Text("Tip: switch to Live in Settings → Speaking check.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 if (vm.coach.mode != "live") TextButton(onClick = {
                     scope.launch {
                         busy = true; listeningLive = true

@@ -102,9 +102,11 @@ class Coach(private val context: Context) {
     }
 
     /** Whether this phone lets the app record while the live recognizer listens (learned on first try). */
+    // Off: on Android the app on screen wins the mic, so recording alongside left the recognizer
+    // hearing silence. Kept as a switch in case a phone handles it differently.
     private var parallel: Boolean
-        get() = prefs.getBoolean("parallel", true)
-        set(v) { prefs.edit().putBoolean("parallel", v).apply() }
+        get() = prefs.getBoolean("parallel2", false)
+        set(v) { prefs.edit().putBoolean("parallel2", v).apply() }
 
     /**
      * Word check by listening live. While the recognizer listens, the app also tries to record

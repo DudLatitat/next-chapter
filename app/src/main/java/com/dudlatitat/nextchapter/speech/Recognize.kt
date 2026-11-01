@@ -137,8 +137,11 @@ object Recognize {
     /** Listens live through the mic. */
     suspend fun live(context: Context): Heard {
         if (!available(context)) return Heard(emptyList(), "No speech recognizer on this phone")
-        val r = run(context, intent(offline = true))
-        return if (!r.ok && r.code != SpeechRecognizer.ERROR_NO_MATCH && r.code != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) run(context, intent(offline = false)).let { if (it.ok) it else r } else r
+        // Online first: offline Chinese often isn't available to apps (error 12). A second listen
+        // only happens when there's no internet, and you'd be asked to speak again anyway.
+        val r = run(context, intent(offline = false))
+        val noNet = r.code == SpeechRecognizer.ERROR_NETWORK || r.code == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || r.code == SpeechRecognizer.ERROR_SERVER
+        return if (noNet) run(context, intent(offline = true)).let { if (it.ok) it else r } else r
     }
 
     private fun explain(code: Int) = when (code) {
