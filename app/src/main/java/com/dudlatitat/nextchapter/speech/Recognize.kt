@@ -115,7 +115,7 @@ object Recognize {
                 }
             } catch (_: Exception) {}
         }
-        return run(context, i).also { try { pipe[0].close() } catch (_: Exception) {} }
+        return run(context, i, onDevice = offline).also { try { pipe[0].close() } catch (_: Exception) {} }
     }
 
     /** Listens live through the mic. */
@@ -139,10 +139,12 @@ object Recognize {
         else -> "Recognizer error $code"
     }
 
-    private suspend fun run(context: Context, i: Intent): Heard = withContext(Dispatchers.Main) {
+    private suspend fun run(context: Context, i: Intent, onDevice: Boolean = false): Heard = withContext(Dispatchers.Main) {
         withTimeoutOrNull(20_000) {
             suspendCancellableCoroutine { cont ->
-                val sr = SpeechRecognizer.createSpeechRecognizer(context)
+                // On-device recognition handles recorded audio best, once Chinese is downloaded.
+                val sr = if (onDevice && Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+                    else SpeechRecognizer.createSpeechRecognizer(context)
                 var done = false
                 fun finish(r: Heard) {
                     if (done) return
