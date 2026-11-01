@@ -89,6 +89,7 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     val service = remember { Recognize.service(context) }
     var installed by remember { mutableStateOf<Boolean?>(null) }
     var downloadAsked by remember { mutableStateOf(false) }
+    var downloadStatus by remember { mutableStateOf<String?>(null) }
     androidx.compose.runtime.LaunchedEffect(Unit) { installed = Recognize.chineseInstalled(context) }
 
     val measureRoom = rememberMic {
@@ -166,16 +167,30 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             installed?.let { Text(if (it) "Offline Chinese: installed ✓" else "Offline Chinese: not downloaded (one take needs it)", style = MaterialTheme.typography.bodySmall, color = if (it) Night.jade else Night.sun) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = testClip, enabled = busy == null) { Text(when (busy) { "clip" -> "Recording… pause to finish"; "clipcheck" -> "Recognizing…"; else -> "Test one take" }, color = Night.sun) }
-                if (installed != true && Build.VERSION.SDK_INT >= 33) OutlinedButton(onClick = {
-                    downloadAsked = Recognize.downloadChinese(context)
-                    scope.launch { kotlinx.coroutines.delay(4000); installed = Recognize.chineseInstalled(context) }
-                }) { Text("Download Chinese", color = Night.jade) }
             }
-            if (downloadAsked) Text(
-                "Asked Google to download Chinese. Watch for a prompt or notification; it can take a few minutes on Wi-Fi. Then test again. " +
-                    "If nothing happens: Google app → Settings → Voice → Offline speech recognition → Chinese.",
-                style = MaterialTheme.typography.bodySmall, color = Night.muted,
-            )
+            if (installed != true) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (Build.VERSION.SDK_INT >= 33) OutlinedButton(onClick = {
+                        downloadAsked = true
+                        downloadStatus = "Asking Google…"
+                        Recognize.downloadChinese(context) { downloadStatus = it }
+                        scope.launch { repeat(10) { kotlinx.coroutines.delay(6000); installed = Recognize.chineseInstalled(context); if (installed == true) return@launch } }
+                    }) { Text("Download Chinese", color = Night.jade, maxLines = 1) }
+                    OutlinedButton(onClick = {
+                        val tries = listOf(
+                            android.content.Intent("android.settings.VOICE_INPUT_SETTINGS"),
+                            android.content.Intent(android.provider.Settings.ACTION_SETTINGS),
+                        )
+                        for (i in tries) { try { context.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); break } catch (_: Exception) {} }
+                    }) { Text("Open voice settings", color = Night.sun, maxLines = 1) }
+                }
+                downloadStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.ink) }
+                Text(
+                    "By hand: in voice settings, tap the ⚙️ next to Speech Recognition & Synthesis from Google → Offline (or On-device) speech recognition → add Chinese (Mandarin, Simplified). " +
+                        "Or: Google app → your picture → Settings → Voice → Offline speech recognition.",
+                    style = MaterialTheme.typography.bodySmall, color = Night.muted,
+                )
+            }
         }
 
         GlassCard(highlight = true) {

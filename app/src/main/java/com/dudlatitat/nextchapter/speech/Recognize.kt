@@ -66,8 +66,24 @@ object Recognize {
      * Asks Google to download Chinese for on-device recognition (Android 13+), which is what
      * one-take mode needs. Android shows its own download prompt or notification.
      */
-    fun downloadChinese(context: Context): Boolean {
+    fun downloadChinese(context: Context, status: (String) -> Unit = {}): Boolean {
         if (Build.VERSION.SDK_INT < 33) return false
+        if (Build.VERSION.SDK_INT >= 34) return try {
+            val sr = if (SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context) else SpeechRecognizer.createSpeechRecognizer(context)
+            status("Asking Google to download Chinese…")
+            sr.triggerModelDownload(intent(offline = true), context.mainExecutor, object : android.speech.ModelDownloadListener {
+                override fun onProgress(completedPercent: Int) = status("Downloading Chinese… $completedPercent%")
+                override fun onSuccess() { status("Chinese downloaded ✓ Test one take again."); sr.destroy() }
+                override fun onScheduled() { status("Download scheduled; Google will fetch it on Wi-Fi soon. Test again in a few minutes."); sr.destroy() }
+                override fun onError(error: Int) {
+                    status(
+                        "Google wouldn't download it from here (error $error). Use \"Open voice settings\" and add Chinese under offline / on-device speech recognition.",
+                    )
+                    sr.destroy()
+                }
+            })
+            true
+        } catch (e: Exception) { status("Couldn't start the download (${e.message}). Use \"Open voice settings\"."); false }
         return try {
             val sr = if (SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context) else SpeechRecognizer.createSpeechRecognizer(context)
             sr.triggerModelDownload(intent(offline = true))
