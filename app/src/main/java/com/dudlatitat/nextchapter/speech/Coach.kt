@@ -5,6 +5,9 @@ import com.dudlatitat.nextchapter.Speaker
 import com.dudlatitat.nextchapter.data.Pinyin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 
 /** How one character came out. */
 enum class Mark { RIGHT, TONE, WRONG, MISSED }
@@ -85,16 +88,54 @@ class Coach(private val context: Context) {
         return Attempt(results?.second, results?.first, melody, userCurve, ref, tone, tooQuiet = false, recognizerError = heard.error)
     }
 
-    /** Word check by listening live (the recognizer uses the mic itself). */
-    suspend fun checkLive(hanzi: String, pinyin: String): Attempt {
-        val heard = Recognize.live(context)
+    private data class PitchPart(val melody: Int?, val user: FloatArray, val ref: FloatArray, val tone: Pitch.ToneGuess?)
+
+    /** The pitch side of a check (graph, melody score, single-syllable tone), from a recording. */
+    private suspend fun pitchOf(clip: Clip, hanzi: String): PitchPart? {
+        val hz = withContext(Dispatchers.Default) { Pitch.track(clip.samples, clip.rate) }
+        if (hz.count { it > 0 } < 6) return null
+        val p = profileFor(hz)
+        val userCurve = p.normalize(Pitch.voiced(hz))
+        val ref = reference(hanzi)
+        val chars = hanzi.filter { it.code in 0x4E00..0x9FFF }
+        return PitchPart(if (ref.isNotEmpty()) Pitch.phraseScore(userCurve, ref) else null, userCurve, ref, if (chars.length == 1) Pitch.classify(hz, p) else null)
+    }
+
+    /** Whether this phone lets the app record while the live recognizer listens (learned on first try). */
+    private var parallel: Boolean
+        get() = prefs.getBoolean("parallel", true)
+        set(v) { prefs.edit().putBoolean("parallel", v).apply() }
+
+    /**
+     * Word check by listening live. While the recognizer listens, the app also tries to record
+     * you for the pitch graph and tones; if the phone won't share the mic, it stops trying.
+     */
+    suspend fun checkLive(hanzi: String, pinyin: String): Attempt = coroutineScope {
+        var heard: Heard
+        var clip: Clip? = null
+        if (parallel) {
+            var stop = false
+            val rec = async { delay(250); Recorder.record(maxSeconds = 15f, stop = { stop }) }
+            heard = Recognize.live(context)
+            stop = true
+            clip = try { rec.await() } catch (_: Exception) { null }
+            if (heard.code == android.speech.SpeechRecognizer.ERROR_AUDIO || heard.code == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                // The two fought over the mic: give it to the recognizer from now on.
+                parallel = false; clip = null
+                heard = Recognize.live(context)
+            }
+        } else heard = Recognize.live(context)
+        val pitch = clip?.let { pitchOf(it, hanzi) }
         val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
-        return Attempt(results?.second, results?.first, null, FloatArray(0), FloatArray(0), null, tooQuiet = false, recognizerError = heard.error)
+        Attempt(
+            results?.second, results?.first, pitch?.melody, pitch?.user ?: FloatArray(0), pitch?.ref ?: FloatArray(0), pitch?.tone,
+            tooQuiet = false, recognizerError = heard.error,
+        )
     }
 
     /** "recorded" (one take: pitch graph + words) or "live" (words only, works on more phones). */
     var mode: String
-        get() = prefs.getString("mode", "recorded") ?: "recorded"
+        get() = prefs.getString("mode", "live") ?: "live"
         set(v) { prefs.edit().putString("mode", v).apply() }
 
     /** Learns your voice from four recordings of 妈 麻 马 骂. */

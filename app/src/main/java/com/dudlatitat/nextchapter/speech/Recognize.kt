@@ -150,7 +150,7 @@ object Recognize {
         SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The recognizer is busy; try again"
         SpeechRecognizer.ERROR_CLIENT -> "The recognizer stopped early"
         SpeechRecognizer.ERROR_SERVER -> "The recognition server had a problem"
-        12 -> "Chinese isn't supported by this recognizer (try Google's)"
+        12 -> "This phone's recognizer doesn't do Chinese from recordings; use Live (it works the same)"
         13 -> "Chinese isn't downloaded for offline use"
         else -> "Recognizer error $code"
     }
