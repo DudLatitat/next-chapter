@@ -1,11 +1,13 @@
 package com.dudlatitat.nextchapter.speech
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -16,26 +18,53 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.thread
 import kotlin.coroutines.resume
 
+/** What the recognizer heard (best guess first), or why it couldn't. */
+data class Heard(val texts: List<String>, val error: String? = null, val code: Int = 0) {
+    val ok get() = error == null
+}
+
 /** The phone's own Chinese speech recognizer: what a native ear would write down. */
 object Recognize {
     fun available(context: Context) = SpeechRecognizer.isRecognitionAvailable(context)
 
-    private fun intent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-        putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+    /** The recognizer app the phone uses ("com.google.android.tts", Samsung's…), if Android says. */
+    fun service(context: Context): String? = try {
+        Settings.Secure.getString(context.contentResolver, "voice_recognition_service")?.let { ComponentName.unflattenFromString(it)?.packageName ?: it }
+    } catch (_: Exception) { null }
+
+    fun describe(pkg: String?): String = when {
+        pkg == null -> "Unknown"
+        pkg.contains("google") -> "Google ($pkg)"
+        pkg.contains("samsung") || pkg.contains("bixby") -> "Samsung ($pkg). Google's usually does much better with Chinese"
+        else -> pkg
     }
 
-    /**
-     * Recognizes audio you already recorded (Android 13+), so one take gives both the pitch
-     * check and the word check. Null if the recognizer can't take recorded audio.
-     */
-    suspend fun fromClip(context: Context, clip: Clip): List<String>? {
-        if (Build.VERSION.SDK_INT < 33 || !available(context)) return null
+    private fun intent(offline: Boolean) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "zh-CN")
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+        putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offline)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+        // Give learners time: don't cut off after a short pause.
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+    }
+
+    /** Recognizes audio you already recorded (Android 13+), so one take gives pitch and words. */
+    suspend fun fromClip(context: Context, clip: Clip): Heard {
+        if (Build.VERSION.SDK_INT < 33) return Heard(emptyList(), "Needs Android 13 or newer; use Live mode")
+        if (!available(context)) return Heard(emptyList(), "No speech recognizer on this phone")
+        val clean = clip.forRecognizer()
+        var r = runClip(context, clean, offline = true)
+        // Offline Chinese not downloaded (or not supported this way): try again online.
+        if (!r.ok && r.code != SpeechRecognizer.ERROR_NO_MATCH) r = runClip(context, clean, offline = false).let { if (it.ok) it else r }
+        return r
+    }
+
+    private suspend fun runClip(context: Context, clip: Clip, offline: Boolean): Heard {
         val pipe = ParcelFileDescriptor.createPipe()
-        val i = intent().apply {
+        val i = intent(offline).apply {
             putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, pipe[0])
             putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
             putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT)
@@ -46,30 +75,51 @@ object Recognize {
             try {
                 ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]).use { out ->
                     out.write(bytes)
-                    out.write(ByteArray(clip.rate)) // half a second of silence to end the utterance
+                    out.write(ByteArray(clip.rate * 2)) // a second of silence to end the utterance
                 }
             } catch (_: Exception) {}
         }
         return run(context, i).also { try { pipe[0].close() } catch (_: Exception) {} }
     }
 
-    /** Listens live through the mic (the fallback when recorded audio isn't accepted). */
-    suspend fun live(context: Context): List<String>? = if (available(context)) run(context, intent()) else null
+    /** Listens live through the mic. */
+    suspend fun live(context: Context): Heard {
+        if (!available(context)) return Heard(emptyList(), "No speech recognizer on this phone")
+        val r = run(context, intent(offline = true))
+        return if (!r.ok && r.code != SpeechRecognizer.ERROR_NO_MATCH && r.code != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) run(context, intent(offline = false)).let { if (it.ok) it else r } else r
+    }
 
-    private suspend fun run(context: Context, i: Intent): List<String>? = withContext(Dispatchers.Main) {
-        withTimeoutOrNull(15_000) {
+    private fun explain(code: Int) = when (code) {
+        SpeechRecognizer.ERROR_NO_MATCH -> "Heard you, but couldn't match any Chinese words"
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Didn't hear any speech"
+        SpeechRecognizer.ERROR_AUDIO -> "Couldn't use the audio (the recognizer may not accept recordings; try Live mode)"
+        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Needs internet, or download offline Chinese in Google's speech settings"
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is off"
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The recognizer is busy; try again"
+        SpeechRecognizer.ERROR_CLIENT -> "The recognizer stopped early"
+        SpeechRecognizer.ERROR_SERVER -> "The recognition server had a problem"
+        12 -> "Chinese isn't supported by this recognizer (try Google's)"
+        13 -> "Chinese isn't downloaded for offline use"
+        else -> "Recognizer error $code"
+    }
+
+    private suspend fun run(context: Context, i: Intent): Heard = withContext(Dispatchers.Main) {
+        withTimeoutOrNull(20_000) {
             suspendCancellableCoroutine { cont ->
                 val sr = SpeechRecognizer.createSpeechRecognizer(context)
                 var done = false
-                fun finish(r: List<String>?) {
+                fun finish(r: Heard) {
                     if (done) return
                     done = true
                     sr.destroy()
                     if (cont.isActive) cont.resume(r)
                 }
                 sr.setRecognitionListener(object : RecognitionListener {
-                    override fun onResults(results: Bundle?) = finish(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION))
-                    override fun onError(error: Int) = finish(if (error == SpeechRecognizer.ERROR_NO_MATCH) emptyList() else null)
+                    override fun onResults(results: Bundle?) {
+                        val list = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty().filter { it.isNotBlank() }
+                        finish(if (list.isEmpty()) Heard(emptyList(), explain(SpeechRecognizer.ERROR_NO_MATCH), SpeechRecognizer.ERROR_NO_MATCH) else Heard(list))
+                    }
+                    override fun onError(error: Int) = finish(Heard(emptyList(), explain(error), error))
                     override fun onReadyForSpeech(params: Bundle?) {}
                     override fun onBeginningOfSpeech() {}
                     override fun onRmsChanged(rmsdB: Float) {}
@@ -81,6 +131,6 @@ object Recognize {
                 cont.invokeOnCancellation { if (!done) { done = true; sr.destroy() } }
                 sr.startListening(i)
             }
-        }
+        } ?: Heard(emptyList(), "The recognizer didn't answer in time")
     }
 }

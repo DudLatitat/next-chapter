@@ -60,6 +60,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    var micTest by remember { mutableStateOf(false) }
+    if (micTest) { MicTestScreen(vm, onBack = { micTest = false }); return }
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
@@ -140,6 +142,13 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
         SectionLabel("Voice")
         VoiceCard(vm)
+
+        SectionLabel("Speaking check")
+        GlassCard(onClick = { micTest = true }) {
+            Text("Test microphone & recognition →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
+            Text("Room noise, hear your own recording, and test both ways the word check can listen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            Text("Using: ${if (vm.coach.mode == "live") "Live" else "One take"}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        }
 
         SectionLabel("Backup")
         GlassCard {

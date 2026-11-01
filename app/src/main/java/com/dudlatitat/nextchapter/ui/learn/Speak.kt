@@ -106,14 +106,23 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
     var liveChars by remember(hanzi) { mutableStateOf<List<CharResult>?>(null) }
     var stopNow by remember { mutableStateOf(false) }
 
+    var listeningLive by remember { mutableStateOf(false) }
     val start = rememberMic {
         if (recording) { stopNow = true; return@rememberMic }
+        if (listeningLive) return@rememberMic
         scope.launch {
             vm.speaker.stop()
-            recording = true; stopNow = false; liveChars = null
-            val clip: Clip = Recorder.record(stop = { stopNow }, level = { level = it })
-            recording = false; busy = true
-            val a = vm.coach.check(clip, hanzi, pinyin)
+            liveChars = null
+            val a = if (vm.coach.mode == "live") {
+                // The recognizer listens through the mic itself.
+                listeningLive = true; busy = true
+                vm.coach.checkLive(hanzi, pinyin).also { listeningLive = false }
+            } else {
+                recording = true; stopNow = false
+                val clip: Clip = Recorder.record(stop = { stopNow }, level = { level = it })
+                recording = false; busy = true
+                vm.coach.check(clip, hanzi, pinyin)
+            }
             attempt = a
             busy = false
             logTones(vm, a, pinyin)
@@ -123,7 +132,7 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         MicButton(recording, level, busy, onClick = start)
         Text(
-            when { recording -> "Listening… tap to stop"; busy -> "Checking…"; attempt == null -> "Tap and say it"; else -> "Tap to try again" },
+            when { listeningLive -> "Listening… just speak"; recording -> "Listening… tap to stop"; busy -> "Checking…"; attempt == null -> "Tap and say it"; else -> "Tap to try again" },
             style = MaterialTheme.typography.bodySmall, color = Night.muted,
         )
         attempt?.let { a ->
@@ -133,10 +142,21 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                 return@let
             }
             val chars = liveChars ?: a.chars
-            if (chars != null) CharResults(chars)
-            else TextButton(onClick = {
-                scope.launch { busy = true; liveChars = vm.coach.checkLive(hanzi, pinyin)?.second ?: emptyList(); busy = false }
-            }) { Text("Check the words too (say it once more)", color = Night.sun) }
+            if (chars != null) {
+                CharResults(chars)
+                a.heardText?.let { Text("Heard: $it", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center) }
+            } else {
+                Text("Word check: ${a.recognizerError ?: "not available"}", style = MaterialTheme.typography.bodySmall, color = Night.coral, textAlign = TextAlign.Center)
+                if (vm.coach.mode != "live") TextButton(onClick = {
+                    scope.launch {
+                        busy = true; listeningLive = true
+                        val live = vm.coach.checkLive(hanzi, pinyin)
+                        listeningLive = false; busy = false
+                        liveChars = live.chars ?: emptyList()
+                        if (live.chars == null) attempt = a.copy(recognizerError = live.recognizerError)
+                    }
+                }) { Text("Try the live recognizer (say it once more)", color = Night.sun) }
+            }
             a.tone?.let { t ->
                 val aimed = com.dudlatitat.nextchapter.data.Pinyin.syllablesIn(pinyin).firstOrNull()?.second
                 Spacer(Modifier.height(6.dp))

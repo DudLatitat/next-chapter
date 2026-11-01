@@ -18,6 +18,33 @@ import kotlin.math.sqrt
 /** Mono audio as floats (−1…1) plus its sample rate; [pcm] is the same as 16-bit samples. */
 class Clip(val samples: FloatArray, val rate: Int) {
     val seconds get() = samples.size / rate.toFloat()
+    /** Loudness as dBFS (0 is the loudest possible; quiet rooms are around −60). */
+    fun rmsDb(from: Int = 0, to: Int = samples.size): Float {
+        if (to <= from) return -100f
+        var e = 0.0
+        for (i in from until to) e += samples[i] * samples[i]
+        return (10 * kotlin.math.log10((e / (to - from)).coerceAtLeast(1e-10))).toFloat()
+    }
+
+    /**
+     * Ready for the recognizer: silence trimmed from both ends (keeping a little), and quiet
+     * speech boosted so its peak is near full volume.
+     */
+    fun forRecognizer(): Clip {
+        if (samples.isEmpty()) return this
+        val win = rate / 50 // 20 ms
+        val levels = (0 until samples.size / win).map { k -> rmsDb(k * win, (k + 1) * win) }
+        if (levels.isEmpty()) return this
+        val floor = levels.sorted()[levels.size / 10]
+        val loud = levels.indices.filter { levels[it] > floor + 12 }
+        val a = ((loud.firstOrNull() ?: 0) - 15).coerceAtLeast(0) * win
+        val b = (((loud.lastOrNull() ?: levels.lastIndex) + 20) * win).coerceAtMost(samples.size)
+        val cut = samples.copyOfRange(a, maxOf(a + 1, b))
+        val peak = cut.maxOf { kotlin.math.abs(it) }.coerceAtLeast(1e-4f)
+        val gain = (0.9f / peak).coerceIn(1f, 8f)
+        return Clip(FloatArray(cut.size) { (cut[it] * gain).coerceIn(-1f, 1f) }, rate)
+    }
+
     fun pcm16(): ByteArray {
         val out = ByteArray(samples.size * 2)
         samples.forEachIndexed { i, s ->
@@ -39,6 +66,8 @@ object Recorder {
     suspend fun record(maxSeconds: Float = 6f, stop: () -> Boolean = { false }, level: (Float) -> Unit = {}): Clip = withContext(Dispatchers.IO) {
         val minBuf = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuf, RATE))
+        // The phone's own noise suppression, where it has it, cleans up background noise.
+        val ns = try { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(rec.audioSessionId)?.apply { enabled = true } else null } catch (_: Exception) { null }
         val chunk = ShortArray(RATE / 20) // 50 ms
         val all = ArrayList<Float>(RATE * 4)
         var heard = false
@@ -59,6 +88,7 @@ object Recorder {
             }
         } finally {
             try { rec.stop() } catch (_: Exception) {}
+            try { ns?.release() } catch (_: Exception) {}
             rec.release()
         }
         Clip(all.toFloatArray(), RATE)

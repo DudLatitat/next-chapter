@@ -21,6 +21,8 @@ data class Attempt(
     /** Per-character check by the recognizer; null if it wasn't available. */
     val chars: List<CharResult>?,
     val heardText: String?,
+    /** Why the word check didn't work, if it didn't. */
+    val recognizerError: String? = null,
     /** 0–100 pitch-melody match to the native recording; null without a recording or voice. */
     val melody: Int?,
     /** Your pitch and the native pitch, both in semitones vs each speaker's normal pitch. */
@@ -79,15 +81,21 @@ class Coach(private val context: Context) {
         val tone = if (chars.length == 1) Pitch.classify(hz, p) else null
 
         val heard = Recognize.fromClip(context, clip)
-        val results = heard?.let { judge(hanzi, pinyin, it) }
-        return Attempt(results?.second, results?.first, melody, userCurve, ref, tone, tooQuiet = false)
+        val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
+        return Attempt(results?.second, results?.first, melody, userCurve, ref, tone, tooQuiet = false, recognizerError = heard.error)
     }
 
-    /** Word check by listening live (for phones that can't recognize recorded audio). */
-    suspend fun checkLive(hanzi: String, pinyin: String): Pair<String, List<CharResult>>? {
-        val heard = Recognize.live(context) ?: return null
-        return judge(hanzi, pinyin, heard)
+    /** Word check by listening live (the recognizer uses the mic itself). */
+    suspend fun checkLive(hanzi: String, pinyin: String): Attempt {
+        val heard = Recognize.live(context)
+        val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
+        return Attempt(results?.second, results?.first, null, FloatArray(0), FloatArray(0), null, tooQuiet = false, recognizerError = heard.error)
     }
+
+    /** "recorded" (one take: pitch graph + words) or "live" (words only, works on more phones). */
+    var mode: String
+        get() = prefs.getString("mode", "recorded") ?: "recorded"
+        set(v) { prefs.edit().putString("mode", v).apply() }
 
     /** Learns your voice from four recordings of 妈 麻 马 骂. */
     suspend fun calibrate(clips: List<Clip>): Boolean {
