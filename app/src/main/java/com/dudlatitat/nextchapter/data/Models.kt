@@ -83,6 +83,10 @@ data class FareAlert(
     /** Earliest and latest day to leave (ISO). */
     val departStart: String,
     val departEnd: String,
+    /** Days of the week you're willing to leave (1 = Monday … 7 = Sunday); empty = any day. */
+    val departDays: List<Int> = emptyList(),
+    /** Days of the week you're willing to fly home; empty = any day. */
+    val returnDays: List<Int> = emptyList(),
     /** How long to stay, in days. */
     val minDays: Int = 12,
     val maxDays: Int = 18,

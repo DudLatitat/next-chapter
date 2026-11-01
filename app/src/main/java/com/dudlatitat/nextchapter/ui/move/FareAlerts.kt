@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -165,7 +167,7 @@ private fun AlertRow(state: AppState, a: FareAlert, onEdit: () -> Unit, onToggle
             Column(Modifier.weight(1f)) {
                 Text("${a.from} → ${a.to.replace(",", "/")}", style = MaterialTheme.typography.titleSmall, color = Night.ink)
                 Text(
-                    "Leave ${shortDate(a.departStart)}–${shortDate(a.departEnd)} · stay ${a.minDays}–${a.maxDays} days",
+                    "Leave ${shortDate(a.departStart)}–${shortDate(a.departEnd)}" + dayList(a.departDays, " on ") + " · stay ${a.minDays}–${a.maxDays} days" + dayList(a.returnDays, " · home on "),
                     style = MaterialTheme.typography.bodySmall, color = Night.muted,
                 )
                 Text(
@@ -224,6 +226,8 @@ private fun AlertDialog(alert: FareAlert, isNew: Boolean, onDismiss: () -> Unit,
                     OutlinedButton(onClick = { picking = "start" }, modifier = Modifier.weight(1f)) { Text(prettyDate(a.departStart) ?: "pick", color = Night.sun, maxLines = 1) }
                     OutlinedButton(onClick = { picking = "end" }, modifier = Modifier.weight(1f)) { Text(prettyDate(a.departEnd) ?: "pick", color = Night.sun, maxLines = 1) }
                 }
+                WeekdayPicker("Only leave on", a.departDays) { a = a.copy(departDays = it) }
+                WeekdayPicker("Only fly home on", a.returnDays) { a = a.copy(returnDays = it) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(minD, { minD = it.filter(Char::isDigit).take(2) }, label = { Text("Stay min (days)") }, singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
                     OutlinedTextField(maxD, { maxD = it.filter(Char::isDigit).take(2) }, label = { Text("Stay max") }, singleLine = true, keyboardOptions = digits, modifier = Modifier.weight(1f))
@@ -256,5 +260,29 @@ private fun AlertDialog(alert: FareAlert, isNew: Boolean, onDismiss: () -> Unit,
             onDismiss = { picking = null },
             onPick = { iso -> if (iso != null) a = if (which == "start") a.copy(departStart = iso) else a.copy(departEnd = iso); picking = null },
         )
+    }
+}
+
+private val dayNames = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+private fun dayList(days: List<Int>, prefix: String) =
+    if (days.isEmpty() || days.size == 7) "" else prefix + days.sorted().joinToString("/") { dayNames[it - 1] }
+
+/** Seven day chips; none selected means any day. */
+@Composable
+private fun WeekdayPicker(label: String, days: List<Int>, onChange: (List<Int>) -> Unit) {
+    Column {
+        Text(label + if (days.isEmpty()) " · any day" else "", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            (1..7).forEach { d ->
+                val on = d in days
+                androidx.compose.foundation.layout.Box(
+                    Modifier.weight(1f).height(40.dp)
+                        .then(androidx.compose.ui.Modifier.background(if (on) Night.sun.copy(alpha = 0.25f) else Night.card, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)))
+                        .clickable { onChange(if (on) days - d else (days + d).sorted()) },
+                    contentAlignment = Alignment.Center,
+                ) { Text(dayNames[d - 1].take(2), style = MaterialTheme.typography.labelMedium, color = if (on) Night.sun else Night.muted) }
+            }
+        }
     }
 }

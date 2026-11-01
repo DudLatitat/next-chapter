@@ -108,10 +108,18 @@ object FareWatch {
         val first = maxOf(start, LocalDate.now().plusDays(1))
         val out = mutableListOf<Pair<LocalDate, LocalDate>>()
         var d = first
+        val hi = maxOf(a.minDays, a.maxDays)
         while (!d.isAfter(end) && out.size < 400) {
-            // Stay lengths: the shortest, the longest and every 3 days between, to spread searches.
-            val lengths = (a.minDays..maxOf(a.minDays, a.maxDays) step 3).toMutableSet().apply { add(maxOf(a.minDays, a.maxDays)) }
-            lengths.sorted().forEach { out += d to d.plusDays(it.toLong()) }
+            if (a.departDays.isEmpty() || d.dayOfWeek.value in a.departDays) {
+                val lengths = if (a.returnDays.isEmpty()) {
+                    // Stay lengths: the shortest, the longest and every 3 days between, to spread searches.
+                    (a.minDays..hi step 3).toMutableSet().apply { add(hi) }.sorted()
+                } else {
+                    // Only return on the chosen weekdays: every length that lands on one.
+                    (a.minDays..hi).filter { d.plusDays(it.toLong()).dayOfWeek.value in a.returnDays }
+                }
+                lengths.forEach { out += d to d.plusDays(it.toLong()) }
+            }
             d = d.plusDays(1)
         }
         return out
