@@ -51,6 +51,19 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     // Opening a review straight from Today.
     var startReview by rememberSaveable { mutableStateOf(false) }
     var startRedo by rememberSaveable { mutableStateOf(false) }
+    var startTool by rememberSaveable { mutableStateOf<String?>(null) }
+    // New milestones get a little celebration, once.
+    val fresh = com.dudlatitat.nextchapter.data.Milestones.fresh(state)
+    if (fresh.isNotEmpty()) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { vm.seeMilestones(fresh.map { it.id }) },
+        title = { Text(if (fresh.size == 1) "${fresh[0].emoji} ${fresh[0].title}!" else "🏅 ${fresh.size} new milestones!") },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                fresh.forEach { Text("${it.emoji}  ${it.title}: ${it.detail}") }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.seeMilestones(fresh.map { it.id }) }) { Text("太好了!") } },
+    )
     var settings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(openStudy) {
@@ -91,8 +104,8 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN })
-                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false }, startRedo = startRedo)
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN })
+                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool)
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.PROGRESS -> ProgressScreen(state)
                 }

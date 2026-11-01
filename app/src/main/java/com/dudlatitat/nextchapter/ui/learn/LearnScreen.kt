@@ -72,7 +72,7 @@ import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 @Composable
-fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false) {
+fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var redoing by rememberSaveable { mutableStateOf(false) }
     var drill by rememberSaveable { mutableStateOf<String?>(null) }
@@ -81,6 +81,7 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
     var calibrating by rememberSaveable { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
 
+    LaunchedEffect(startTool) { if (startTool != null) { tool = startTool; onReviewStarted() } }
     LaunchedEffect(startReview, startRedo) {
         if (startReview) { reviewing = true; onReviewStarted() }
         if (startRedo) { redoing = true; onReviewStarted() }
@@ -93,6 +94,10 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
         drill != null -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = drill!!.split(",").map { it.toInt() }.toSet())
         tool == "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "writing" -> WritingScreen(state, vm, onBack = { tool = null })
+        tool == "drive" -> DriveScreen(vm, onBack = { tool = null })
+        tool == "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
+        tool == "stories" -> StoriesScreen(state, vm, onBack = { tool = null })
+        tool == "culture" -> CultureScreen(vm, onBack = { tool = null })
         tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
@@ -150,6 +155,14 @@ private fun Overview(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ToolCard("写字", "Writing", "Trace with stroke order", Night.sun, Modifier.weight(1f)) { onTool("writing") }
                     ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ToolCard("语法", "Grammar", "Patterns that build sentences", Night.violet, Modifier.weight(1f)) { onTool("grammar") }
+                    ToolCard("故事", "Stories", "Read, tap any word", Night.rose, Modifier.weight(1f)) { onTool("stories") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ToolCard("开车", "Drive mode", "Hands-free on your commute", Night.jade, Modifier.weight(1f)) { onTool("drive") }
+                    ToolCard("礼节", "Etiquette", "Meeting her family, holidays", Night.sun, Modifier.weight(1f)) { onTool("culture") }
                 }
             }
         }

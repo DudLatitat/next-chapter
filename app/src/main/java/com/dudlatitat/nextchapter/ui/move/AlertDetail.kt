@@ -3,6 +3,8 @@ package com.dudlatitat.nextchapter.ui.move
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -69,7 +71,9 @@ fun AlertDetail(state: AppState, vm: MainViewModel, alert: FareAlert, onEdit: ()
     var tab by rememberSaveable { mutableStateOf("fares") }
     var sortByPrice by rememberSaveable { mutableStateOf(true) }
     val fares = state.fares.filter { it.alertId == alert.id }
-    val shown = if (sortByPrice) fares.sortedBy { it.price } else fares.sortedByDescending { it.checkedAt }
+    var selectedDay by rememberSaveable { mutableStateOf<String?>(null) }
+    val filtered = if (selectedDay == null) fares else fares.filter { it.depart == selectedDay }
+    val shown = if (sortByPrice) filtered.sortedBy { it.price } else filtered.sortedByDescending { it.checkedAt }
     val log = state.fareLog.filter { it.alertId == alert.id || it.alertId == null }.reversed()
     val nextRun by produceState<Long?>(null, state.fareLog.size) { value = withContext(Dispatchers.IO) { FareWatch.nextRun(context) } }
     val upcoming = remember(state.fares.size, alert) { FareWatch.nextPairs(context, alert, FareWatch.runBudget(context).coerceAtLeast(3)) }
@@ -120,6 +124,8 @@ fun AlertDetail(state: AppState, vm: MainViewModel, alert: FareAlert, onEdit: ()
                 )
             }
         }
+
+        item { FareCalendar(alert, fares, selectedDay) { selectedDay = if (selectedDay == it) null else it } }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -202,5 +208,44 @@ private fun Option(o: FareOption, showPrice: Boolean = false) {
         )
         o.legs.forEach { Text("✈ $it", style = MaterialTheme.typography.bodySmall, color = Night.ink) }
         o.layovers.forEach { Text("   ⏱ $it", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
+    }
+}
+
+/** Each departure day in the window, coloured by the cheapest fare found leaving that day. */
+@Composable
+private fun FareCalendar(alert: FareAlert, fares: List<FareFound>, selected: String?, onPick: (String) -> Unit) {
+    val start = parseDate(alert.departStart) ?: return
+    val end = parseDate(alert.departEnd) ?: return
+    val days = generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(end) }.take(62).toList()
+    val cheapest = fares.groupBy { it.depart }.mapValues { (_, v) -> v.minOf { it.price } }
+    GlassCard {
+        Text("Fare calendar · by departure day", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+        Text("Green fits your price · yellow within 15% · tap a day to filter", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        Spacer(Modifier.height(8.dp))
+        days.chunked(7).forEach { week ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                week.forEach { d ->
+                    val iso = d.toString()
+                    val p = cheapest[iso]
+                    val color = when {
+                        p == null -> Night.muted
+                        p <= alert.maxPrice -> Night.jade
+                        p <= alert.maxPrice * 1.15 -> Night.sun
+                        else -> Night.coral
+                    }
+                    Column(
+                        Modifier.weight(1f).padding(vertical = 2.dp)
+                            .then(if (iso == selected) Modifier.background(color.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) else Modifier.background(color.copy(alpha = 0.12f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)))
+                            .clickable { onPick(iso) }.padding(vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(d.format(DateTimeFormatter.ofPattern("EEE")).take(2), style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                        Text("${d.dayOfMonth}", style = MaterialTheme.typography.labelLarge, color = Night.ink)
+                        Text(p?.let { "$" + it } ?: "–", style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+                    }
+                }
+                repeat(7 - week.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }

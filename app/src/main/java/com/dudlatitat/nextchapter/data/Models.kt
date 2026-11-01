@@ -193,4 +193,12 @@ data class AppState(
     val alerts: List<FareAlert> = emptyList(),
     val fares: List<FareFound> = emptyList(),
     val fareLog: List<FareLog> = emptyList(),
+    /** Trip mode: "auto" (on during a planned trip), "on" or "off". */
+    val tripMode: String = "auto",
+    val milestonesSeen: List<String> = emptyList(),
+    val dialoguesDone: List<String> = emptyList(),
+    val grammarPassed: List<String> = emptyList(),
+    val storiesRead: List<String> = emptyList(),
+    val charsWritten: Int = 0,
+    val driveMinutes: Int = 0,
 )

@@ -127,6 +127,17 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        SectionLabel("Trip mode")
+        GlassCard {
+            Text("Survival screen on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+            Text("Her address, quick yuan and the lines you'll need most. Auto turns it on during a trip in your flight planner.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                listOf("auto" to "Auto", "on" to "On", "off" to "Off").forEach { (v, l) ->
+                    androidx.compose.material3.FilterChip(selected = state.tripMode == v, onClick = { vm.setTripMode(v) }, label = { Text(l) })
+                }
+            }
+        }
+
         SectionLabel("Voice")
         VoiceCard(vm)
 

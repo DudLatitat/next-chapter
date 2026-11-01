@@ -93,6 +93,7 @@ private fun Scene(d: Dialogue, vm: MainViewModel, onBack: () -> Unit, onCalibrat
 
     LaunchedEffect(at) {
         current?.let { if (!it.you) vm.speaker.say(it.hanzi) }
+        if (at >= d.lines.size) vm.markDialogue(d.id)
         if (at > 0) list.animateScrollToItem(maxOf(0, at))
     }
 

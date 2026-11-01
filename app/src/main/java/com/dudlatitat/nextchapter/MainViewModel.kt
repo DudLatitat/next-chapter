@@ -32,6 +32,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
+    // Progress in the learning tools (for milestones)
+    private fun addOnce(list: List<String>, id: String) = if (id in list) list else list + id
+    fun markDialogue(id: String) = store.edit { it.copy(dialoguesDone = addOnce(it.dialoguesDone, id)) }
+    fun passGrammar(id: String) = store.edit { it.copy(grammarPassed = addOnce(it.grammarPassed, id)) }
+    fun readStory(id: String) = store.edit { it.copy(storiesRead = addOnce(it.storiesRead, id)) }
+    fun wroteChar() = store.edit { it.copy(charsWritten = it.charsWritten + 1) }
+    fun seeMilestones(ids: List<String>) = store.edit { s -> s.copy(milestonesSeen = (s.milestonesSeen + ids).distinct()) }
+    fun setTripMode(mode: String) = store.edit { it.copy(tripMode = mode) }
+
     // Fare alerts
     fun saveAlert(a: com.dudlatitat.nextchapter.data.FareAlert) {
         store.edit { s -> s.copy(alerts = if (s.alerts.any { it.id == a.id }) s.alerts.map { if (it.id == a.id) a else it } else s.alerts + a) }

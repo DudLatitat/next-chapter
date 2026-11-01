@@ -179,7 +179,7 @@ fun WritingScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
             TextButton(onClick = { vm.speaker.say(item.first.toString(), slow = true) }) { Text("▶ Hear", color = Night.sun) }
         }
-        TraceBox(item.first, onDone = {})
+        TraceBox(item.first, onDone = { vm.wroteChar() })
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { if (index > 0) index-- }, modifier = Modifier.weight(1f), enabled = index > 0) { Text("← Previous", color = Night.muted) }
             OutlinedButton(onClick = { if (index < chars.size - 1) index++ }, modifier = Modifier.weight(1f)) { Text("Next →", color = Night.sun) }

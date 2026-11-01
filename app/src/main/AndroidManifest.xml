@@ -3,6 +3,9 @@
 
     <!-- Optional daily reminder to practice. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Drive mode keeps talking with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Only for fetching today's dollar-to-yuan rate when you tap Update. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Speaking practice: recorded on the phone, checked on the phone. -->
@@ -65,6 +68,11 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_phrase_info" />
         </receiver>
+
+        <service
+            android:name=".drive.DriveService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <receiver android:name=".notify.ReminderReceiver" android:exported="false" />
         <receiver android:name=".notify.BootReceiver" android:exported="false">

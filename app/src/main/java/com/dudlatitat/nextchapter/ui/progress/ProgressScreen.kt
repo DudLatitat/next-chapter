@@ -80,6 +80,9 @@ fun ProgressScreen(state: AppState) {
             }
         }
 
+        SectionLabel("Milestones")
+        MilestoneGrid(state)
+
         SectionLabel("By deck")
         GlassCard {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -133,4 +136,27 @@ private fun bestStreak(days: List<Long>): Int {
         prev = d
     }
     return best
+}
+
+@Composable
+private fun MilestoneGrid(state: AppState) {
+    val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
+    GlassCard {
+        Text("${all.count { it.done }} of ${all.size} reached", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        Spacer(Modifier.height(8.dp))
+        all.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { m ->
+                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text(m.emoji, style = MaterialTheme.typography.titleLarge, color = if (m.done) Color.Unspecified else Color.White.copy(alpha = 0.25f), modifier = Modifier.padding(end = 8.dp))
+                        Column {
+                            Text(m.title, style = MaterialTheme.typography.labelLarge, color = if (m.done) Night.ink else Night.muted)
+                            Text(m.detail, style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                        }
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
 }

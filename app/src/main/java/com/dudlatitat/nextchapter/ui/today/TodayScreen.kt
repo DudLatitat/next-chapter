@@ -44,7 +44,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 import java.time.LocalTime
 
 @Composable
-fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit) {
+fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit, onPhrasebook: () -> Unit = {}) {
     val queue = Srs.queue(state)
     val streak = Srs.streak(state.studyDays)
     val studiedToday = com.dudlatitat.nextchapter.data.today() in state.studyDays
@@ -74,6 +74,8 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
             Countdown("Next trip", "成都", daysUntil(state.nextTripDate()), Night.rose, Modifier.weight(1f), onOpenMove)
             Countdown("The move", "搬家", daysUntil(state.moveDate), Night.sun, Modifier.weight(1f), onOpenMove)
         }
+
+        if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
 
         // Monday: a look back at last week.
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
