@@ -21,8 +21,6 @@ data class Attempt(
     /** Per-character check by the recognizer; null if it wasn't available. */
     val chars: List<CharResult>?,
     val heardText: String?,
-    /** Why the word check didn't work, if it didn't. */
-    val recognizerError: String? = null,
     /** 0–100 pitch-melody match to the native recording; null without a recording or voice. */
     val melody: Int?,
     /** Your pitch and the native pitch, both in semitones vs each speaker's normal pitch. */
@@ -31,6 +29,8 @@ data class Attempt(
     /** For a single character: the tone you produced. */
     val tone: Pitch.ToneGuess?,
     val tooQuiet: Boolean,
+    /** Why the word check didn't work, if it didn't. */
+    val recognizerError: String? = null,
 )
 
 /** Records you saying a phrase and checks the words, each character's tone and the pitch melody. */
