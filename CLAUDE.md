@@ -10,6 +10,31 @@ I'm Rudy (Dudster). This is my private app for the road to China: learning Chine
 - Everything stays on the phone: no account, no server. It must work in China without a VPN, so no Google services and no library that phones home to a blocked domain. Keep it that way unless I say otherwise.
 - Built on the Two Skies stack (Kotlin, Jetpack Compose, night-sea theme) and should feel just as polished. Reuse Two Skies patterns rather than inventing new ones.
 
+## Bring ideas
+
+I want this app to be something I actually love opening, not just a flashcard tool. Be creative. The rest of this file is about not *breaking* things, not about thinking small.
+
+**What matters most:**
+- **Real conversations.** The goal is talking with Yuling, her family and people in Sichuan, not passing a test. Favor speaking, listening and real situations (dinner with her family, ordering food, a taxi, WeChat messages) over memorizing lists.
+- **Fun and game-like.** Streaks, challenges, rewards, surprises, things that pull me back every day. Make practice feel like playing, not homework.
+
+The best ideas do both. A good test: *would this help me say something real to Yuling's family next trip, and would I want to open it tomorrow?*
+
+**How to bring ideas:**
+- At the end of every task, suggest 1–3 ideas: new features, game mechanics, or polish. Be bold and specific (what it looks like, how it feels, roughly how big it is). I pick what gets built; don't build ideas I haven't chosen.
+- When building something I asked for, go past the bare minimum: smooth animations, satisfying feedback when I get something right, nice empty states. That polish is part of the task, not an extra.
+- If you see a better way to do what I asked, tell me before building it my way.
+- The "simplest tool" rule is about libraries and code, not about ideas. Ideas can be big.
+
+**Avoid suggesting:**
+- Anything that costs money: paid APIs, paid services, servers.
+- Anything social or public. The app is private.
+- Anything that needs Yuling to do work. She can be part of the content (phrases for talking to her), but the app shouldn't depend on her.
+
+If an idea breaks one of these but you think it's really worth it, you can still pitch it. Just say which rule it breaks and why it's worth it.
+
+**Hard limits** (never cross, even in ideas): it works offline and in China without a VPN, never lose my saved progress, and the Safety section. Everything else in this file is a default you can argue with.
+
 ## Chinese content
 
 - Simplified characters, pinyin with tone marks.
