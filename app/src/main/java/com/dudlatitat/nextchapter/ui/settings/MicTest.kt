@@ -234,7 +234,7 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text("5 · Offline recognizer (new, on the phone)", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text(
                 "Vosk runs on your phone with no internet and no Google, from the same recording the pitch graph uses. " +
-                    "\"Anything\": say a phrase and see what it heard. A word set: say one of the four, and see if it tells the tones apart.",
+                    "\"Anything\": say a phrase and see what it heard. A word set: say just one of the four per take. (Vosk is weak at tones; the speaking check uses your pitch for those.)",
                 style = MaterialTheme.typography.bodySmall, color = Night.muted,
             )
             if (!bundled) Text("This build doesn't include the model.", style = MaterialTheme.typography.bodySmall, color = Night.coral)
@@ -270,16 +270,12 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         GlassCard(highlight = true) {
             Text("Which to use", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text(
-                when {
-                    clipResult?.ok == true -> "One take works on your phone. Keep it: you get the pitch graph and the word check from a single try."
-                    liveResult?.ok == true -> "Live works but one take doesn't. Switch to Live: the word check will work; the pitch graph needs one take."
-                    liveResult != null || clipResult != null -> "Neither heard you yet. Check the room noise and playback above, make sure the recognizer is Google's, and download offline Chinese in Google's speech settings."
-                    else -> "Run tests 3 and 4, then pick the one that heard you."
-                },
+                "Offline (recommended): one take on the phone, no internet. It checks each character's sound, judges tones from your pitch, and draws the graph. " +
+                    "Google live: Google's recognizer listens through the mic and says which words it understood (needs internet, no tones or graph).",
                 style = MaterialTheme.typography.bodySmall, color = Night.ink,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                listOf("recorded" to "One take", "live" to "Live").forEach { (v, l) ->
+                listOf("offline" to "Offline", "live" to "Google live").forEach { (v, l) ->
                     androidx.compose.material3.FilterChip(selected = mode == v, onClick = { mode = v; vm.coach.mode = v }, label = { Text(l) })
                 }
             }

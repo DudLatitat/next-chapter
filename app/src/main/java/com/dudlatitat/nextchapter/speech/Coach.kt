@@ -18,6 +18,8 @@ data class CharResult(
     val mark: Mark,
     /** What the recognizer heard there, as pinyin (when not right). */
     val heard: String? = null,
+    /** False when the tone couldn't be judged with confidence (it's then given the benefit of the doubt). */
+    val sure: Boolean = true,
 )
 
 data class Attempt(
@@ -34,6 +36,8 @@ data class Attempt(
     val tooQuiet: Boolean,
     /** Why the word check didn't work, if it didn't. */
     val recognizerError: String? = null,
+    /** Where each character sits along [userCurve] (0–1 start and end), for labelling the graph. */
+    val spans: List<Pair<Float, Float>> = emptyList(),
 )
 
 /** Records you saying a phrase and checks the words, each character's tone and the pitch melody. */
@@ -70,7 +74,7 @@ class Coach(private val context: Context) {
         return curve
     }
 
-    /** Checks a recording of you saying [hanzi] (with its [pinyin]). */
+    /** Checks a recording of you saying [hanzi] (with its [pinyin]): words, tones and melody from one take. */
     suspend fun check(clip: Clip, hanzi: String, pinyin: String): Attempt {
         val hz = withContext(Dispatchers.Default) { Pitch.track(clip.samples, clip.rate) }
         val voicedCount = hz.count { it > 0 }
@@ -83,9 +87,50 @@ class Coach(private val context: Context) {
         val melody = if (ref.isNotEmpty()) Pitch.phraseScore(userCurve, ref) else null
         val tone = if (chars.length == 1) Pitch.classify(hz, p) else null
 
+        if (mode == "offline" && Offline.bundled(context) && chars.isNotEmpty()) {
+            offline(clip, hz, p, chars, pinyin, tone)?.let { (results, spans, heardText) ->
+                return Attempt(results, heardText, melody, userCurve, ref, tone, tooQuiet = false, spans = Judge.spansOnCurve(hz, spans))
+            }
+        }
+        // No offline model (or it failed): the phone's recognizer, from the same recording.
         val heard = Recognize.fromClip(context, clip)
         val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
         return Attempt(results?.second, results?.first, melody, userCurve, ref, tone, tooQuiet = false, recognizerError = heard.error)
+    }
+
+    /**
+     * The offline check. Vosk listens only for the target characters, which tells whether each
+     * one's sound (consonant + vowel) came through and when it was said. Vosk barely hears
+     * tones, so tones come from your pitch instead: the single-syllable classifier for one
+     * character, the phrase tone model for several. Returns null if Vosk failed.
+     */
+    private suspend fun offline(
+        clip: Clip, hz: FloatArray, p: Pitch.VoiceProfile, chars: String, pinyin: String, single: Pitch.ToneGuess?,
+    ): Triple<List<CharResult>, List<Pair<Float, Float>>, String>? {
+        val sylls = Pinyin.syllablesIn(pinyin).map { (r, _) -> pinyin.substring(r.first, r.last + 1) }
+        fun target(i: Int): String = if (sylls.size == chars.length) sylls[i] else Pinyin.fromHanzi(chars[i].toString()) ?: ""
+        val targets = chars.indices.map(::target)
+        val accepted = Judge.acceptedTones(chars, targets.map { Pinyin.tone(it) })
+
+        val heard = Offline.recognize(context, clip, Judge.grammarFor(chars))
+        if (!heard.ok) return null
+        val times = Judge.matchTimes(chars, Judge.charsOf(heard.words))
+
+        val guesses: List<Pair<Int, Float>?> = if (chars.length == 1) listOf(single?.let { it.tone to 1f }) else withContext(Dispatchers.Default) {
+            Judge.phraseTones(times.map { t -> t?.let { (s, e) -> Pitch.syllable(Judge.slice(hz, s, e))?.let(p::normalize) } })
+        }
+        val results = chars.indices.map { i ->
+            val t = targets[i]
+            val g = guesses[i]
+            when {
+                times[i] == null -> CharResult(chars[i], t, Mark.MISSED)
+                accepted[i].isEmpty() -> CharResult(chars[i], t, Mark.RIGHT) // neutral tone: not judged
+                g == null || g.second < SURE -> CharResult(chars[i], t, Mark.RIGHT, sure = false)
+                g.first in accepted[i] -> CharResult(chars[i], t, Mark.RIGHT)
+                else -> CharResult(chars[i], t, Mark.TONE, Judge.retone(t, g.first))
+            }
+        }
+        return Triple(results, times.map { it ?: (0f to 0f) }, heard.text)
     }
 
     private data class PitchPart(val melody: Int?, val user: FloatArray, val ref: FloatArray, val tone: Pitch.ToneGuess?)
@@ -135,10 +180,13 @@ class Coach(private val context: Context) {
         )
     }
 
-    /** "recorded" (one take: pitch graph + words) or "live" (words only, works on more phones). */
+    /**
+     * "offline" (one take on the phone: words, tones and pitch graph) or "live" (Google listens
+     * through the mic: words only). A new setting key, so everyone starts on offline once.
+     */
     var mode: String
-        get() = prefs.getString("mode", "live") ?: "live"
-        set(v) { prefs.edit().putString("mode", v).apply() }
+        get() = prefs.getString("mode2", "offline") ?: "offline"
+        set(v) { prefs.edit().putString("mode2", v).apply() }
 
     /** Learns your voice from four recordings of 妈 麻 马 骂. */
     suspend fun calibrate(clips: List<Clip>): Boolean {
@@ -150,6 +198,9 @@ class Coach(private val context: Context) {
     }
 
     companion object {
+        /** Below this, the phrase tone model isn't sure enough to call a tone wrong (~91% right above it on native phrases). */
+        const val SURE = 0.7f
+
         /**
          * Lines up what was heard with the target, character by character. A different
          * character with the same syllable but another tone counts as a tone mistake; same

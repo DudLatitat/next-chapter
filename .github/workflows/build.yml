@@ -47,9 +47,9 @@ jobs:
           key: vosk-model-small-cn-0.22
       - name: Speech model
         env:
-          # Pinned fingerprint of the zip: a changed or corrupted download fails the build
-          # instead of shipping. Empty = not pinned yet (the build prints it to pin).
-          MODEL_SHA256: ""
+          # Pinned fingerprint of the zip (first seen in build 29): a changed or corrupted
+          # download fails the build instead of shipping.
+          MODEL_SHA256: "3af8b0e7e0f835ae9d414ce5df580237a3cfb08d586c9fbbb0f7ff29ad5b14ba"
         run: |
           set -e
           zip=~/vosk-model/vosk-model-small-cn-0.22.zip

@@ -147,7 +147,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         GlassCard(onClick = { micTest = true }) {
             Text("Test microphone & recognition →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
             Text("Room noise, hear your own recording, and test both ways the word check can listen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            Text("Using: ${if (vm.coach.mode == "live") "Live" else "One take"}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            Text("Using: ${if (vm.coach.mode == "live") "Google live (words only)" else "Offline on the phone (words, tones and pitch)"}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
         }
 
         SectionLabel("Backup")

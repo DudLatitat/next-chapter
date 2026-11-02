@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -183,7 +184,8 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                     Spacer(Modifier.width(8.dp))
                     a.melody?.let { m -> Pill("$m%", if (m >= 75) Night.jade else if (m >= 50) Night.sun else Night.coral) }
                 }
-                PitchGraph(a.userCurve, a.refCurve)
+                val labels = (liveChars ?: a.chars)?.takeIf { it.size > 1 && it.size == a.spans.size }?.zip(a.spans).orEmpty()
+                PitchGraph(a.userCurve, a.refCurve, labels = labels)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Legend("Native", Night.muted); Legend("You", Night.sun)
                 }
@@ -200,7 +202,7 @@ private fun logTones(vm: MainViewModel, a: Attempt, pinyin: String) {
     if (a.tone == null) a.chars?.forEach { c ->
         val target = P.tone(c.target)
         when (c.mark) {
-            Mark.RIGHT -> vm.logTone(target, target, spoken = true)
+            Mark.RIGHT -> if (c.sure) vm.logTone(target, target, spoken = true)
             Mark.TONE -> c.heard?.let { vm.logTone(target, P.tone(it), spoken = true) }
             else -> {}
         }
@@ -216,15 +218,15 @@ private fun CharResults(chars: List<CharResult>) {
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         chars.forEach { c ->
-            val color = when (c.mark) { Mark.RIGHT -> Night.jade; Mark.TONE -> Night.sun; Mark.WRONG -> Night.coral; Mark.MISSED -> Night.muted }
+            val color = markColor(c.mark)
             Column(
                 Modifier.clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.14f)).border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(c.hanzi.toString(), fontSize = 24.sp, color = Night.ink)
                 PinyinText(c.target, style = MaterialTheme.typography.labelMedium)
-                if (c.heard != null) Text("heard ${c.heard}", style = MaterialTheme.typography.labelSmall, color = color)
-                if (c.mark == Mark.MISSED) Text("missed", style = MaterialTheme.typography.labelSmall, color = color)
+                if (c.heard != null) Text(if (c.mark == Mark.TONE) "sounded ${c.heard}" else "heard ${c.heard}", style = MaterialTheme.typography.labelSmall, color = color)
+                if (c.mark == Mark.MISSED) Text("unclear", style = MaterialTheme.typography.labelSmall, color = Night.coral)
             }
         }
     }
@@ -234,12 +236,15 @@ private fun CharResults(chars: List<CharResult>) {
     Text(
         when {
             right == chars.size -> "Every character understood. 很好!"
-            tones > 0 -> "$right/${chars.size} clear · yellow ones were heard with another tone"
+            tones > 0 -> "$right/${chars.size} clear · yellow: right sound, but your pitch made another tone"
+            chars.any { it.mark == Mark.MISSED } -> "$right/${chars.size} clear · red ones didn't come through; try them slower"
             else -> "$right/${chars.size} understood"
         },
         style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center,
     )
 }
+
+private fun markColor(m: Mark) = when (m) { Mark.RIGHT -> Night.jade; Mark.TONE -> Night.sun; Mark.WRONG, Mark.MISSED -> Night.coral }
 
 @Composable
 private fun Legend(label: String, color: Color) {
@@ -250,10 +255,16 @@ private fun Legend(label: String, color: Color) {
     }
 }
 
-/** Your pitch line over the native one, both stretched to the same length. */
+/**
+ * Your pitch line over the native one, both stretched to the same length. With [labels], each
+ * character gets a coloured bar under its stretch of your line (green right, yellow tone, red unclear).
+ */
 @Composable
-fun PitchGraph(user: FloatArray, ref: FloatArray, modifier: Modifier = Modifier) {
-    Canvas(modifier.fillMaxWidth().height(110.dp).padding(vertical = 8.dp)) {
+fun PitchGraph(user: FloatArray, ref: FloatArray, modifier: Modifier = Modifier, labels: List<Pair<CharResult, Pair<Float, Float>>> = emptyList()) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelMedium.copy(color = Night.ink)
+    Canvas(modifier.fillMaxWidth().height(if (labels.isEmpty()) 110.dp else 140.dp).padding(vertical = 8.dp)) {
+        val graphH = if (labels.isEmpty()) size.height else size.height - 30.dp.toPx()
         val lo = minOf(user.minOrNull() ?: 0f, ref.minOrNull() ?: 0f, -6f) - 1f
         val hi = maxOf(user.maxOrNull() ?: 0f, ref.maxOrNull() ?: 0f, 6f) + 1f
         fun line(v: FloatArray, color: Color, width: Float) {
@@ -261,15 +272,26 @@ fun PitchGraph(user: FloatArray, ref: FloatArray, modifier: Modifier = Modifier)
             val p = Path()
             v.forEachIndexed { i, s ->
                 val x = i / (v.size - 1f) * size.width
-                val y = size.height * (1f - (s - lo) / (hi - lo))
+                val y = graphH * (1f - (s - lo) / (hi - lo))
                 if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
             }
             drawPath(p, color, style = Stroke(width, cap = StrokeCap.Round))
         }
-        val mid = size.height * (1f - (0f - lo) / (hi - lo))
+        val mid = graphH * (1f - (0f - lo) / (hi - lo))
         drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, mid), Offset(size.width, mid), 1.dp.toPx())
         line(ref, Night.muted, 3.dp.toPx())
         line(user, Night.sun, 4.dp.toPx())
+        labels.forEach { (c, span) ->
+            val (a, b) = span
+            if (b <= a) return@forEach
+            val color = markColor(c.mark)
+            val x0 = a * size.width; val x1 = b * size.width
+            // A faint band over the character's stretch, and its bar and label underneath.
+            drawRect(color.copy(alpha = 0.07f), Offset(x0, 0f), androidx.compose.ui.geometry.Size(x1 - x0, graphH))
+            drawLine(color, Offset(x0 + 2.dp.toPx(), graphH + 4.dp.toPx()), Offset(x1 - 2.dp.toPx(), graphH + 4.dp.toPx()), 3.dp.toPx(), cap = StrokeCap.Round)
+            val t = measurer.measure(c.hanzi.toString(), labelStyle)
+            drawText(t, topLeft = Offset((x0 + x1) / 2 - t.size.width / 2, graphH + 8.dp.toPx()))
+        }
     }
 }
 
