@@ -1,5 +1,7 @@
 # Working on Next Chapter · 新篇章
 
+> Current state, architecture and open work: see `HANDOFF.md`.
+
 ## Who I am
 
 I'm Rudy (Dudster). This is my private app for the road to China: learning Chinese for real life there and tracking the move. I'm a beginner in Chinese and new to Android development, and I want to learn enough to change the code myself, so explain non-obvious changes in a sentence.
