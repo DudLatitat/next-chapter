@@ -39,6 +39,44 @@ jobs:
         run: |
           mkdir -p /tmp/hw && cd /tmp/hw && npm pack hanzi-writer-data@2.0.1 --silent && tar xzf hanzi-writer-data-*.tgz
           cd "$GITHUB_WORKSPACE" && python3 tools/make_strokes.py /tmp/hw/package
+      # Offline Chinese recognizer model (Vosk small-cn 0.22, Apache 2.0), bundled in the APK so
+      # it works with no internet and nothing to download in China. Downloaded once, then cached.
+      - uses: actions/cache@v4
+        with:
+          path: ~/vosk-model
+          key: vosk-model-small-cn-0.22
+      - name: Speech model
+        env:
+          # Pinned fingerprint of the zip: a changed or corrupted download fails the build
+          # instead of shipping. Empty = not pinned yet (the build prints it to pin).
+          MODEL_SHA256: ""
+        run: |
+          set -e
+          zip=~/vosk-model/vosk-model-small-cn-0.22.zip
+          if [ ! -f "$zip" ]; then
+            mkdir -p ~/vosk-model
+            curl -fsSL --retry 3 -o "$zip" https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+          fi
+          sum=$(sha256sum "$zip" | cut -d' ' -f1)
+          if [ -n "$MODEL_SHA256" ] && [ "$sum" != "$MODEL_SHA256" ]; then
+            echo "::error title=Speech model::Checksum mismatch: got $sum"; exit 1
+          fi
+          [ -z "$MODEL_SHA256" ] && echo "::notice title=Speech model sha256::$sum"
+          rm -rf /tmp/vosk && mkdir -p /tmp/vosk && unzip -q "$zip" -d /tmp/vosk
+          dest=app/src/main/assets/vosk-cn
+          rm -rf "$dest" && mkdir -p "$dest"
+          cp -r /tmp/vosk/vosk-model-small-cn-0.22/. "$dest/"
+          # The app re-copies the model onto the phone only when this changes.
+          echo "small-cn-0.22-$sum" > "$dest/uuid"
+          # Facts for planning the tone check: sizes, and whether the model's sounds carry tones.
+          files=$(cd "$dest" && find . -type f -printf '%p %s\n' | sort | tr '\n' ';')
+          phones=$(find "$dest" -name 'phones.txt' | head -1)
+          tonal="no phones.txt found"
+          if [ -n "$phones" ]; then
+            tonal="$(wc -l < "$phones") phones; with a tone digit: $(grep -cE '^[a-z]+[1-5]' "$phones" || true); sample: $(head -40 "$phones" | cut -d' ' -f1 | tr '\n' ' ')"
+          fi
+          words=$(find "$dest" -name 'words.txt' | head -1)
+          echo "::notice title=Speech model::$(du -sh "$dest" | cut -f1) · $tonal · words: ${words:+$(wc -l < "$words")} · files: $files"
       - name: Unlock signing key
         env:
           NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}
@@ -53,12 +91,12 @@ jobs:
           NC_KEYSTORE: ${{ runner.temp }}/nc.jks
         run: |
           set -o pipefail
-          ./gradlew :app:assembleRelease --stacktrace 2>&1 | tee build.log
+          ./gradlew :app:testReleaseUnitTest :app:assembleRelease --stacktrace 2>&1 | tee build.log
       # Repeat compiler errors as one annotation, readable without the full log.
       - name: Summarise build errors
         if: failure()
         run: |
-          errors=$(grep -E "^e: |Error: |What went wrong" -A4 build.log | grep -v "^\s*at " | head -60 || true)
+          errors=$(grep -E "^e: |Error: |What went wrong|FAILED|Test.*>.*FAILED" -A4 build.log | grep -v "^\s*at " | head -60 || true)
           errors=${errors//'%'/'%25'}
           errors=${errors//$'\n'/'%0A'}
           echo "::error title=Build errors::${errors:-No error lines found; see the full log.}"

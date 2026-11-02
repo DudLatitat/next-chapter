@@ -23,6 +23,22 @@ data class Heard(val texts: List<String>, val error: String? = null, val code: I
     val ok get() = error == null
 }
 
+/**
+ * Lets the screen end a live listen early. Tapping stop tells the recognizer "that's all",
+ * and it answers with what it heard so far (instead of waiting for you to go quiet).
+ */
+class LiveControl(val level: (Float) -> Unit = {}) {
+    @Volatile internal var stopper: (() -> Unit)? = null
+    @Volatile var stopped = false
+        private set
+
+    /** Call on the main thread (a tap). */
+    fun stop() {
+        stopped = true
+        stopper?.invoke()
+    }
+}
+
 /** The phone's own Chinese speech recognizer: what a native ear would write down. */
 object Recognize {
     fun available(context: Context) = SpeechRecognizer.isRecognitionAvailable(context)
@@ -134,14 +150,14 @@ object Recognize {
         return run(context, i, onDevice = offline).also { try { pipe[0].close() } catch (_: Exception) {} }
     }
 
-    /** Listens live through the mic. */
-    suspend fun live(context: Context): Heard {
+    /** Listens live through the mic; [control] lets you stop it with a tap. */
+    suspend fun live(context: Context, control: LiveControl? = null): Heard {
         if (!available(context)) return Heard(emptyList(), "No speech recognizer on this phone")
         // Online first: offline Chinese often isn't available to apps (error 12). A second listen
         // only happens when there's no internet, and you'd be asked to speak again anyway.
-        val r = run(context, intent(offline = false))
+        val r = run(context, intent(offline = false), control = control)
         val noNet = r.code == SpeechRecognizer.ERROR_NETWORK || r.code == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || r.code == SpeechRecognizer.ERROR_SERVER
-        return if (noNet) run(context, intent(offline = true)).let { if (it.ok) it else r } else r
+        return if (noNet && control?.stopped != true) run(context, intent(offline = true), control = control).let { if (it.ok) it else r } else r
     }
 
     private fun explain(code: Int) = when (code) {
@@ -158,8 +174,8 @@ object Recognize {
         else -> "Recognizer error $code"
     }
 
-    private suspend fun run(context: Context, i: Intent, onDevice: Boolean = false): Heard = withContext(Dispatchers.Main) {
-        withTimeoutOrNull(20_000) {
+    private suspend fun run(context: Context, i: Intent, onDevice: Boolean = false, control: LiveControl? = null): Heard = withContext(Dispatchers.Main) {
+        withTimeoutOrNull(if (control != null) 40_000 else 20_000) {
             suspendCancellableCoroutine { cont ->
                 // On-device recognition handles recorded audio best, once Chinese is downloaded.
                 val sr = if (onDevice && Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
@@ -168,6 +184,7 @@ object Recognize {
                 fun finish(r: Heard) {
                     if (done) return
                     done = true
+                    control?.stopper = null
                     sr.destroy()
                     if (cont.isActive) cont.resume(r)
                 }
@@ -179,7 +196,8 @@ object Recognize {
                     override fun onError(error: Int) = finish(Heard(emptyList(), explain(error), error))
                     override fun onReadyForSpeech(params: Bundle?) {}
                     override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
+                    // Roughly −2 (quiet) to 10 (loud) dB; turned into 0–1 for the mic animation.
+                    override fun onRmsChanged(rmsdB: Float) { control?.level?.invoke(((rmsdB + 2f) / 12f).coerceIn(0f, 1f)) }
                     override fun onBufferReceived(buffer: ByteArray?) {}
                     override fun onEndOfSpeech() {}
                     override fun onPartialResults(partialResults: Bundle?) {}
@@ -187,6 +205,9 @@ object Recognize {
                 })
                 cont.invokeOnCancellation { if (!done) { done = true; sr.destroy() } }
                 sr.startListening(i)
+                // Stop = "I'm done talking": the recognizer then sends its results.
+                control?.stopper = { if (!done) sr.stopListening() }
+                if (control?.stopped == true) sr.stopListening()
             }
         } ?: Heard(emptyList(), "The recognizer didn't answer in time")
     }

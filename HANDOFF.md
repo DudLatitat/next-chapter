@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.24** (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.24** (1.25 = Vosk build 1, see below) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
@@ -73,7 +73,10 @@ What we learned on his phone (from the Settings → Mic & recognition test):
 2. **sherpa-onnx Paraformer** (Alibaba/Xiaomi): more accurate for Chinese, even a Sichuanese model, but bigger and harder to integrate (AAR from GitHub releases).
 3. **Azure Pronunciation Assessment** (zh-CN): best per-syllable scoring, 5 free hours/month, but online + needs a key and a paid-service account, which conflicts with the "nothing that costs money / works in China" rules. Only as an optional extra if Rudy wants.
 
-Rudy was asked "Want me to build in Vosk?" and hadn't answered. Size: **large** (new dependency, model asset, changes to Coach/Speak). Give him the plan first.
+**Decided (Nov 2):** Vosk, model bundled in the APK (1a), in two builds.
+
+- **Build 1 (done, this push):** Live can be stopped (`LiveControl` in `Recognize.kt` → `stopListening()`; `SpeakPanel` shows ■ while listening). Vosk added: `speech/Offline.kt` (unpacks `assets/vosk-cn` to `filesDir/vosk-cn` once, keyed by the `uuid` file CI writes; `recognize(clip, grammar)` returns text + word timings). Settings → Mic & recognition test → card 5 tests it ("Anything", or a 妈麻马骂 / 汤糖躺烫 pick, shown beside the pitch classifier's tone). CI downloads the model (cached), prints its sha256 and whether its phones carry tones as notices, and now runs `testReleaseUnitTest` (first test: `VoskJsonTest`). arm64-v8a only. R8 keeps `org.vosk.**` and `com.sun.jna.**`.
+- **Build 2 (next):** pin `MODEL_SHA256` in build.yml from build 1's notice; `Coach.check` = one recording → Vosk free pass + `judge()`, tone pass (grammar of tone-swapped characters, tone sandhi allowed), per-character pitch from word timings; one mode in `Speak.kt`; Settings mode Offline (default) / Google live; more tests (`judge`, confusables, segmenting).
 
 ## Things that bend CLAUDE.md's rules (already in the app, flag before expanding)
 

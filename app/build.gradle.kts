@@ -20,6 +20,9 @@ android {
         versionCode = 100 + build
         versionName = "1.$build"
         resourceConfigurations += listOf("en", "zh-rCN")
+        // Only the chip type real phones use (the Fold included): keeps the offline
+        // recognizer's native code from adding ~30 MB for chips nobody here has.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     // One lasting key, so each new build installs over the old one and keeps your progress.
@@ -73,5 +76,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // Daily background fare checks.
     implementation(libs.androidx.work.runtime)
+    // Offline Chinese speech recognition (Vosk, Apache 2.0; runs on the phone, no network).
+    implementation(libs.vosk.android)
+    testImplementation(libs.junit)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

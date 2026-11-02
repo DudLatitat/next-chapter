@@ -16,3 +16,10 @@
 # without a mapping file.
 -dontobfuscate
 -keepattributes SourceFile,LineNumberTable
+
+# Vosk talks to its native library through JNA, which finds Java methods and fields by name
+# at runtime. R8 can't see those uses, so keep both libraries whole.
+-keep class com.sun.jna.** { *; }
+-keep class * extends com.sun.jna.** { *; }
+-keep class org.vosk.** { *; }
+-dontwarn java.awt.**

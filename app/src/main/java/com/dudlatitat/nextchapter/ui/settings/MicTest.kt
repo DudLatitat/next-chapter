@@ -35,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.speech.Clip
 import com.dudlatitat.nextchapter.speech.Heard
+import com.dudlatitat.nextchapter.speech.LiveControl
+import com.dudlatitat.nextchapter.speech.Offline
+import com.dudlatitat.nextchapter.speech.VoskResult
 import com.dudlatitat.nextchapter.speech.Recognize
 import com.dudlatitat.nextchapter.speech.Recorder
 import com.dudlatitat.nextchapter.ui.components.Bar
@@ -73,6 +76,7 @@ private suspend fun playBack(clip: Clip) = withContext(Dispatchers.IO) {
 }
 
 /** Find out why the word check isn't hearing you: room noise, mic level, and both recognizer methods. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -110,7 +114,38 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             busy = "play"; playBack(c); busy = null
         }
     }
-    val testLive = rememberMic { scope.launch { busy = "live"; liveResult = Recognize.live(context); busy = null } }
+    var liveControl by remember { mutableStateOf<LiveControl?>(null) }
+    val testLive = rememberMic {
+        scope.launch {
+            val c = LiveControl(level = { level = it })
+            liveControl = c; busy = "live"
+            liveResult = try { Recognize.live(context, c) } finally { liveControl = null; busy = null }
+        }
+    }
+    // Offline recognizer (Vosk) test: free listening, or a pick between same-sound words.
+    val toneSets = remember { listOf(listOf("妈", "麻", "马", "骂"), listOf("汤", "糖", "躺", "烫")) }
+    var voskSet by remember { mutableStateOf<List<String>?>(null) }
+    var voskStatus by remember { mutableStateOf<String?>(null) }
+    var voskResult by remember { mutableStateOf<VoskResult?>(null) }
+    var voskTone by remember { mutableStateOf<Int?>(null) }
+    var voskMs by remember { mutableStateOf<Long?>(null) }
+    val bundled = remember { Offline.bundled(context) }
+    val testVosk = rememberMic {
+        scope.launch {
+            busy = "vosk"; voskResult = null; voskTone = null; voskStatus = null
+            val c = Recorder.record(maxSeconds = 6f, level = { level = it })
+            busy = "voskcheck"
+            val t0 = System.currentTimeMillis()
+            val set = voskSet
+            voskResult = Offline.recognize(context, c, grammar = set) { voskStatus = it }
+            voskMs = System.currentTimeMillis() - t0
+            // The app's own pitch guess for the same take, to compare with what Vosk picked.
+            if (set != null) voskTone = withContext(Dispatchers.Default) {
+                com.dudlatitat.nextchapter.speech.Pitch.classify(com.dudlatitat.nextchapter.speech.Pitch.track(c.samples, c.rate), vm.coach.profile)?.tone
+            }
+            voskStatus = null; busy = null
+        }
+    }
     val testClip = rememberMic {
         scope.launch {
             busy = "clip"
@@ -133,7 +168,7 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text("Your phone", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text("Recognizer: ${Recognize.describe(service)}", style = MaterialTheme.typography.bodySmall, color = if (service?.contains("google") == true) Night.ink else Night.sun)
             Text("Available: ${if (Recognize.available(context)) "yes" else "no"} · Android ${Build.VERSION.RELEASE}" + if (Build.VERSION.SDK_INT < 33) " (one-take mode needs 13+)" else "", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            if (busy in setOf("room", "voice", "clip")) { Spacer(Modifier.height(6.dp)); Bar(level, Night.sun) }
+            if (busy in setOf("room", "voice", "clip", "live", "vosk")) { Spacer(Modifier.height(6.dp)); Bar(level, Night.sun) }
         }
 
         GlassCard {
@@ -157,7 +192,9 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text("3 · Recognizer, live", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text("Tap, then say something simple in Chinese (你好, 谢谢, 我想你).", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             ResultLine(liveResult)
-            OutlinedButton(onClick = testLive, enabled = busy == null) { Text(if (busy == "live") "Listening… speak now" else "Test live", color = Night.sun) }
+            OutlinedButton(onClick = { if (busy == "live") liveControl?.stop() else testLive() }, enabled = busy == null || busy == "live") {
+                Text(if (busy == "live") "■ Stop (listening…)" else "Test live", color = Night.sun)
+            }
         }
 
         GlassCard {
@@ -190,6 +227,43 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
                         "Or: Google app → your picture → Settings → Voice → Offline speech recognition.",
                     style = MaterialTheme.typography.bodySmall, color = Night.muted,
                 )
+            }
+        }
+
+        GlassCard(highlight = true) {
+            Text("5 · Offline recognizer (new, on the phone)", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+            Text(
+                "Vosk runs on your phone with no internet and no Google, from the same recording the pitch graph uses. " +
+                    "\"Anything\": say a phrase and see what it heard. A word set: say one of the four, and see if it tells the tones apart.",
+                style = MaterialTheme.typography.bodySmall, color = Night.muted,
+            )
+            if (!bundled) Text("This build doesn't include the model.", style = MaterialTheme.typography.bodySmall, color = Night.coral)
+            // Wraps onto two lines on the narrow cover screen.
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilterChip(selected = voskSet == null, onClick = { voskSet = null }, label = { Text("Anything") })
+                toneSets.forEach { set ->
+                    androidx.compose.material3.FilterChip(selected = voskSet == set, onClick = { voskSet = set }, label = { Text(set.joinToString(" ")) })
+                }
+            }
+            voskStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.sun) }
+            voskResult?.let { r ->
+                if (!r.ok) Text("✗ ${r.error}", style = MaterialTheme.typography.bodyMedium, color = Night.coral)
+                else if (r.text.isEmpty()) Text("Heard nothing it knows. Try again, a bit slower and closer.", style = MaterialTheme.typography.bodyMedium, color = Night.sun)
+                else {
+                    Pill("Heard ✓", Night.jade)
+                    Text(r.text, style = MaterialTheme.typography.headlineSmall, color = Night.ink)
+                    Text(
+                        r.words.joinToString("  ") { w -> "${w.text} ${"%.2f".format(w.start)}–${"%.2f".format(w.end)}s ${(w.conf * 100).toInt()}%" },
+                        style = MaterialTheme.typography.labelSmall, color = Night.muted,
+                    )
+                }
+                voskSet?.let { set ->
+                    voskTone?.let { t -> Text("Your pitch sounded like tone $t (${set.getOrNull(t - 1) ?: "?"})", style = MaterialTheme.typography.bodySmall, color = Night.ink) }
+                }
+                voskMs?.let { Text("Took ${"%.1f".format(it / 1000f)} s" + if (it > 4000) " (the first time includes unpacking the model)" else "", style = MaterialTheme.typography.labelSmall, color = Night.muted) }
+            }
+            OutlinedButton(onClick = testVosk, enabled = busy == null && bundled) {
+                Text(when (busy) { "vosk" -> "Recording… pause to finish"; "voskcheck" -> "Recognizing…"; else -> "Test offline" }, color = Night.sun)
             }
         }
 

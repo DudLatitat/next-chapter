@@ -112,21 +112,21 @@ class Coach(private val context: Context) {
      * Word check by listening live. While the recognizer listens, the app also tries to record
      * you for the pitch graph and tones; if the phone won't share the mic, it stops trying.
      */
-    suspend fun checkLive(hanzi: String, pinyin: String): Attempt = coroutineScope {
+    suspend fun checkLive(hanzi: String, pinyin: String, control: LiveControl? = null): Attempt = coroutineScope {
         var heard: Heard
         var clip: Clip? = null
         if (parallel) {
             var stop = false
             val rec = async { delay(250); Recorder.record(maxSeconds = 15f, stop = { stop }) }
-            heard = Recognize.live(context)
+            heard = Recognize.live(context, control)
             stop = true
             clip = try { rec.await() } catch (_: Exception) { null }
             if (heard.code == android.speech.SpeechRecognizer.ERROR_AUDIO || heard.code == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                 // The two fought over the mic: give it to the recognizer from now on.
                 parallel = false; clip = null
-                heard = Recognize.live(context)
+                heard = Recognize.live(context, control)
             }
-        } else heard = Recognize.live(context)
+        } else heard = Recognize.live(context, control)
         val pitch = clip?.let { pitchOf(it, hanzi) }
         val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
         Attempt(
