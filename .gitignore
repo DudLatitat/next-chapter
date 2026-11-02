@@ -7,3 +7,4 @@ local.properties
 app/src/main/assets/voice/
 app/src/main/assets/strokes.json
 app/src/main/assets/vosk-cn/
+__pycache__/
