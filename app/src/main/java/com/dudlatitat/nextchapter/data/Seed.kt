@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 3
+    const val VERSION = 4
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
         Card(id = "$deck:$hanzi", hanzi = hanzi, pinyin = pinyin, english = english, deck = deck)
