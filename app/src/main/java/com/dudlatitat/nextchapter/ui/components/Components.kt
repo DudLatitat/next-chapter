@@ -127,8 +127,3 @@ fun ScreenTitle(title: String, subtitle: String? = null) {
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Night.muted, fontWeight = FontWeight.SemiBold)
     }
 }
-
-@Composable
-fun RowSpaced(content: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) { content() }
-}

@@ -5,12 +5,9 @@ import com.dudlatitat.nextchapter.Speaker
 import com.dudlatitat.nextchapter.data.Pinyin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 
 /** How one character came out. */
-enum class Mark { RIGHT, TONE, WRONG, MISSED }
+enum class Mark { RIGHT, TONE, MISSED }
 
 data class CharResult(
     val hanzi: Char,
@@ -44,6 +41,9 @@ data class Attempt(
 class Coach(private val context: Context) {
     private val prefs = context.getSharedPreferences("voice_profile", Context.MODE_PRIVATE)
     private val refCache = HashMap<String, FloatArray>()
+
+    // Settings from the old Google recognizer modes, no longer used.
+    init { prefs.edit().remove("mode").remove("mode2").remove("parallel2").apply() }
 
     var profile: Pitch.VoiceProfile
         get() = Pitch.VoiceProfile(prefs.getFloat("base", 0f), prefs.getFloat("scale", 1f), prefs.getBoolean("calibrated", false))
@@ -87,16 +87,15 @@ class Coach(private val context: Context) {
         val melody = if (ref.isNotEmpty()) Pitch.phraseScore(userCurve, ref) else null
         val tone = if (chars.length == 1) Pitch.classify(hz, p) else null
 
-        if (mode == "offline" && Offline.bundled(context) && chars.isNotEmpty()) {
-            offline(clip, hz, p, chars, pinyin, tone)?.let { (results, spans, heardText) ->
-                return Attempt(results, heardText, melody, userCurve, ref, tone, tooQuiet = false, spans = Judge.spansOnCurve(hz, spans))
-            }
-        }
-        // No offline model (or it failed): the phone's recognizer, from the same recording.
-        val heard = Recognize.fromClip(context, clip)
-        val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
-        return Attempt(results?.second, results?.first, melody, userCurve, ref, tone, tooQuiet = false, recognizerError = heard.error)
+        if (chars.isEmpty()) return Attempt(null, null, melody, userCurve, ref, tone, tooQuiet = false)
+        val r = offline(clip, hz, p, chars, pinyin, tone)
+            // The recognizer couldn't run: the pitch graph and melody still work.
+            ?: return Attempt(null, null, melody, userCurve, ref, tone, tooQuiet = false, recognizerError = lastError ?: "the offline recognizer didn't start")
+        val (results, spans, heardText) = r
+        return Attempt(results, heardText, melody, userCurve, ref, tone, tooQuiet = false, spans = Judge.spansOnCurve(hz, spans))
     }
+
+    private var lastError: String? = null
 
     /**
      * The offline check. Vosk listens only for the target characters, which tells whether each
@@ -113,6 +112,7 @@ class Coach(private val context: Context) {
         val accepted = Judge.acceptedTones(chars, targets.map { Pinyin.tone(it) })
 
         val heard = Offline.recognize(context, clip, Judge.grammarFor(chars))
+        lastError = heard.error
         if (!heard.ok) return null
         val times = Judge.matchTimes(chars, Judge.charsOf(heard.words))
 
@@ -133,61 +133,6 @@ class Coach(private val context: Context) {
         return Triple(results, times.map { it ?: (0f to 0f) }, heard.text)
     }
 
-    private data class PitchPart(val melody: Int?, val user: FloatArray, val ref: FloatArray, val tone: Pitch.ToneGuess?)
-
-    /** The pitch side of a check (graph, melody score, single-syllable tone), from a recording. */
-    private suspend fun pitchOf(clip: Clip, hanzi: String): PitchPart? {
-        val hz = withContext(Dispatchers.Default) { Pitch.track(clip.samples, clip.rate) }
-        if (hz.count { it > 0 } < 6) return null
-        val p = profileFor(hz)
-        val userCurve = p.normalize(Pitch.voiced(hz))
-        val ref = reference(hanzi)
-        val chars = hanzi.filter { it.code in 0x4E00..0x9FFF }
-        return PitchPart(if (ref.isNotEmpty()) Pitch.phraseScore(userCurve, ref) else null, userCurve, ref, if (chars.length == 1) Pitch.classify(hz, p) else null)
-    }
-
-    /** Whether this phone lets the app record while the live recognizer listens (learned on first try). */
-    // Off: on Android the app on screen wins the mic, so recording alongside left the recognizer
-    // hearing silence. Kept as a switch in case a phone handles it differently.
-    private var parallel: Boolean
-        get() = prefs.getBoolean("parallel2", false)
-        set(v) { prefs.edit().putBoolean("parallel2", v).apply() }
-
-    /**
-     * Word check by listening live. While the recognizer listens, the app also tries to record
-     * you for the pitch graph and tones; if the phone won't share the mic, it stops trying.
-     */
-    suspend fun checkLive(hanzi: String, pinyin: String, control: LiveControl? = null): Attempt = coroutineScope {
-        var heard: Heard
-        var clip: Clip? = null
-        if (parallel) {
-            var stop = false
-            val rec = async { delay(250); Recorder.record(maxSeconds = 15f, stop = { stop }) }
-            heard = Recognize.live(context, control)
-            stop = true
-            clip = try { rec.await() } catch (_: Exception) { null }
-            if (heard.code == android.speech.SpeechRecognizer.ERROR_AUDIO || heard.code == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
-                // The two fought over the mic: give it to the recognizer from now on.
-                parallel = false; clip = null
-                heard = Recognize.live(context, control)
-            }
-        } else heard = Recognize.live(context, control)
-        val pitch = clip?.let { pitchOf(it, hanzi) }
-        val results = if (heard.ok) judge(hanzi, pinyin, heard.texts) else null
-        Attempt(
-            results?.second, results?.first, pitch?.melody, pitch?.user ?: FloatArray(0), pitch?.ref ?: FloatArray(0), pitch?.tone,
-            tooQuiet = false, recognizerError = heard.error,
-        )
-    }
-
-    /**
-     * "offline" (one take on the phone: words, tones and pitch graph) or "live" (Google listens
-     * through the mic: words only). A new setting key, so everyone starts on offline once.
-     */
-    var mode: String
-        get() = prefs.getString("mode2", "offline") ?: "offline"
-        set(v) { prefs.edit().putString("mode2", v).apply() }
-
     /** Learns your voice from four recordings of 妈 麻 马 骂. */
     suspend fun calibrate(clips: List<Clip>): Boolean {
         val curves = withContext(Dispatchers.Default) { clips.map { Pitch.syllable(Pitch.track(it.samples, it.rate)) } }
@@ -200,61 +145,5 @@ class Coach(private val context: Context) {
     companion object {
         /** Below this, the phrase tone model isn't sure enough to call a tone wrong (~91% right above it on native phrases). */
         const val SURE = 0.7f
-
-        /**
-         * Lines up what was heard with the target, character by character. A different
-         * character with the same syllable but another tone counts as a tone mistake; same
-         * sound and tone (a homophone, like 他/她) counts as right.
-         */
-        fun judge(hanzi: String, pinyin: String, heardOptions: List<String>): Pair<String, List<CharResult>> {
-            val target = hanzi.filter { it.code in 0x4E00..0x9FFF }
-            val sylls = Pinyin.syllablesIn(pinyin).map { (r, _) -> pinyin.substring(r.first, r.last + 1) }
-            fun targetSyll(i: Int): String = if (sylls.size == target.length) sylls[i] else Pinyin.fromHanzi(target[i].toString()) ?: ""
-
-            var best: Pair<String, List<CharResult>>? = null
-            var bestScore = -1
-            for (option in heardOptions.ifEmpty { listOf("") }) {
-                val heard = option.filter { it.code in 0x4E00..0x9FFF }
-                val res = align(target, heard).mapIndexed { i, h ->
-                    val t = targetSyll(i)
-                    when {
-                        h == null -> CharResult(target[i], t, Mark.MISSED)
-                        h == target[i] -> CharResult(target[i], t, Mark.RIGHT)
-                        else -> {
-                            val hp = Pinyin.fromHanzi(h.toString()) ?: ""
-                            when {
-                                hp.equals(t, ignoreCase = true) -> CharResult(target[i], t, Mark.RIGHT)
-                                Pinyin.bare(hp) == Pinyin.bare(t) -> CharResult(target[i], t, Mark.TONE, hp)
-                                else -> CharResult(target[i], t, Mark.WRONG, hp.ifBlank { h.toString() })
-                            }
-                        }
-                    }
-                }
-                val score = res.sumOf { when (it.mark) { Mark.RIGHT -> 3; Mark.TONE -> 1; else -> 0 }.toInt() }
-                if (score > bestScore) { bestScore = score; best = option to res }
-            }
-            return best!!
-        }
-
-        /** For each target character, the heard character it lines up with (edit-distance alignment). */
-        private fun align(t: String, h: String): List<Char?> {
-            val n = t.length; val m = h.length
-            val d = Array(n + 1) { IntArray(m + 1) }
-            for (i in 0..n) d[i][0] = i
-            for (j in 0..m) d[0][j] = j
-            for (i in 1..n) for (j in 1..m) {
-                d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + if (t[i - 1] == h[j - 1]) 0 else 1)
-            }
-            val out = arrayOfNulls<Char>(n)
-            var i = n; var j = m
-            while (i > 0) {
-                when {
-                    j > 0 && d[i][j] == d[i - 1][j - 1] + (if (t[i - 1] == h[j - 1]) 0 else 1) -> { out[i - 1] = h[j - 1]; i--; j-- }
-                    d[i][j] == d[i - 1][j] + 1 -> { out[i - 1] = null; i-- }
-                    else -> j--
-                }
-            }
-            return out.toList()
-        }
     }
 }

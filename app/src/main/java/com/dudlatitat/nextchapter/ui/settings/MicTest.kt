@@ -3,14 +3,12 @@ package com.dudlatitat.nextchapter.ui.settings
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -34,12 +32,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.speech.Clip
-import com.dudlatitat.nextchapter.speech.Heard
-import com.dudlatitat.nextchapter.speech.LiveControl
 import com.dudlatitat.nextchapter.speech.Offline
-import com.dudlatitat.nextchapter.speech.VoskResult
-import com.dudlatitat.nextchapter.speech.Recognize
 import com.dudlatitat.nextchapter.speech.Recorder
+import com.dudlatitat.nextchapter.speech.VoskResult
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.Pill
@@ -52,7 +47,7 @@ import kotlinx.coroutines.withContext
 private fun roomVerdict(db: Float) = when {
     db < -55 -> "Quiet ✓" to Night.jade
     db < -42 -> "Some background noise; should be okay" to Night.sun
-    else -> "Noisy. Recognition will struggle; try somewhere quieter or hold the phone closer" to Night.coral
+    else -> "Noisy. The check will struggle; try somewhere quieter or hold the phone closer" to Night.coral
 }
 
 private fun voiceVerdict(db: Float) = when {
@@ -75,8 +70,7 @@ private suspend fun playBack(clip: Clip) = withContext(Dispatchers.IO) {
     track.release()
 }
 
-/** Find out why the word check isn't hearing you: room noise, mic level, and both recognizer methods. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/** For when the speaking check isn't hearing you: room noise, your mic level, and what the recognizer hears. */
 @Composable
 fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -87,14 +81,8 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     var room by remember { mutableStateOf<Float?>(null) }
     var voice by remember { mutableStateOf<Float?>(null) }
     var clip by remember { mutableStateOf<Clip?>(null) }
-    var liveResult by remember { mutableStateOf<Heard?>(null) }
-    var clipResult by remember { mutableStateOf<Heard?>(null) }
-    var mode by remember { mutableStateOf(vm.coach.mode) }
-    val service = remember { Recognize.service(context) }
-    var installed by remember { mutableStateOf<Boolean?>(null) }
-    var downloadAsked by remember { mutableStateOf(false) }
-    var downloadStatus by remember { mutableStateOf<String?>(null) }
-    androidx.compose.runtime.LaunchedEffect(Unit) { installed = Recognize.chineseInstalled(context) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var heard by remember { mutableStateOf<VoskResult?>(null) }
 
     val measureRoom = rememberMic {
         scope.launch {
@@ -105,6 +93,7 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     }
     val recordVoice = rememberMic {
         scope.launch {
+            vm.speaker.stop()
             busy = "voice"
             val c = Recorder.record(maxSeconds = 5f, level = { level = it })
             clip = c
@@ -114,44 +103,14 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
             busy = "play"; playBack(c); busy = null
         }
     }
-    var liveControl by remember { mutableStateOf<LiveControl?>(null) }
-    val testLive = rememberMic {
+    val listen = rememberMic {
         scope.launch {
-            val c = LiveControl(level = { level = it })
-            liveControl = c; busy = "live"
-            liveResult = try { Recognize.live(context, c) } finally { liveControl = null; busy = null }
-        }
-    }
-    // Offline recognizer (Vosk) test: free listening, or a pick between same-sound words.
-    val toneSets = remember { listOf(listOf("妈", "麻", "马", "骂"), listOf("汤", "糖", "躺", "烫")) }
-    var voskSet by remember { mutableStateOf<List<String>?>(null) }
-    var voskStatus by remember { mutableStateOf<String?>(null) }
-    var voskResult by remember { mutableStateOf<VoskResult?>(null) }
-    var voskTone by remember { mutableStateOf<Int?>(null) }
-    var voskMs by remember { mutableStateOf<Long?>(null) }
-    val bundled = remember { Offline.bundled(context) }
-    val testVosk = rememberMic {
-        scope.launch {
-            busy = "vosk"; voskResult = null; voskTone = null; voskStatus = null
+            vm.speaker.stop()
+            busy = "listen"; heard = null
             val c = Recorder.record(maxSeconds = 6f, level = { level = it })
-            busy = "voskcheck"
-            val t0 = System.currentTimeMillis()
-            val set = voskSet
-            voskResult = Offline.recognize(context, c, grammar = set) { voskStatus = it }
-            voskMs = System.currentTimeMillis() - t0
-            // The app's own pitch guess for the same take, to compare with what Vosk picked.
-            if (set != null) voskTone = withContext(Dispatchers.Default) {
-                com.dudlatitat.nextchapter.speech.Pitch.classify(com.dudlatitat.nextchapter.speech.Pitch.track(c.samples, c.rate), vm.coach.profile)?.tone
-            }
-            voskStatus = null; busy = null
-        }
-    }
-    val testClip = rememberMic {
-        scope.launch {
-            busy = "clip"
-            val c = Recorder.record(maxSeconds = 6f, level = { level = it })
-            busy = "clipcheck"
-            clipResult = Recognize.fromClip(context, c); busy = null
+            busy = "recognize"
+            heard = Offline.recognize(context, c) { status = it }
+            status = null; busy = null
         }
     }
 
@@ -159,17 +118,11 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         Row(Modifier.padding(top = 24.dp)) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column {
-                Text("Mic & recognition test", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
-                Text("Find out why the word check isn't hearing you", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                Text("Microphone check", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
+                Text("If the speaking check isn't hearing you", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
         }
-
-        GlassCard {
-            Text("Your phone", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-            Text("Recognizer: ${Recognize.describe(service)}", style = MaterialTheme.typography.bodySmall, color = if (service?.contains("google") == true) Night.ink else Night.sun)
-            Text("Available: ${if (Recognize.available(context)) "yes" else "no"} · Android ${Build.VERSION.RELEASE}" + if (Build.VERSION.SDK_INT < 33) " (one-take mode needs 13+)" else "", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            if (busy in setOf("room", "voice", "clip", "live", "vosk")) { Spacer(Modifier.height(6.dp)); Bar(level, Night.sun) }
-        }
+        if (busy in setOf("room", "voice", "listen")) Bar(level, Night.sun)
 
         GlassCard {
             Text("1 · Room noise", style = MaterialTheme.typography.titleSmall, color = Night.ink)
@@ -189,107 +142,26 @@ fun MicTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         }
 
         GlassCard {
-            Text("3 · Recognizer, live", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-            Text("Tap, then say something simple in Chinese (你好, 谢谢, 我想你).", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            ResultLine(liveResult)
-            OutlinedButton(onClick = { if (busy == "live") liveControl?.stop() else testLive() }, enabled = busy == null || busy == "live") {
-                Text(if (busy == "live") "■ Stop (listening…)" else "Test live", color = Night.sun)
-            }
-        }
-
-        GlassCard {
-            Text("4 · Recognizer, one take (recording)", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-            Text("The app records you, then hands the recording to the recognizer. It gives the pitch graph too, but not every phone accepts it.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            ResultLine(clipResult)
-            installed?.let { Text(if (it) "Offline Chinese: installed ✓" else "Offline Chinese: not downloaded (one take needs it)", style = MaterialTheme.typography.bodySmall, color = if (it) Night.jade else Night.sun) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = testClip, enabled = busy == null) { Text(when (busy) { "clip" -> "Recording… pause to finish"; "clipcheck" -> "Recognizing…"; else -> "Test one take" }, color = Night.sun) }
-            }
-            if (installed != true) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (Build.VERSION.SDK_INT >= 33) OutlinedButton(onClick = {
-                        downloadAsked = true
-                        downloadStatus = "Asking Google…"
-                        Recognize.downloadChinese(context) { downloadStatus = it }
-                        scope.launch { repeat(10) { kotlinx.coroutines.delay(6000); installed = Recognize.chineseInstalled(context); if (installed == true) return@launch } }
-                    }) { Text("Download Chinese", color = Night.jade, maxLines = 1) }
-                    OutlinedButton(onClick = {
-                        val tries = listOf(
-                            android.content.Intent("android.settings.VOICE_INPUT_SETTINGS"),
-                            android.content.Intent(android.provider.Settings.ACTION_SETTINGS),
-                        )
-                        for (i in tries) { try { context.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); break } catch (_: Exception) {} }
-                    }) { Text("Open voice settings", color = Night.sun, maxLines = 1) }
-                }
-                downloadStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.ink) }
-                Text(
-                    "By hand: in voice settings, tap the ⚙️ next to Speech Recognition & Synthesis from Google → Offline (or On-device) speech recognition → add Chinese (Mandarin, Simplified). " +
-                        "Or: Google app → your picture → Settings → Voice → Offline speech recognition.",
-                    style = MaterialTheme.typography.bodySmall, color = Night.muted,
-                )
-            }
-        }
-
-        GlassCard(highlight = true) {
-            Text("5 · Offline recognizer (new, on the phone)", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+            Text("3 · What the recognizer hears", style = MaterialTheme.typography.titleSmall, color = Night.ink)
             Text(
-                "Vosk runs on your phone with no internet and no Google, from the same recording the pitch graph uses. " +
-                    "\"Anything\": say a phrase and see what it heard. A word set: say just one of the four per take. (Vosk is weak at tones; the speaking check uses your pitch for those.)",
+                "Say anything in Chinese. This is the on-phone recognizer the speaking check uses, listening freely (in practice it only listens for the card's own words, which is much easier).",
                 style = MaterialTheme.typography.bodySmall, color = Night.muted,
             )
-            if (!bundled) Text("This build doesn't include the model.", style = MaterialTheme.typography.bodySmall, color = Night.coral)
-            // Wraps onto two lines on the narrow cover screen.
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.FilterChip(selected = voskSet == null, onClick = { voskSet = null }, label = { Text("Anything") })
-                toneSets.forEach { set ->
-                    androidx.compose.material3.FilterChip(selected = voskSet == set, onClick = { voskSet = set }, label = { Text(set.joinToString(" ")) })
+            status?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.sun) }
+            heard?.let { r ->
+                when {
+                    !r.ok -> Text("✗ ${r.error}", style = MaterialTheme.typography.bodyMedium, color = Night.coral)
+                    r.text.isEmpty() -> Text("Heard nothing it knows. Try again, a bit slower and closer.", style = MaterialTheme.typography.bodyMedium, color = Night.sun)
+                    else -> {
+                        Pill("Heard ✓", Night.jade)
+                        Spacer(Modifier.height(4.dp))
+                        Text(r.text, style = MaterialTheme.typography.headlineSmall, color = Night.ink)
+                    }
                 }
             }
-            voskStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Night.sun) }
-            voskResult?.let { r ->
-                if (!r.ok) Text("✗ ${r.error}", style = MaterialTheme.typography.bodyMedium, color = Night.coral)
-                else if (r.text.isEmpty()) Text("Heard nothing it knows. Try again, a bit slower and closer.", style = MaterialTheme.typography.bodyMedium, color = Night.sun)
-                else {
-                    Pill("Heard ✓", Night.jade)
-                    Text(r.text, style = MaterialTheme.typography.headlineSmall, color = Night.ink)
-                    Text(
-                        r.words.joinToString("  ") { w -> "${w.text} ${"%.2f".format(w.start)}–${"%.2f".format(w.end)}s ${(w.conf * 100).toInt()}%" },
-                        style = MaterialTheme.typography.labelSmall, color = Night.muted,
-                    )
-                }
-                voskSet?.let { set ->
-                    voskTone?.let { t -> Text("Your pitch sounded like tone $t (${set.getOrNull(t - 1) ?: "?"})", style = MaterialTheme.typography.bodySmall, color = Night.ink) }
-                }
-                voskMs?.let { Text("Took ${"%.1f".format(it / 1000f)} s" + if (it > 4000) " (the first time includes unpacking the model)" else "", style = MaterialTheme.typography.labelSmall, color = Night.muted) }
-            }
-            OutlinedButton(onClick = testVosk, enabled = busy == null && bundled) {
-                Text(when (busy) { "vosk" -> "Recording… pause to finish"; "voskcheck" -> "Recognizing…"; else -> "Test offline" }, color = Night.sun)
+            OutlinedButton(onClick = listen, enabled = busy == null) {
+                Text(when (busy) { "listen" -> "Listening… pause to finish"; "recognize" -> "Recognizing…"; else -> "Listen" }, color = Night.sun)
             }
         }
-
-        GlassCard(highlight = true) {
-            Text("Which to use", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-            Text(
-                "Offline (recommended): one take on the phone, no internet. It checks each character's sound, judges tones from your pitch, and draws the graph. " +
-                    "Google live: Google's recognizer listens through the mic and says which words it understood (needs internet, no tones or graph).",
-                style = MaterialTheme.typography.bodySmall, color = Night.ink,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                listOf("offline" to "Offline", "live" to "Google live").forEach { (v, l) ->
-                    androidx.compose.material3.FilterChip(selected = mode == v, onClick = { mode = v; vm.coach.mode = v }, label = { Text(l) })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ResultLine(r: Heard?) {
-    if (r == null) return
-    if (r.ok) {
-        Pill("Heard ✓", Night.jade)
-        r.texts.take(3).forEachIndexed { i, t -> Text("${i + 1}. $t", style = MaterialTheme.typography.bodyLarge, color = Night.ink) }
-    } else {
-        Text("✗ ${r.error}", style = MaterialTheme.typography.bodyMedium, color = Night.coral)
     }
 }

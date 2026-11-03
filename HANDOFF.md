@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.30** (Vosk build 2; see the speaking check section) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.31** (cleanup: Google recognizer removed, version shown at the bottom of Settings) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
@@ -22,8 +22,9 @@ app/src/main/java/com/dudlatitat/nextchapter/
   speech/
     Audio.kt                      Recorder (AudioRecord 16 kHz + NoiseSuppressor), MP3 asset decode, Clip
     Pitch.kt                      YIN pitch tracking, tone templates/classifier, calibration, DTW melody score
-    Recognize.kt                  Android SpeechRecognizer wrapper (live, from a clip, model download)
-    Coach.kt                      one speaking check: pitch + recognizer + per-character judge
+    Offline.kt                    Vosk on-phone recognizer (model in assets/vosk-cn, unpacked to filesDir once)
+    Judge.kt, PhraseToneModel.kt  tone sandhi, per-character timing, phrase tone model (generated)
+    Coach.kt                      one speaking check: Vosk sounds + timing, pitch tones, melody
   drive/DriveService.kt           Drive mode foreground audio service
   notify/Reminder.kt              daily reminder (AlarmManager) + boot receiver
   notify/FareWatch.kt             fare alerts: SerpApi Google Flights, WorkManager every 12 h
@@ -50,15 +51,17 @@ tools/
 - Everything is in `AppState` (kotlinx.serialization, `ignoreUnknownKeys`). New fields need defaults so old files still load.
 - `Seed.VERSION` bump = new starter cards/tasks get merged into existing state on launch.
 - Backup/restore (Settings) exports/imports the whole AppState JSON.
-- Preferences outside AppState: `voice` (TTS engine/voice/recordings), `voice_profile` (pitch calibration, speaking-check mode), `fares` (SerpApi key, searches/day, monthly counter), `app_font` not used here.
+- Preferences outside AppState: `voice` (TTS engine/voice/recordings), `voice_profile` (pitch calibration), `fares` (SerpApi key, searches/day, monthly counter), `app_font` not used here.
 
 ## Features (all shipped)
 
-Today (countdowns, practice, phrase of the day, move step, Monday recap, trip mode) · Learn (decks + SRS review with Read/Say/Listen, tone trainer hear/say, dialogues, writing with stroke checking, grammar quizzes, stories with tap-to-define, Drive mode, etiquette, phrasebook, weak-tone drills, redo today) · Move (dates, savings, checklist, flights planner, fare alerts with calendar/activity log/Google Flights links, packing, money in yuan) · Progress (stats, heatmap, weekly recap, milestones) · widget, reminder, WeChat quick-add, backup, voice picker, mic & recognition test.
+Settings shows the app version at the bottom. Today (countdowns, practice, phrase of the day, move step, Monday recap, trip mode) · Learn (decks + SRS review with Read/Say/Listen, tone trainer hear/say, dialogues, writing with stroke checking, grammar quizzes, stories with tap-to-define, Drive mode, etiquette, phrasebook, weak-tone drills, redo today) · Move (dates, savings, checklist, flights planner, fare alerts with calendar/activity log/Google Flights links, packing, money in yuan) · Progress (stats, heatmap, weekly recap, milestones) · widget, reminder, WeChat quick-add, backup, voice picker, microphone check.
 
 ## Open issue being worked on: the speaking check
 
-**Status:** the pitch/tone side works (records, tracks pitch, classifies tones, draws the graph). The *word check* (did a native ear understand you) is the problem on Rudy's phone.
+**Status (Nov 3): solved; history below.** 1.31 removed the Google recognizer entirely (`Recognize.kt`, Live mode, the Mic test's Google cards); the Mic check is now room noise, playback and what Vosk hears.
+
+**Earlier status:** the pitch/tone side works (records, tracks pitch, classifies tones, draws the graph). The *word check* (did a native ear understand you) is the problem on Rudy's phone.
 
 What we learned on his phone (from the Settings → Mic & recognition test):
 - Recognizer is Google (`com.google.android.tts`), mic level and room noise are fine.
@@ -77,12 +80,11 @@ What we learned on his phone (from the Settings → Mic & recognition test):
 
 - **Build 29 (1.29):** Live can be stopped (`LiveControl` in `Recognize.kt`). Vosk added (`speech/Offline.kt`), test card 5 in Settings → Mic & recognition test. On Rudy's phone: Vosk works (你好 100%, 0.5 s), no R8 problems.
 - **Finding:** Vosk small-cn barely hears tones. On the app's own native recordings, picking among 妈麻马骂 / 汤糖躺烫 it got 6/8 (4/8 with the voice 5 semitones lower); tone 3 is heard as tone 2. But forced to a phrase's own characters it times 99% of characters and rejects a different phrase ~88% of the time. So: **Vosk = sounds + timing, pitch = tones.**
-- **Build 2 (this push):** `Coach.check` in mode `offline` (new pref key `mode2`, default offline; `live` = Google): Vosk grammar = the phrase's characters (`Judge.grammarFor`, which keeps 啡/杉/睛/矶/础/逸/钥/鸯/鸳 inside their words since the model only knows them there; `tools/tone_proto/vosk_oov.py` finds such characters) → per-character times (`Judge.matchTimes`) → tone per character: one character = `Pitch.classify`; phrases = `Judge.phraseTones`, a small softmax model (`PhraseToneModel.kt`, generated by `tools/tone_proto/phrase_tones.py` from `phrase_collect.py` data). Held-out native phrases: 82–86% right, 91–92% when p ≥ 0.7 (`Coach.SURE`); below that the tone gets the benefit of the doubt (`CharResult.sure = false`, not logged to tone stats). On native speech overall: 94% green, 5% yellow (false alarms), 1% red. Tone sandhi accepted (`Judge.acceptedTones`). Graph shows each character's stretch with its colour. Falls back to Google `fromClip` if the model is missing or fails. Model sha256 pinned in build.yml.
+- **Build 30 (1.30):** `Coach.check`: Vosk grammar = the phrase's characters (`Judge.grammarFor`, which keeps 啡/杉/睛/矶/础/逸/钥/鸯/鸳 inside their words since the model only knows them there; `tools/tone_proto/vosk_oov.py` finds such characters) → per-character times (`Judge.matchTimes`) → tone per character: one character = `Pitch.classify`; phrases = `Judge.phraseTones`, a small softmax model (`PhraseToneModel.kt`, generated by `tools/tone_proto/phrase_tones.py` from `phrase_collect.py` data). Held-out native phrases: 82–86% right, 91–92% when p ≥ 0.7 (`Coach.SURE`); below that the tone gets the benefit of the doubt (`CharResult.sure = false`, not logged to tone stats). On native speech overall: 94% green, 5% yellow (false alarms), 1% red. Tone sandhi accepted (`Judge.acceptedTones`). Graph shows each character's stretch with its colour. If Vosk fails, the pitch graph and melody still show (1.31; the Google fallback is gone). Model sha256 pinned in build.yml.
 - **To do / watch:** learner voices are harder than native ones; ask Rudy how often yellow feels wrong. Retrain (`phrase_collect.py` → `phrase_tones.py`) after adding many phrases. Tests: `JudgeTest`, `VoskJsonTest` (CI runs `testReleaseUnitTest`).
 
 ## Things that bend CLAUDE.md's rules (already in the app, flag before expanding)
 
-- The word check uses the phone's **Google** speech recognizer (online). An on-device recognizer (above) would remove that dependency.
 - **Fare alerts** call SerpApi over the internet (free plan, 250 searches/month; key stored on the phone only). The exchange-rate "Update" button calls open.er-api.com. Both are optional, internet-only features.
 - Voice recordings are generated in CI with edge-tts (Microsoft's unofficial endpoint). If it stops working, existing recordings stay and new lines fall back to the phone's voice.
 

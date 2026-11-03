@@ -145,9 +145,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
         SectionLabel("Speaking check")
         GlassCard(onClick = { micTest = true }) {
-            Text("Test microphone & recognition →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
-            Text("Room noise, hear your own recording, and test both ways the word check can listen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            Text("Using: ${if (vm.coach.mode == "live") "Google live (words only)" else "Offline on the phone (words, tones and pitch)"}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
+            Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
         SectionLabel("Backup")
@@ -159,6 +158,14 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 OutlinedButton(onClick = { exportFile.launch("next-chapter-${LocalDate.now()}.json") }, modifier = Modifier.weight(1f)) { Text("Back up", color = Night.jade) }
                 OutlinedButton(onClick = { importFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }, modifier = Modifier.weight(1f)) { Text("Restore", color = Night.sun) }
             }
+        }
+        // Which build this is, so screenshots and bug reports say it.
+        val version = remember {
+            try { context.packageManager.getPackageInfo(context.packageName, 0).versionName } catch (_: Exception) { null }
+        }
+        Column(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Next Chapter · 新篇章", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            Text("Version ${version ?: "?"}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
         }
         Spacer(Modifier.width(1.dp).height(24.dp))
     }
@@ -242,7 +249,6 @@ private fun VoiceCard(vm: MainViewModel) {
         TextButton(onClick = {
             try { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
         }) { Text("Open text-to-speech settings", color = Night.sun) }
-        Text("Tip: Google's \"Speech Recognition & Synthesis\" app from the Play Store has the most natural Mandarin voices.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
     }
 }
 

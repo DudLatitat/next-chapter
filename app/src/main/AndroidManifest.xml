@@ -6,7 +6,7 @@
     <!-- Drive mode keeps talking with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <!-- Only for fetching today's dollar-to-yuan rate when you tap Update. -->
+    <!-- Only for the exchange rate (when you tap Update) and fare alerts. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Speaking practice: recorded on the phone, checked on the phone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -17,10 +17,6 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
-        </intent>
-        <!-- The phone's speech recognizer, for checking what you said. -->
-        <intent>
-            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 

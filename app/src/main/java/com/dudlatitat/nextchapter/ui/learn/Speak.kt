@@ -55,7 +55,6 @@ import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.speech.Attempt
 import com.dudlatitat.nextchapter.speech.CharResult
 import com.dudlatitat.nextchapter.speech.Clip
-import com.dudlatitat.nextchapter.speech.LiveControl
 import com.dudlatitat.nextchapter.speech.Mark
 import com.dudlatitat.nextchapter.speech.Recorder
 import com.dudlatitat.nextchapter.ui.components.GlassCard
@@ -99,41 +98,21 @@ fun MicButton(recording: Boolean, level: Float, busy: Boolean, onClick: () -> Un
 /** Say a phrase and see how it came out: each character, its tone, and your pitch melody. */
 @Composable
 fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: () -> Unit) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var recording by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var level by remember { mutableFloatStateOf(0f) }
     var attempt by remember(hanzi) { mutableStateOf<Attempt?>(null) }
-    var liveChars by remember(hanzi) { mutableStateOf<List<CharResult>?>(null) }
     var stopNow by remember { mutableStateOf(false) }
-
-    var listeningLive by remember { mutableStateOf(false) }
-    var liveControl by remember { mutableStateOf<LiveControl?>(null) }
-
-    /** Live word check: the mic button shows ■ while it listens, and a tap ends the listen. */
-    suspend fun listenLive(): Attempt {
-        val c = LiveControl(level = { level = it })
-        liveControl = c; listeningLive = true; level = 0f
-        return try { vm.coach.checkLive(hanzi, pinyin, c) } finally { listeningLive = false; liveControl = null; level = 0f }
-    }
-    val stopLive = { liveControl?.let { it.stop(); busy = true } }
 
     val start = rememberMic {
         if (recording) { stopNow = true; return@rememberMic }
-        if (listeningLive) { stopLive(); return@rememberMic }
         scope.launch {
             vm.speaker.stop()
-            liveChars = null
-            val a = if (vm.coach.mode == "live") {
-                // The recognizer listens through the mic itself.
-                listenLive()
-            } else {
-                recording = true; stopNow = false
-                val clip: Clip = Recorder.record(stop = { stopNow }, level = { level = it })
-                recording = false; busy = true
-                vm.coach.check(clip, hanzi, pinyin)
-            }
+            recording = true; stopNow = false
+            val clip: Clip = Recorder.record(stop = { stopNow }, level = { level = it })
+            recording = false; busy = true
+            val a = vm.coach.check(clip, hanzi, pinyin)
             attempt = a
             busy = false
             logTones(vm, a, pinyin)
@@ -141,9 +120,9 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        MicButton(recording || (listeningLive && !busy), level, busy, onClick = start)
+        MicButton(recording, level, busy, onClick = start)
         Text(
-            when { listeningLive && !busy -> "Listening… tap ■ when you're done"; recording -> "Listening… tap to stop"; busy -> "Checking…"; attempt == null -> "Tap and say it"; else -> "Tap to try again" },
+            when { recording -> "Listening… tap ■ or pause when you're done"; busy -> "Checking…"; attempt == null -> "Tap and say it"; else -> "Tap to try again" },
             style = MaterialTheme.typography.bodySmall, color = Night.muted,
         )
         attempt?.let { a ->
@@ -152,22 +131,14 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                 Text("Didn't catch that. Speak up a little, closer to the phone.", style = MaterialTheme.typography.bodyMedium, color = Night.coral, textAlign = TextAlign.Center)
                 return@let
             }
-            val chars = liveChars ?: a.chars
+            val chars = a.chars
             if (chars != null) {
                 CharResults(chars)
-                a.heardText?.let { Text("Heard: $it", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center) }
-            } else {
-                Text("Word check: ${a.recognizerError ?: "not available"}", style = MaterialTheme.typography.bodySmall, color = Night.coral, textAlign = TextAlign.Center)
-                if (vm.coach.mode != "live") Text("Tip: switch to Live in Settings → Speaking check.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-                if (vm.coach.mode != "live") TextButton(onClick = {
-                    if (listeningLive) return@TextButton
-                    scope.launch {
-                        val live = listenLive()
-                        busy = false
-                        liveChars = live.chars ?: emptyList()
-                        if (live.chars == null) attempt = a.copy(recognizerError = live.recognizerError)
-                    }
-                }) { Text("Try the live recognizer (say it once more)", color = Night.sun) }
+                a.heardText?.takeIf { it != chars.joinToString("") { c -> c.hanzi.toString() } }?.let {
+                    Text("Heard: $it", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
+                }
+            } else if (a.recognizerError != null) {
+                Text("Word check: ${a.recognizerError}", style = MaterialTheme.typography.bodySmall, color = Night.coral, textAlign = TextAlign.Center)
             }
             a.tone?.let { t ->
                 val aimed = com.dudlatitat.nextchapter.data.Pinyin.syllablesIn(pinyin).firstOrNull()?.second
@@ -184,7 +155,7 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
                     Spacer(Modifier.width(8.dp))
                     a.melody?.let { m -> Pill("$m%", if (m >= 75) Night.jade else if (m >= 50) Night.sun else Night.coral) }
                 }
-                val labels = (liveChars ?: a.chars)?.takeIf { it.size > 1 && it.size == a.spans.size }?.zip(a.spans).orEmpty()
+                val labels = a.chars?.takeIf { it.size > 1 && it.size == a.spans.size }?.zip(a.spans).orEmpty()
                 PitchGraph(a.userCurve, a.refCurve, labels = labels)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Legend("Native", Night.muted); Legend("You", Night.sun)
@@ -232,19 +203,22 @@ private fun CharResults(chars: List<CharResult>) {
     }
     val right = chars.count { it.mark == Mark.RIGHT }
     val tones = chars.count { it.mark == Mark.TONE }
+    val sounds = right + tones
     Spacer(Modifier.height(6.dp))
     Text(
         when {
-            right == chars.size -> "Every character understood. 很好!"
-            tones > 0 -> "$right/${chars.size} clear · yellow: right sound, but your pitch made another tone"
-            chars.any { it.mark == Mark.MISSED } -> "$right/${chars.size} clear · red ones didn't come through; try them slower"
-            else -> "$right/${chars.size} understood"
+            right == chars.size -> "Every character spot on. 很好!"
+            else -> "Sounds $sounds/${chars.size} · tones $right/${chars.size}" + when {
+                tones > 0 && sounds < chars.size -> " · yellow: other tone · red: unclear, try slower"
+                tones > 0 -> " · yellow: right sound, your pitch made another tone"
+                else -> " · red ones didn't come through; try them slower"
+            }
         },
         style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center,
     )
 }
 
-private fun markColor(m: Mark) = when (m) { Mark.RIGHT -> Night.jade; Mark.TONE -> Night.sun; Mark.WRONG, Mark.MISSED -> Night.coral }
+private fun markColor(m: Mark) = when (m) { Mark.RIGHT -> Night.jade; Mark.TONE -> Night.sun; Mark.MISSED -> Night.coral }
 
 @Composable
 private fun Legend(label: String, color: Color) {
@@ -281,9 +255,17 @@ fun PitchGraph(user: FloatArray, ref: FloatArray, modifier: Modifier = Modifier,
         drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, mid), Offset(size.width, mid), 1.dp.toPx())
         line(ref, Night.muted, 3.dp.toPx())
         line(user, Night.sun, 4.dp.toPx())
-        labels.forEach { (c, span) ->
-            val (a, b) = span
-            if (b <= a) return@forEach
+        labels.forEachIndexed { i, (c, span) ->
+            var (a, b) = span
+            if (b <= a) {
+                // Not heard: put a "?" in the gap between the neighbours that were.
+                a = labels.subList(0, i).lastOrNull { it.second.second > it.second.first }?.second?.second ?: 0f
+                b = labels.subList(i + 1, labels.size).firstOrNull { it.second.second > it.second.first }?.second?.first ?: 1f
+                if (b - a < 0.02f) return@forEachIndexed
+                val q = measurer.measure("${c.hanzi}?", labelStyle.copy(color = Night.coral))
+                drawText(q, topLeft = Offset((a + b) / 2 * size.width - q.size.width / 2, graphH + 8.dp.toPx()))
+                return@forEachIndexed
+            }
             val color = markColor(c.mark)
             val x0 = a * size.width; val x1 = b * size.width
             // A faint band over the character's stretch, and its bar and label underneath.

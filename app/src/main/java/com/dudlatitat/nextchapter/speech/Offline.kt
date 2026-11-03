@@ -60,11 +60,6 @@ object Offline {
     private val lock = Mutex()
     @Volatile private var model: org.vosk.Model? = null
 
-    /** Whether this build has the model inside it (CI adds it; a local build may not). */
-    fun bundled(context: Context): Boolean = try { context.assets.list(ASSET_DIR)?.isNotEmpty() == true } catch (_: Exception) { false }
-
-    val loaded get() = model != null
-
     /**
      * Loads the model, first copying it out of the APK into the app's own storage (Vosk needs
      * real files, and the APK's assets aren't files). The copy happens once per model version:

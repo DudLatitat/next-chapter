@@ -14,7 +14,7 @@ This app exists to make my life better in every way, not only my Chinese. Learni
 
 - Mainly for me. Yuling doesn't get access yet, so no sharing or sync features without asking.
 - Everything stays on the phone: no account, no server. It must work in China without a VPN, so no Google services and no library that phones home to a blocked domain. Keep it that way unless I say otherwise.
-- **Allowed exceptions** (already in the app, fine to keep and improve): the word check uses the phone's own speech recognizer (Google's on my phone, online); fare alerts use SerpApi's free plan over the internet with a key stored only on my phone; the money screen can fetch today's exchange rate; voice recordings are made in CI with edge-tts. Each is optional and the rest of the app works without it. Ask me before adding any *new* online dependency.
+- **Allowed exceptions** (already in the app, fine to keep and improve). The speaking check is fully offline (Vosk on the phone); the Google recognizer was removed in 1.31. Fare alerts use SerpApi's free plan over the internet with a key stored only on my phone; the money screen can fetch today's exchange rate; voice recordings are made in CI with edge-tts. Each is optional and the rest of the app works without it. Ask me before adding any *new* online dependency.
 - Built on the Two Skies stack (Kotlin, Jetpack Compose, night-sea theme) and should feel just as polished. Reuse Two Skies patterns rather than inventing new ones.
 
 ## Bring ideas
