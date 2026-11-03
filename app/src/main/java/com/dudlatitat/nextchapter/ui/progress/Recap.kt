@@ -57,7 +57,6 @@ fun WeeklyRecap(state: AppState, lastWeek: Boolean = false, modifier: Modifier =
             },
             style = MaterialTheme.typography.bodyMedium, color = Night.ink,
         )
-        Text("Move-ready: ${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         if (lastWeek && LocalDate.now().dayOfWeek.value <= 1) Text(message(now.daysPracticed), style = MaterialTheme.typography.bodySmall, color = Night.sun)
     }
     if (bare) Column(modifier, content = body) else GlassCard(modifier, highlight = true, content = body)

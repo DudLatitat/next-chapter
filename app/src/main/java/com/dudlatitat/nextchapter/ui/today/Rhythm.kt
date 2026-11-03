@@ -178,11 +178,15 @@ fun AmenButton(state: AppState, vm: MainViewModel) {
 /** Pick tonight's one goal: a quick choice, or your own words. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: Long = today()) {
+fun GoalChooser(state: AppState, vm: MainViewModel, day: Long, onPicked: () -> Unit) = GoalPicker(state, vm, "", day, onPicked)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: Long = today(), onPicked: () -> Unit = {}) {
     val goal = Life.goalFor(state, day)
     var changing by remember { mutableStateOf(false) }
     var writing by remember { mutableStateOf(false) }
-    Text(title, style = MaterialTheme.typography.labelMedium, color = Night.muted)
+    if (title.isNotEmpty()) Text(title, style = MaterialTheme.typography.labelMedium, color = Night.muted)
     if (goal != null && !changing) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("🎯 ${goal.text}", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
@@ -192,7 +196,7 @@ private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: L
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Life.goalIdeas.forEach { idea ->
-            FilterChip(selected = goal?.text == idea, onClick = { vm.setGoal(idea, day); changing = false }, label = { Text(idea) })
+            FilterChip(selected = goal?.text == idea, onClick = { vm.setGoal(idea, day); changing = false; onPicked() }, label = { Text(idea) })
         }
         FilterChip(selected = false, onClick = { writing = true }, label = { Text("Other…") })
     }
@@ -203,7 +207,7 @@ private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: L
             title = { Text("Tonight's goal") },
             text = { OutlinedTextField(text, { text = it.take(60) }, singleLine = true, label = { Text("e.g. Finish the subnetting chapter") }) },
             confirmButton = {
-                TextButton(onClick = { if (text.isNotBlank()) vm.setGoal(text, day); writing = false; changing = false }) { Text("Set", color = Night.sun) }
+                TextButton(onClick = { if (text.isNotBlank()) vm.setGoal(text, day); writing = false; changing = false; onPicked() }) { Text("Set", color = Night.sun) }
             },
             dismissButton = { TextButton(onClick = { writing = false }) { Text("Cancel", color = Night.muted) } },
         )

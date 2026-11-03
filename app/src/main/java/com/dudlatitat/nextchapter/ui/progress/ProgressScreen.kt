@@ -1,5 +1,6 @@
 package com.dudlatitat.nextchapter.ui.progress
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,7 +40,7 @@ import com.dudlatitat.nextchapter.ui.components.Stat
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 @Composable
-fun ProgressScreen(state: AppState) {
+fun ProgressScreen(state: AppState, onOpenDeck: (String) -> Unit = {}) {
     val known = state.cards.count { it.isKnown }
     val learning = state.cards.count { !it.isNew && !it.isKnown }
     val streak = Srs.streak(state.studyDays)
@@ -50,37 +51,21 @@ fun ProgressScreen(state: AppState) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenTitle("Progress", "进步 · every day counts")
-        WeeklyRecap(state)
-
+        // One card for the week and the totals (they used to be two cards saying similar things).
         GlassCard(highlight = true) {
+            WeeklyRecap(state, bare = true)
+            Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Stat("$streak", "day streak", Night.sun)
-                Stat("$known", "known", Night.jade)
+                Stat("$best", "best", Night.rose)
                 Stat("$learning", "learning", Night.violet)
-                Stat("$best", "best streak", Night.rose)
+                Stat("$known", "known", Night.jade)
             }
         }
 
         val practiced = com.dudlatitat.nextchapter.data.Stats.practiceDays(state)
         com.dudlatitat.nextchapter.ui.components.Collapsible("progress.heatmap", "Last 12 weeks", summary = "${practiced.count { it > com.dudlatitat.nextchapter.data.today() - 84 }} days practiced", defaultOpen = true) {
             Heatmap(practiced)
-        }
-
-        GlassCard {
-            Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(state.moveReady(), 96.dp, Night.sun, stroke = 10.dp) {
-                    Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleLarge, color = Night.ink)
-                }
-                Spacer(Modifier.width(18.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Checklist", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    Bar(state.taskProgress(), Night.sun)
-                    Text("Savings", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    Bar(state.savingsProgress(), Night.jade)
-                }
-            }
         }
 
         val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
@@ -94,16 +79,19 @@ fun ProgressScreen(state: AppState) {
             }
         }
 
-        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.decks", "By deck", summary = "${state.cards.count { it.isKnown }} known of ${state.cards.size}") {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Decks.forEach { deck ->
-                    val cards = state.cards.filter { it.deck == deck.id }
-                    if (cards.isEmpty()) return@forEach
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(deck.title, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.width(130.dp))
-                        Bar(cards.count { it.isKnown }.toFloat() / cards.size, Night.jade, Modifier.weight(1f))
-                        Text("  ${cards.count { it.isKnown }}/${cards.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    }
+        val started = state.cards.count { !it.isNew }
+        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.decks", "By deck", summary = "$started of ${state.cards.size} started · $known known") {
+            Text("Same as Learn: the bar is how much you've started, ✓ is what you know (remembered a week+). Tap one to open it.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            Spacer(Modifier.height(6.dp))
+            Decks.forEach { deck ->
+                val cards = state.cards.filter { it.deck == deck.id }
+                if (cards.isEmpty()) return@forEach
+                val s0 = cards.count { !it.isNew }
+                val k0 = cards.count { it.isKnown }
+                Row(Modifier.fillMaxWidth().clickable { onOpenDeck(deck.id) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(deck.title, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.width(130.dp))
+                    Bar(s0.toFloat() / cards.size, Night.jade, Modifier.weight(1f))
+                    Text("  $s0/${cards.size}" + if (k0 > 0) " · $k0✓" else "", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                 }
             }
         }

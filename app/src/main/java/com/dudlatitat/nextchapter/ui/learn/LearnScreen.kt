@@ -76,7 +76,10 @@ import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 @Composable
-fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null) {
+fun LearnScreen(
+    state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null,
+    startDeck: String? = null, onDeckOpened: () -> Unit = {},
+) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var redoing by rememberSaveable { mutableStateOf(false) }
     var drill by rememberSaveable { mutableStateOf<String?>(null) }
@@ -86,6 +89,8 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
     var adding by remember { mutableStateOf(false) }
 
     LaunchedEffect(startTool) { if (startTool != null) { tool = startTool; onReviewStarted() } }
+    // Opening a deck from elsewhere (Progress → By deck).
+    LaunchedEffect(startDeck) { if (startDeck != null) { openDeck = startDeck; onDeckOpened() } }
     LaunchedEffect(startReview, startRedo) {
         if (startReview) { reviewing = true; onReviewStarted() }
         if (startRedo) { redoing = true; onReviewStarted() }
@@ -169,8 +174,17 @@ private fun Overview(
         item {
             val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
             val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
-            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all", defaultOpen = false) {
-                visible.forEach { deck -> DeckRow(deck, state) { onDeck(deck.id) } }
+            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all", defaultOpen = true) {
+                // A grid of small tiles (2 across on the cover screen, 3 unfolded): far less scrolling.
+                val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 3 else 2
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    visible.chunked(cols).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { deck -> DeckTile(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
+                            repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
                 TextButton(onClick = onAdd) {
                     Icon(Icons.Rounded.Add, null, tint = Night.sun)
                     Spacer(Modifier.width(4.dp))
@@ -178,6 +192,23 @@ private fun Overview(
                 }
             }
         }
+    }
+}
+
+/** One deck as a small tile: Chinese name, English name, progress. */
+@Composable
+private fun DeckTile(deck: Deck, state: AppState, modifier: Modifier, onClick: () -> Unit) {
+    val cards = state.cards.filter { it.deck == deck.id }
+    val started = cards.count { !it.isNew }
+    Column(
+        modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Night.ground2.copy(alpha = 0.5f))
+            .clickable(onClick = onClick).padding(10.dp),
+    ) {
+        Text(deck.hanzi, fontSize = 15.sp, color = Night.sun, maxLines = 1)
+        Text(deck.title, style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Spacer(Modifier.height(4.dp))
+        Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
+        Text("$started/${cards.size}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
     }
 }
 
@@ -521,18 +552,26 @@ private fun ToolTile(zh: String, title: String, color: Color, modifier: Modifier
 /** Accuracy for each tone lately, and a drill for the pair you mix up most. */
 @Composable
 private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
-    val acc = com.dudlatitat.nextchapter.data.Stats.toneAccuracy(state)
+    val S = com.dudlatitat.nextchapter.data.Stats
+    val acc = S.toneAccuracy(state)
     if (acc.values.all { it == null }) return
-    val pair = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
+    val d = today()
+    // This week vs the three weeks before, so you see the direction, not just a number.
+    val now = S.toneAccuracyBetween(state, d - 6, d, min = 3)
+    val before = S.toneAccuracyBetween(state, d - 30, d - 7, min = 3)
+    val pair = S.weakestPair(state)
     GlassCard {
         Text("Your tones · last 30 days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            (1..4).forEach { t ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val a = acc[t]
-                    Text(if (a == null) "–" else "${(a * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = com.dudlatitat.nextchapter.ui.components.toneColor(t))
-                    Text("tone $t", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        (1..4).forEach { t ->
+            val a = acc[t]
+            val n = now[t]; val b = before[t]
+            val trend = if (n != null && b != null) when { n > b + 0.05f -> " · ↑ better this week"; n < b - 0.05f -> " · ↓ dipped this week"; else -> "" } else ""
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                Text("Tone $t", style = MaterialTheme.typography.labelMedium, color = com.dudlatitat.nextchapter.ui.components.toneColor(t), modifier = Modifier.width(56.dp))
+                Column(Modifier.weight(1f)) {
+                    Bar(a ?: 0f, com.dudlatitat.nextchapter.ui.components.toneColor(t).copy(alpha = 0.8f))
+                    Text(S.toneWord(a) + trend, style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 }
             }
         }
@@ -541,7 +580,7 @@ private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
             Button(
                 onClick = { onDrill(pair.first, pair.second) }, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Night.violet.copy(alpha = 0.2f), contentColor = Night.violet),
-            ) { Text("Drill tones ${pair.first} & ${pair.second}: you mix these up most") }
+            ) { Text("Practice tones ${pair.first} & ${pair.second} · 2 min") }
         }
     }
 }

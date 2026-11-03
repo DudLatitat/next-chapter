@@ -55,6 +55,7 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     var startRedo by rememberSaveable { mutableStateOf(false) }
     var startTool by rememberSaveable { mutableStateOf<String?>(null) }
     var startAPlus by rememberSaveable { mutableStateOf(false) }
+    var startDeck by rememberSaveable { mutableStateOf<String?>(null) }
     // New milestones get a little celebration, once.
     val fresh = com.dudlatitat.nextchapter.data.Milestones.fresh(state)
     if (fresh.isNotEmpty()) androidx.compose.material3.AlertDialog(
@@ -107,11 +108,11 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE })
-                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool)
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE }, onTool = { startTool = it; tab = Tab.LEARN }, onOpenProgress = { tab = Tab.PROGRESS })
+                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool, startDeck = startDeck, onDeckOpened = { startDeck = null })
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false })
-                    Tab.PROGRESS -> ProgressScreen(state)
+                    Tab.PROGRESS -> ProgressScreen(state, onOpenDeck = { startDeck = it; tab = Tab.LEARN })
                 }
             }
         }

@@ -67,6 +67,20 @@ class LifeTest {
         }
     }
 
+    @Test fun yulingsTimeFollowsDaylightSaving() {
+        val la = java.time.ZoneId.of("America/Los_Angeles")
+        // Winter (PST): 16 hours ahead. 8 pm Tuesday in LA is noon Wednesday in Neijiang.
+        val winter = java.time.ZonedDateTime.of(2026, 12, 1, 20, 0, 0, 0, la)
+        assertEquals(16, Life.hoursAhead(winter))
+        assertEquals(java.time.LocalTime.NOON, Life.herTime(winter).toLocalTime())
+        assertEquals("tomorrow", Life.herDayWord(winter))
+        // Summer (PDT): 15 hours ahead. 7 am in LA is 10 pm the same day there.
+        val summer = java.time.ZonedDateTime.of(2026, 7, 1, 7, 0, 0, 0, la)
+        assertEquals(15, Life.hoursAhead(summer))
+        assertEquals(22, Life.herTime(summer).hour)
+        assertEquals("today", Life.herDayWord(summer))
+    }
+
     @Test fun oldSavedDataStillLoads() {
         // A backup from before 1.32 has none of the new fields: they must default, not fail.
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }

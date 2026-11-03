@@ -105,41 +105,34 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
             }
         }
 
-        // Savings
+        // Savings, compact: amount and goal on one line, the plan underneath, quick-add chips.
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProgressRing(state.savingsProgress(), 72.dp, Night.jade, stroke = 8.dp) {
-                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+                    ProgressRing(state.savingsProgress(), 52.dp, Night.jade, stroke = 6.dp) {
+                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = Night.ink)
                     }
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Savings · 存钱", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                        Text(money(state.saved), style = MaterialTheme.typography.headlineMedium, color = Night.ink, maxLines = 1)
+                        Text("Savings · 存钱", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                        Text(
+                            money(state.saved) + if (state.savingsGoal > 0) " of ${money(state.savingsGoal)}" else "",
+                            style = MaterialTheme.typography.titleMedium, color = Night.ink, maxLines = 1,
+                        )
+                        if (state.savingsGoal > 0) perMonth(state)?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Night.jade) }
+                        else Text("Tap ✏️ to set a goal", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                     }
                     IconButton(onClick = { editingMoney = true }) { Icon(Icons.Rounded.Edit, "Edit", tint = Night.muted) }
                 }
-                Spacer(Modifier.height(10.dp))
-                if (state.savingsGoal > 0) {
-                    Row {
-                        Text("Goal ${money(state.savingsGoal)}", style = MaterialTheme.typography.bodyMedium, color = Night.muted, modifier = Modifier.weight(1f))
-                        Text("${money((state.savingsGoal - state.saved).coerceAtLeast(0))} to go", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
-                    }
-                    perMonth(state)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Night.jade) }
-                } else {
-                    Text("Tap ✏️ to set a goal", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     listOf(50, 100, 500).forEach { n ->
-                        OutlinedButton(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, modifier = Modifier.weight(1f)) {
-                            Text("+$$n", color = Night.jade)
-                        }
+                        androidx.compose.material3.AssistChip(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, label = { Text("+$$n", color = Night.jade) })
                     }
-                }
-                if (state.flightTarget > 0) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("✈  Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.bodyMedium, color = Night.rose)
+                    if (state.flightTarget > 0) {
+                        Spacer(Modifier.weight(1f))
+                        Text("✈ ≤ ${money(state.flightTarget)}", style = MaterialTheme.typography.labelMedium, color = Night.rose)
+                    }
                 }
             }
         }

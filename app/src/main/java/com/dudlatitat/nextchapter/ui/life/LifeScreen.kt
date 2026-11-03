@@ -1,5 +1,7 @@
 package com.dudlatitat.nextchapter.ui.life
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -153,17 +155,20 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
             )
         }
         Spacer(Modifier.height(6.dp))
-        APlus.domains.forEach { (d, info) ->
-            val (name, weight) = info
-            val s = strength[d] ?: 0f
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$name · $weight%", style = MaterialTheme.typography.bodySmall, color = if (d == weakest) Night.sun else Night.muted, modifier = Modifier.weight(1f))
-                if (d == weakest) Pill("focus", Night.sun)
-                Spacer(Modifier.width(6.dp))
-                Text("${(s * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = Night.ink)
+        // The five domains in one row: short name, a mini bar, how much you know.
+        val short = mapOf(1 to "Mobile", 2 to "Network", 3 to "Hardware", 4 to "Cloud", 5 to "Fixes")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            APlus.domains.forEach { (d, info) ->
+                val s0 = strength[d] ?: 0f
+                val c = if (d == weakest) Night.sun else Night.jade
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(short.getValue(d), style = MaterialTheme.typography.labelSmall, color = if (d == weakest) Night.sun else Night.muted, maxLines = 1)
+                    Bar(s0, c, Modifier.padding(vertical = 3.dp))
+                    Text("${(s0 * 100).toInt()}% · ${info.second}", style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1)
+                }
             }
-            Bar(s, if (d == weakest) Night.sun else Night.jade, Modifier.padding(bottom = 6.dp))
         }
+        weakest?.let { Text("Focus: ${APlus.domains.getValue(it).first} (${APlus.domains.getValue(it).second}% of the exam)", style = MaterialTheme.typography.labelSmall, color = Night.sun, modifier = Modifier.padding(top = 6.dp)) }
         Spacer(Modifier.height(6.dp))
         Button(
             onClick = onStart, enabled = queue.isNotEmpty(),
@@ -254,13 +259,20 @@ private fun CertPath(state: AppState, vm: MainViewModel) {
         Text("Certifications · ${certs.count { it.status == "passed" }}/${certs.size} passed", style = MaterialTheme.typography.titleMedium, color = Night.ink)
         Text("Tap one to move it along: planned → studying → booked → passed", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         Spacer(Modifier.height(8.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Career.certs(state).forEach { c ->
-                FilterChip(
-                    selected = c.status != "planned",
-                    onClick = { vm.cycleCert(c.id) },
-                    label = { Text((if (c.status == "passed") "✓ " else "") + "${c.name} · ${c.status}", color = certColor(c.status)) },
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            certs.chunked(2).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { c ->
+                        val color = certColor(c.status)
+                        Column(
+                            Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                .background(color.copy(alpha = 0.12f)).clickable { vm.cycleCert(c.id) }.padding(10.dp),
+                        ) {
+                            Text(c.name.substringBefore(" ("), style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1)
+                            Text((if (c.status == "passed") "✓ " else "") + c.status, style = MaterialTheme.typography.labelSmall, color = color)
+                        }
+                    }
+                }
             }
         }
     }

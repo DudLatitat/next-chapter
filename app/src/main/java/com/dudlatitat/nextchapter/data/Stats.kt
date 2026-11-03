@@ -46,6 +46,23 @@ object Stats {
         }
     }
 
+    /** Accuracy per tone between two days (inclusive); null with fewer than [min] attempts. */
+    fun toneAccuracyBetween(state: AppState, from: Long, to: Long, min: Int = 4): Map<Int, Float?> {
+        val events = state.toneEvents.filter { it.day in from..to }
+        return (1..4).associateWith { t ->
+            val mine = events.filter { it.target == t }
+            if (mine.size < min) null else mine.count { it.got == t }.toFloat() / mine.size
+        }
+    }
+
+    /** A kind word for a tone's accuracy instead of a bare percentage. */
+    fun toneWord(a: Float?): String = when {
+        a == null -> "not enough yet"
+        a < 0.4f -> "needs practice"
+        a < 0.7f -> "getting there"
+        else -> "solid ✓"
+    }
+
     /** The two tones you mix up most (either way round), or null if nothing stands out yet. */
     fun weakestPair(state: AppState, days: Int = 30): Pair<Int, Int>? {
         val since = today() - days

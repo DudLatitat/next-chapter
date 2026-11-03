@@ -118,4 +118,15 @@ class LifeTabTest {
         val s = AppState(studyDays = listOf(10, 11), days = mapOf(12L to DayLog(reviews = 4), 13L to DayLog(reviews = 0)))
         assertEquals(listOf(10L, 11L, 12L), Stats.practiceDays(s))
     }
+
+    @Test fun toneTrendWindowsAndKindWords() {
+        val ev = listOf(ToneEvent(10, 4, 1), ToneEvent(10, 4, 4), ToneEvent(11, 4, 4), ToneEvent(20, 4, 4))
+        val s = AppState(toneEvents = ev)
+        assertEquals(2 / 3f, Stats.toneAccuracyBetween(s, 10, 11, min = 3)[4]!!, 1e-6f)
+        assertNull(Stats.toneAccuracyBetween(s, 10, 11, min = 4)[4]) // too few to say
+        assertEquals("needs practice", Stats.toneWord(0.07f))
+        assertEquals("getting there", Stats.toneWord(0.5f))
+        assertEquals("solid ✓", Stats.toneWord(0.9f))
+        assertEquals("not enough yet", Stats.toneWord(null))
+    }
 }

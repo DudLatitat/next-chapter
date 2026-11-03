@@ -45,6 +45,22 @@ object Life {
         )
     }
 
+    /** Yuling's zone: Neijiang, Sichuan (China has no daylight saving). */
+    val HER_ZONE: java.time.ZoneId = java.time.ZoneId.of("Asia/Shanghai")
+
+    /** The same moment in Neijiang. */
+    fun herTime(now: java.time.ZonedDateTime): java.time.ZonedDateTime = now.withZoneSameInstant(HER_ZONE)
+
+    /** "today", "tomorrow" or "yesterday": her calendar day compared with yours. */
+    fun herDayWord(now: java.time.ZonedDateTime): String {
+        val diff = herTime(now).toLocalDate().toEpochDay() - now.toLocalDate().toEpochDay()
+        return when { diff > 0 -> "tomorrow"; diff < 0 -> "yesterday"; else -> "today" }
+    }
+
+    /** Hours she's ahead of you right now (15 or 16 from Los Angeles, as daylight saving changes). */
+    fun hoursAhead(now: java.time.ZonedDateTime): Int =
+        (HER_ZONE.rules.getOffset(now.toInstant()).totalSeconds - now.offset.totalSeconds) / 3600
+
     /** Adds [day] to a list of days once, keeping the last 400. */
     fun addDay(days: List<Long>, day: Long): List<Long> = if (day in days) days else (days + day).filter { it > day - 400 }
 }
