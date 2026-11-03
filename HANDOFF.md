@@ -48,9 +48,9 @@ tools/
 
 ## Daily rhythm (1.32) and what's next
 
-- `data/Life.kt` (pure, tested in `LifeTest`): parts of the day (morning < 12, plan 17–19, **call 19–20: never ask anything**, late ≥ 20), early start = opened 3–7 am, one `DayGoal` per day, Sunday week counts. `data/Prayers.kt`: Catholic prayers EN + mainland Catholic Chinese + pinyin, one per day after the Sign of the Cross (Chinese recorded by make_voice; Rudy should check the Chinese against a Catholic prayer book).
+- `data/Life.kt` (pure, tested in `LifeTest`): parts of the day (morning < 12, plan 17–19, **call 19–20: never ask anything**, late ≥ 20), early start = opened 3–7 am, one `DayGoal` per day, Sunday week counts. `data/Prayers.kt`: Catholic prayers EN + mainland Catholic Chinese + pinyin, one per day after the Sign of the Cross (Chinese recorded by make_voice; Chinese + pinyin copied exactly from dominicweb.eu, Standard Mandarin page, per Rudy).
 - `ui/today/Rhythm.kt`: MorningCard, EveningCard, SundayReview, WeekNotes (on Progress). `notify/Evening.kt`: 8:30 pm check-in if a goal is set and unanswered (Settings switch, `eveningCheck`).
-- Identity V deck (`idv`, Seed.VERSION 3): all slang flagged for Rudy to check with Yuling.
+- Identity V deck (`idv`, Seed.VERSION 4): terms checked against Bilibili/Moegirl player guides (Rudy won't ask Yuling about slang).
 - **Next (1.33, agreed):** a 5th tab "Life · 生活": A+ exam mode (SRS deck, Core 1 / 220-1201 first, no exam date yet → "set date" button), job & school tracker, gift & moments notes. Then add an A+ card to the morning card.
 
 ## Saved data: be careful
