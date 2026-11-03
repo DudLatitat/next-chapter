@@ -70,6 +70,9 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         vm.setReminder(granted, state.reminderMinutes)
         if (!granted) Toast.makeText(context, "Notifications are off for Next Chapter", Toast.LENGTH_SHORT).show()
     }
+    val askEvening = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Toast.makeText(context, "Notifications are off for Next Chapter", Toast.LENGTH_SHORT).show()
+    }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val ok = try {
@@ -113,6 +116,25 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             if (state.reminderOn) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { pickingTime = true }) { Text("At ${timeLabel(state.reminderMinutes)}", color = Night.sun) }
+            }
+        }
+
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Evening check-in", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("At 8:30 pm, after her call: did you get to tonight's goal? Only if you set one.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Switch(
+                    checked = state.eveningCheck,
+                    onCheckedChange = { on ->
+                        if (on && Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) askEvening.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        vm.setEveningCheck(on)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
             }
         }
 

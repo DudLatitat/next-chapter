@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.31** (cleanup: Google recognizer removed, version shown at the bottom of Settings) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.32** (daily rhythm: morning card with Catholic prayer, evening plan around the 7–8 pm call, Sunday review, Identity V deck) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
@@ -45,6 +45,13 @@ tools/
 5. On failure, "Summarise build errors" puts compiler errors in an annotation: read with `gh api .../check-runs/<job id>/annotations`.
 
 `assets/voice/` and `assets/strokes.json` are gitignored build outputs.
+
+## Daily rhythm (1.32) and what's next
+
+- `data/Life.kt` (pure, tested in `LifeTest`): parts of the day (morning < 12, plan 17–19, **call 19–20: never ask anything**, late ≥ 20), early start = opened 3–7 am, one `DayGoal` per day, Sunday week counts. `data/Prayers.kt`: Catholic prayers EN + mainland Catholic Chinese + pinyin, one per day after the Sign of the Cross (Chinese recorded by make_voice; Rudy should check the Chinese against a Catholic prayer book).
+- `ui/today/Rhythm.kt`: MorningCard, EveningCard, SundayReview, WeekNotes (on Progress). `notify/Evening.kt`: 8:30 pm check-in if a goal is set and unanswered (Settings switch, `eveningCheck`).
+- Identity V deck (`idv`, Seed.VERSION 3): all slang flagged for Rudy to check with Yuling.
+- **Next (1.33, agreed):** a 5th tab "Life · 生活": A+ exam mode (SRS deck, Core 1 / 220-1201 first, no exam date yet → "set date" button), job & school tracker, gift & moments notes. Then add an A+ card to the morning card.
 
 ## Saved data: be careful
 

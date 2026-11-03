@@ -37,6 +37,7 @@ data class Deck(val id: String, val title: String, val hanzi: String, val blurb:
 
 val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
+    Deck("idv", "Identity V", "第五人格", "Callouts for playing with Yuling"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
     Deck("daily", "Everyday", "日常", "Getting by, asking for help"),
@@ -205,4 +206,14 @@ data class AppState(
     val storiesRead: List<String> = emptyList(),
     val charsWritten: Int = 0,
     val driveMinutes: Int = 0,
+    /** Days the app was opened before 7 am (the early-start streak). */
+    val wakeDays: List<Long> = emptyList(),
+    /** Days the morning prayer was said ("Amen" tapped). */
+    val prayedDays: List<Long> = emptyList(),
+    /** One goal per evening (Life.withGoal keeps the last 120 days). */
+    val goals: List<DayGoal> = emptyList(),
+    /** The Sunday review's one line, by the week's Monday (ISO date). */
+    val weekNotes: Map<String, String> = emptyMap(),
+    /** The 8:30 pm "did you get to it?" notification. */
+    val eveningCheck: Boolean = true,
 )

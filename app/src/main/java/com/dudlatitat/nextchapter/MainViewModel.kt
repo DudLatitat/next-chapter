@@ -29,6 +29,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         store.onChange = { PhraseWidget.refresh(app, it) }
         PhraseWidget.refresh(app, store.state.value)
         Reminder.schedule(app, store.state.value)
+        com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
@@ -141,6 +142,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteTask(task: MoveTask) = store.edit { s -> s.copy(tasks = s.tasks.filterNot { it.id == task.id }) }
 
     fun updatePlan(change: (AppState) -> AppState) = store.edit(change)
+
+    // ---- Daily rhythm (Today's morning card, evening plan, Sunday review) ----
+    fun markEarlyStart() = store.edit { s -> if (today() in s.wakeDays) s else s.copy(wakeDays = com.dudlatitat.nextchapter.data.Life.addDay(s.wakeDays, today())) }
+    fun prayed() = store.edit { s -> s.copy(prayedDays = com.dudlatitat.nextchapter.data.Life.addDay(s.prayedDays, today())) }
+    fun setGoal(text: String) = store.edit { s ->
+        s.copy(goals = com.dudlatitat.nextchapter.data.Life.withGoal(s.goals, com.dudlatitat.nextchapter.data.DayGoal(today(), text.trim())))
+    }
+    fun answerGoal(done: Boolean) = store.edit { s ->
+        val g = com.dudlatitat.nextchapter.data.Life.goalFor(s) ?: return@edit s
+        s.copy(goals = com.dudlatitat.nextchapter.data.Life.withGoal(s.goals, g.copy(done = done)))
+    }
+    fun setWeekNote(weekStart: String, note: String) = store.edit { s ->
+        s.copy(weekNotes = if (note.isBlank()) s.weekNotes - weekStart else s.weekNotes + (weekStart to note.trim()))
+    }
+    fun setEveningCheck(on: Boolean) {
+        store.edit { it.copy(eveningCheck = on) }
+        com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)
+    }
 
     override fun onCleared() = speaker.close()
 }

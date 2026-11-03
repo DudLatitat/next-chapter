@@ -83,6 +83,11 @@ fun ProgressScreen(state: AppState) {
         SectionLabel("Milestones")
         MilestoneGrid(state)
 
+        if (state.weekNotes.isNotEmpty()) {
+            SectionLabel("Your weeks")
+            com.dudlatitat.nextchapter.ui.today.WeekNotes(state)
+        }
+
         SectionLabel("By deck")
         GlassCard {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

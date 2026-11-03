@@ -49,6 +49,10 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
     val streak = Srs.streak(state.studyDays)
     val studiedToday = com.dudlatitat.nextchapter.data.today() in state.studyDays
     val hour = LocalTime.now().hour
+    // Opening the app before 7 am counts toward the early-start streak.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (com.dudlatitat.nextchapter.data.Life.earlyStart(LocalTime.now())) vm.markEarlyStart()
+    }
     val (hello, helloZh) = when {
         hour < 5 -> "Up late" to "夜深了"
         hour < 12 -> "Good morning" to "早上好"
@@ -76,6 +80,11 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
         }
 
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
+
+        // The daily rhythm: morning card, tonight's plan / call time / check-in, Sunday review.
+        val part = com.dudlatitat.nextchapter.data.Life.partOf(LocalTime.now())
+        if (part == com.dudlatitat.nextchapter.data.Life.Part.MORNING) MorningCard(state, vm) else EveningCard(state, vm, part)
+        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm)
 
         // Monday: a look back at last week.
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {

@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 2
+    const val VERSION = 3
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
         Card(id = "$deck:$hanzi", hanzi = hanzi, pinyin = pinyin, english = english, deck = deck)
@@ -19,6 +19,24 @@ object Seed {
         c("yuling", "别生气了", "bié shēngqì le", "Don't be mad anymore"),
         c("yuling", "我很快就来找你", "wǒ hěn kuài jiù lái zhǎo nǐ", "I'm coming to you soon"),
         c("yuling", "你是我的一切", "nǐ shì wǒ de yíqiè", "You are my everything"),
+
+        // Identity V (第五人格): callouts for matches with Yuling. Game slang: check each with her.
+        c("idv", "快跑！", "kuài pǎo!", "Run!"),
+        c("idv", "救我！", "jiù wǒ!", "Save me!"),
+        c("idv", "我来救你", "wǒ lái jiù nǐ", "I'm coming to rescue you"),
+        c("idv", "监管者来了", "jiānguǎnzhě lái le", "The hunter is coming"),
+        c("idv", "我被追了", "wǒ bèi zhuī le", "I'm being chased"),
+        c("idv", "我在修机", "wǒ zài xiū jī", "I'm decoding (a cipher machine)"),
+        c("idv", "压机", "yā jī", "Hold the cipher (leave it almost done)"),
+        c("idv", "开门", "kāi mén", "Open the gate"),
+        c("idv", "地窖", "dìjiào", "The dungeon (escape hatch)"),
+        c("idv", "我倒地了", "wǒ dǎo dì le", "I'm down"),
+        c("idv", "别救了，先修机", "bié jiù le, xiān xiū jī", "Don't rescue, decode first"),
+        c("idv", "小心！", "xiǎoxīn!", "Careful!"),
+        c("idv", "打得好！", "dǎ de hǎo!", "Nice play!"),
+        c("idv", "我们赢了！", "wǒmen yíng le!", "We won!"),
+        c("idv", "你好厉害", "nǐ hǎo lìhai", "You're so good"),
+        c("idv", "再来一局？", "zài lái yì jú?", "One more match?"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),
