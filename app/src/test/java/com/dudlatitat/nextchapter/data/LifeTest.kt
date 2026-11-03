@@ -60,6 +60,13 @@ class LifeTest {
         assertEquals(Prayers.daily[n - 1], Prayers.forDay(-1)) // never crashes on odd input
     }
 
+    @Test fun prayerLinesAddUpToTheWholePrayer() {
+        (Prayers.daily + Prayers.signOfTheCross).forEach { p ->
+            assertEquals(p.hanzi, p.lines.joinToString("") { it.first })
+            assertTrue(p.lines.all { it.second.isNotBlank() } && p.english.isNotEmpty())
+        }
+    }
+
     @Test fun oldSavedDataStillLoads() {
         // A backup from before 1.32 has none of the new fields: they must default, not fail.
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }

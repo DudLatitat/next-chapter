@@ -121,25 +121,47 @@ fun EveningCard(state: AppState, vm: MainViewModel, part: Life.Part) {
 /** Today's prayer, opened with the Sign of the Cross; Chinese and pinyin on a tap. */
 @Composable
 fun PrayerBlock(vm: MainViewModel, prayer: com.dudlatitat.nextchapter.data.Prayer = Prayers.forDay(today())) {
+    // Unfolded Fold: English and Chinese side by side. Cover screen: switch between them.
+    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     var chinese by remember { mutableStateOf(false) }
     Text("✝  ${prayer.title} · ${prayer.titleZh}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-    Spacer(Modifier.height(4.dp))
-    Text(Prayers.signOfTheCross.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
-    Spacer(Modifier.height(6.dp))
-    Text(prayer.english, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
-    TextButton(onClick = { chinese = !chinese }) { Text(if (chinese) "中文 ▴" else "中文 + pinyin ▾", color = Night.violet) }
-    AnimatedVisibility(chinese) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                Prayers.signOfTheCross.hanzi, style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-                modifier = Modifier.clickable { vm.speaker.say(Prayers.signOfTheCross.hanzi) },
-            )
-            Text(
-                "${prayer.hanzi}  🔊", style = MaterialTheme.typography.titleMedium, color = Night.ink,
-                modifier = Modifier.clickable { vm.speaker.say(prayer.hanzi) },
-            )
-            PinyinText(prayer.pinyin, style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(8.dp))
+    if (wide) {
+        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(Modifier.weight(1f)) { EnglishLines(prayer) }
+            Column(Modifier.weight(1f)) { ChineseLines(prayer, vm) }
         }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = !chinese, onClick = { chinese = false }, label = { Text("English") })
+            FilterChip(selected = chinese, onClick = { chinese = true }, label = { Text("中文 + pinyin") })
+        }
+        Spacer(Modifier.height(8.dp))
+        if (chinese) ChineseLines(prayer, vm) else EnglishLines(prayer)
+    }
+}
+
+/** English in short lines with room between them, opened with the Sign of the Cross. */
+@Composable
+private fun EnglishLines(prayer: com.dudlatitat.nextchapter.data.Prayer) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(Prayers.signOfTheCross.english.joinToString(" "), style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+        prayer.english.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, color = Night.ink) }
+    }
+}
+
+/** Chinese line by line, each with its pinyin right under it. Tap a line to hear it. */
+@Composable
+private fun ChineseLines(prayer: com.dudlatitat.nextchapter.data.Prayer, vm: MainViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        (Prayers.signOfTheCross.lines + prayer.lines).forEachIndexed { i, (zh, py) ->
+            Column(Modifier.fillMaxWidth().clickable { vm.speaker.say(zh) }) {
+                Text(zh, style = MaterialTheme.typography.titleMedium, color = if (i == 0) Night.muted else Night.ink)
+                PinyinText(py, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        TextButton(onClick = { vm.speaker.say(prayer.hanzi) }) { Text("🔊 Hear it all", color = Night.sun) }
+        Text("Tap any line to hear just that line.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
     }
 }
 
