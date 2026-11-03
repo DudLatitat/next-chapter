@@ -216,4 +216,16 @@ data class AppState(
     val weekNotes: Map<String, String> = emptyMap(),
     /** The 8:30 pm "did you get to it?" notification. */
     val eveningCheck: Boolean = true,
+    // ---- Life tab ----
+    /** A+ review progress (card text lives in APlus.kt), new cards per day, exam date (ISO). */
+    val aplus: List<Review> = emptyList(),
+    val aplusPerDay: Int = 10,
+    val aplusExam: String? = null,
+    val certs: List<CertStep> = emptyList(),
+    val classes: List<SchoolClass> = emptyList(),
+    val jobs: List<JobPosting> = emptyList(),
+    /** Job deadline reminders (3 days and 1 day before), at lunchtime. */
+    val jobReminders: Boolean = true,
+    val people: List<Person> = emptyList(),
+    val notes: List<PersonNote> = emptyList(),
 )

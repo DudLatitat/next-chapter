@@ -45,7 +45,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 
 /** Before noon: today's prayer, your early-start streak, and tonight's one goal. */
 @Composable
-fun MorningCard(state: AppState, vm: MainViewModel) {
+fun MorningCard(state: AppState, vm: MainViewModel, onAPlus: () -> Unit = {}) {
     val day = today()
     val prayer = Prayers.forDay(day)
     val prayedToday = day in state.prayedDays
@@ -88,6 +88,8 @@ fun MorningCard(state: AppState, vm: MainViewModel) {
             colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
         ) { Text("Amen 🙏") }
 
+        Spacer(Modifier.height(14.dp))
+        com.dudlatitat.nextchapter.ui.life.MorningAPlus(state, vm, onMore = onAPlus)
         Spacer(Modifier.height(14.dp))
         GoalPicker(state, vm, title = "Tonight's goal")
     }

@@ -138,6 +138,25 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Job deadline reminders", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("At 12:15 pm, 3 days and 1 day before a saved posting closes (Life tab).", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Switch(
+                    checked = state.jobReminders,
+                    onCheckedChange = { on ->
+                        if (on && Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) askEvening.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        vm.setJobReminders(on)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
+            }
+        }
+
         SectionLabel("Learning")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {

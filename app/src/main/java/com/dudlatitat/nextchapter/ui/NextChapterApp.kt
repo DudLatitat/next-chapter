@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
     TODAY("Today", Icons.Rounded.Home),
     LEARN("Learn", Icons.Rounded.Star),
     MOVE("Move", Icons.Rounded.Place),
+    LIFE("Life", Icons.Rounded.Person),
     PROGRESS("Progress", Icons.Rounded.CheckCircle),
 }
 
@@ -52,6 +54,7 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     var startReview by rememberSaveable { mutableStateOf(false) }
     var startRedo by rememberSaveable { mutableStateOf(false) }
     var startTool by rememberSaveable { mutableStateOf<String?>(null) }
+    var startAPlus by rememberSaveable { mutableStateOf(false) }
     // New milestones get a little celebration, once.
     val fresh = com.dudlatitat.nextchapter.data.Milestones.fresh(state)
     if (fresh.isNotEmpty()) androidx.compose.material3.AlertDialog(
@@ -104,9 +107,10 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN })
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE })
                     Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool)
                     Tab.MOVE -> MoveScreen(state, vm)
+                    Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false })
                     Tab.PROGRESS -> ProgressScreen(state)
                 }
             }

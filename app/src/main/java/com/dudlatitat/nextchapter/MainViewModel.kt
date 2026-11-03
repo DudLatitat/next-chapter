@@ -30,6 +30,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         PhraseWidget.refresh(app, store.state.value)
         Reminder.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
+        com.dudlatitat.nextchapter.notify.Deadlines.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
@@ -156,6 +157,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setWeekNote(weekStart: String, note: String) = store.edit { s ->
         s.copy(weekNotes = if (note.isBlank()) s.weekNotes - weekStart else s.weekNotes + (weekStart to note.trim()))
     }
+    // ---- Life tab: A+, career, people ----
+    fun gradeAPlus(id: String, g: Grade) = store.edit { s ->
+        val r = com.dudlatitat.nextchapter.data.APlus.grade(com.dudlatitat.nextchapter.data.APlus.review(s, id), g)
+        s.copy(aplus = com.dudlatitat.nextchapter.data.APlus.withReview(s.aplus, r))
+    }
+    fun setAPlusExam(iso: String?) = store.edit { it.copy(aplusExam = iso) }
+    fun setAPlusPerDay(n: Int) = store.edit { it.copy(aplusPerDay = n.coerceIn(3, 30)) }
+    fun cycleCert(id: String) = store.edit { s ->
+        val certs = com.dudlatitat.nextchapter.data.Career.certs(s)
+        s.copy(certs = certs.map { if (it.id == id) it.copy(status = com.dudlatitat.nextchapter.data.Career.nextStatus(it.status)) else it })
+    }
+    fun addClass(name: String, term: String) = store.edit { s ->
+        s.copy(classes = s.classes + com.dudlatitat.nextchapter.data.SchoolClass("class:${System.currentTimeMillis()}", name.trim(), term.trim()))
+    }
+    fun toggleClass(id: String) = store.edit { s -> s.copy(classes = s.classes.map { if (it.id == id) it.copy(done = !it.done) else it }) }
+    fun deleteClass(id: String) = store.edit { s -> s.copy(classes = s.classes.filterNot { it.id == id }) }
+    fun saveJob(job: com.dudlatitat.nextchapter.data.JobPosting) {
+        store.edit { s -> s.copy(jobs = if (s.jobs.any { it.id == job.id }) s.jobs.map { if (it.id == job.id) job else it } else s.jobs + job) }
+        com.dudlatitat.nextchapter.notify.Deadlines.schedule(getApplication(), store.state.value)
+    }
+    fun deleteJob(id: String) = store.edit { s -> s.copy(jobs = s.jobs.filterNot { it.id == id }) }
+    fun setJobReminders(on: Boolean) {
+        store.edit { it.copy(jobReminders = on) }
+        com.dudlatitat.nextchapter.notify.Deadlines.schedule(getApplication(), store.state.value)
+    }
+    fun addPerson(name: String) = store.edit { s ->
+        s.copy(people = s.people + com.dudlatitat.nextchapter.data.Person("person:${System.currentTimeMillis()}", name.trim()))
+    }
+    fun deletePerson(id: String) = store.edit { s -> s.copy(people = s.people.filterNot { it.id == id }, notes = s.notes.filterNot { it.personId == id }) }
+    fun addPersonDate(personId: String, d: com.dudlatitat.nextchapter.data.PersonDate) = store.edit { s ->
+        s.copy(people = s.people.map { if (it.id == personId) it.copy(dates = it.dates + d) else it })
+    }
+    fun removePersonDate(personId: String, d: com.dudlatitat.nextchapter.data.PersonDate) = store.edit { s ->
+        s.copy(people = s.people.map { if (it.id == personId) it.copy(dates = it.dates - d) else it })
+    }
+    fun addNote(personId: String, text: String, kind: String) = store.edit { s ->
+        s.copy(notes = s.notes + com.dudlatitat.nextchapter.data.PersonNote("note:${System.currentTimeMillis()}", personId, text.trim(), kind, System.currentTimeMillis()))
+    }
+    fun deleteNote(id: String) = store.edit { s -> s.copy(notes = s.notes.filterNot { it.id == id }) }
+
     fun setEveningCheck(on: Boolean) {
         store.edit { it.copy(eveningCheck = on) }
         com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)

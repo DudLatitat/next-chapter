@@ -44,7 +44,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 import java.time.LocalTime
 
 @Composable
-fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit, onPhrasebook: () -> Unit = {}) {
+fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit, onPhrasebook: () -> Unit = {}, onOpenLife: () -> Unit = {}, onAPlus: () -> Unit = {}) {
     val queue = Srs.queue(state)
     val streak = Srs.streak(state.studyDays)
     val studiedToday = com.dudlatitat.nextchapter.data.today() in state.studyDays
@@ -83,7 +83,8 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
 
         // The daily rhythm: morning card, tonight's plan / call time / check-in, Sunday review.
         val part = com.dudlatitat.nextchapter.data.Life.partOf(LocalTime.now())
-        if (part == com.dudlatitat.nextchapter.data.Life.Part.MORNING) MorningCard(state, vm) else EveningCard(state, vm, part)
+        if (part == com.dudlatitat.nextchapter.data.Life.Part.MORNING) MorningCard(state, vm, onAPlus) else EveningCard(state, vm, part)
+        com.dudlatitat.nextchapter.ui.life.ComingUpCard(state, onOpenLife)
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm)
 
         // Monday: a look back at last week.
