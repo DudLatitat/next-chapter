@@ -20,14 +20,18 @@ object Seed {
         c("yuling", "我很快就来找你", "wǒ hěn kuài jiù lái zhǎo nǐ", "I'm coming to you soon"),
         c("yuling", "你是我的一切", "nǐ shì wǒ de yíqiè", "You are my everything"),
 
-        // Identity V (第五人格): callouts for matches with Yuling. Game slang: check each with her.
+        // Identity V (第五人格): callouts for matches with Yuling. Game terms (压机, 溜鬼, 屠夫, 快走 as the
+        // quick signal) checked against Chinese player guides on Bilibili and Moegirl, Nov 2026.
         c("idv", "快跑！", "kuài pǎo!", "Run!"),
         c("idv", "救我！", "jiù wǒ!", "Save me!"),
         c("idv", "我来救你", "wǒ lái jiù nǐ", "I'm coming to rescue you"),
+        c("idv", "快走！", "kuài zǒu!", "Go! (the in-game quick signal)"),
         c("idv", "监管者来了", "jiānguǎnzhě lái le", "The hunter is coming"),
+        c("idv", "屠夫来了", "túfū lái le", "The hunter's coming (players call the hunter 屠夫, \"butcher\")"),
+        c("idv", "我来溜鬼", "wǒ lái liū guǐ", "I'll kite the hunter"),
         c("idv", "我被追了", "wǒ bèi zhuī le", "I'm being chased"),
         c("idv", "我在修机", "wǒ zài xiū jī", "I'm decoding (a cipher machine)"),
-        c("idv", "压机", "yā jī", "Hold the cipher (leave it almost done)"),
+        c("idv", "压机", "yā jī", "Hold the last cipher (don't pop it yet)"),
         c("idv", "开门", "kāi mén", "Open the gate"),
         c("idv", "地窖", "dìjiào", "The dungeon (escape hatch)"),
         c("idv", "我倒地了", "wǒ dǎo dì le", "I'm down"),
