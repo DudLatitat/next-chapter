@@ -63,6 +63,7 @@ import com.dudlatitat.nextchapter.data.daysUntil
 import com.dudlatitat.nextchapter.data.friendlySpan
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
+import com.dudlatitat.nextchapter.ui.components.Collapsible
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.ProgressRing
@@ -248,8 +249,12 @@ private fun certColor(status: String) = when (status) { "studying" -> Night.viol
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CertPath(state: AppState, vm: MainViewModel) {
-    GlassCard {
-        Text("Certifications", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+    val certs = Career.certs(state)
+    val current = certs.firstOrNull { it.status != "passed" }
+    Collapsible(
+        "life.certs", "Certifications · ${certs.count { it.status == "passed" }}/${certs.size} passed",
+        summary = current?.let { "${it.name} · ${it.status}" } ?: "All passed 🎉",
+    ) {
         Text("Tap one to move it along: planned → studying → booked → passed", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -268,10 +273,11 @@ private fun CertPath(state: AppState, vm: MainViewModel) {
 @Composable
 private fun Classes(state: AppState, vm: MainViewModel, onAdd: () -> Unit) {
     var deleting by remember { mutableStateOf<String?>(null) }
-    GlassCard {
-        val left = state.classes.count { !it.done }
-        Text("AS in CIS · classes", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Text(if (state.classes.isEmpty()) "Add the classes you have left" else if (left == 0) "All done. Graduation! 🎓" else "$left left", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    val left = state.classes.count { !it.done }
+    Collapsible(
+        "life.classes", "AS in CIS · classes",
+        summary = if (state.classes.isEmpty()) "Add the classes you have left" else if (left == 0) "All done. Graduation! 🎓" else "$left left",
+    ) {
         state.classes.forEach { c ->
             Row(
                 Modifier.fillMaxWidth().combinedClickable(onClick = { vm.toggleClass(c.id) }, onLongClick = { deleting = c.id }),
@@ -299,10 +305,13 @@ private fun Classes(state: AppState, vm: MainViewModel, onAdd: () -> Unit) {
 @Composable
 private fun Jobs(state: AppState, onEdit: (JobPosting) -> Unit, onAdd: () -> Unit) {
     val today = LocalDate.now()
-    GlassCard {
-        Text("Job postings", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+    val open = state.jobs.filter { it.status != "closed" }.sortedWith(compareBy({ it.deadline == null }, { it.deadline }))
+    val soonest = open.firstOrNull { it.status == "saved" }?.let { j -> Career.daysLeft(j, today)?.takeIf { it >= 0 }?.let { "${j.title} closes in ${it}d" } }
+    Collapsible(
+        "life.jobs", "Job postings · ${open.size}",
+        summary = soonest ?: if (open.isEmpty()) "Save postings you're watching" else "${open.count { it.status == "applied" }} applied",
+    ) {
         Text("Public-sector IT and more. Reminders 3 days and 1 day before a deadline.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-        val open = state.jobs.filter { it.status != "closed" }.sortedWith(compareBy({ it.deadline == null }, { it.deadline }))
         open.forEach { j ->
             val left = Career.daysLeft(j, today)
             Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable { onEdit(j) }) {
@@ -374,14 +383,19 @@ private fun PeopleList(state: AppState, vm: MainViewModel, onOpen: (Person) -> U
         }
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val soon = People.upcoming(state, today, within = 30).firstOrNull()
+    Collapsible(
+        "life.people", "People · ${state.people.size}",
+        summary = soon?.let { "${it.person.name}'s ${it.date.label.lowercase()} in ${it.days}d" } ?: "${state.notes.size} notes",
+    ) {
         state.people.forEach { p ->
             val next = p.dates.mapNotNull { d -> runCatching { d to People.next(d, today) }.getOrNull() }.minByOrNull { it.second }
             val count = state.notes.count { it.personId == p.id }
-            GlassCard(onClick = { onOpen(p) }) {
+            Column(Modifier.fillMaxWidth().clickable { onOpen(p) }.padding(vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(p.name, style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
+                    Text(p.name, style = MaterialTheme.typography.bodyLarge, color = Night.ink, modifier = Modifier.weight(1f))
                     if (count > 0) Pill("$count notes", Night.violet)
+                    Text("  ›", color = Night.muted)
                 }
                 next?.let { (d, on) ->
                     val days = on.toEpochDay() - today.toEpochDay()
@@ -516,15 +530,25 @@ private fun TwoFieldDialog(title: String, first: String, second: String?, onDism
     )
 }
 
-/** On Today: birthdays in the next 2 weeks and job deadlines in the next week. */
-@Composable
-fun ComingUpCard(state: AppState, onOpen: () -> Unit) {
+/** On Today: one line for the closed "Coming up" row, or null when nothing is coming up. */
+fun comingUpSummary(state: AppState): String? {
     val today = LocalDate.now()
     val dates = People.upcoming(state, today, within = 14)
     val jobs = Career.deadlinesSoon(state, today, within = 7)
-    if (dates.isEmpty() && jobs.isEmpty()) return
-    GlassCard(onClick = onOpen) {
-        Text("Coming up", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+    if (dates.isEmpty() && jobs.isEmpty()) return null
+    return listOfNotNull(
+        dates.firstOrNull()?.let { "🎂 ${it.person.name} " + if (it.days == 0L) "today" else "in ${it.days}d" },
+        jobs.firstOrNull()?.let { (j, d) -> "💼 ${j.title} " + if (d == 0L) "today" else "in ${d}d" },
+    ).joinToString(" · ")
+}
+
+/** Birthdays in the next 2 weeks and job deadlines in the next week (inside Today's row). */
+@Composable
+fun ComingUpList(state: AppState, onOpen: () -> Unit) {
+    val today = LocalDate.now()
+    val dates = People.upcoming(state, today, within = 14)
+    val jobs = Career.deadlinesSoon(state, today, within = 7)
+    Column(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         dates.forEach { u ->
             Text(
                 "🎂 ${u.person.name}'s ${u.date.label.lowercase()} · " + if (u.days == 0L) "today!" else "in ${u.days} days",
@@ -536,6 +560,7 @@ fun ComingUpCard(state: AppState, onOpen: () -> Unit) {
         jobs.forEach { (j, days) ->
             Text("💼 ${j.title} closes " + if (days == 0L) "today" else "in $days days", style = MaterialTheme.typography.bodyLarge, color = if (days <= 3) Night.coral else Night.ink)
         }
+        Text("Open Life →", style = MaterialTheme.typography.labelMedium, color = Night.sun, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

@@ -27,13 +27,14 @@ import java.util.Locale
  * [lastWeek] shows the week that just ended (for the Monday recap on Today).
  */
 @Composable
-fun WeeklyRecap(state: AppState, lastWeek: Boolean = false, modifier: Modifier = Modifier) {
+fun WeeklyRecap(state: AppState, lastWeek: Boolean = false, modifier: Modifier = Modifier, bare: Boolean = false) {
     val thisStart = Stats.weekStart()
     val start = if (lastWeek) thisStart.minusWeeks(1) else thisStart
     val now = Stats.week(state, start)
     val before = Stats.week(state, start.minusWeeks(1))
     val fmt = DateTimeFormatter.ofPattern("MMM d", Locale.US)
-    GlassCard(modifier, highlight = true) {
+    // [bare]: just the contents, for use inside a collapsible section.
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         Text(
             (if (lastWeek) "Last week" else "This week") + " · ${start.format(fmt)}–${start.plusDays(6).format(fmt)}",
             style = MaterialTheme.typography.labelMedium, color = Night.muted,
@@ -59,6 +60,14 @@ fun WeeklyRecap(state: AppState, lastWeek: Boolean = false, modifier: Modifier =
         Text("Move-ready: ${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         if (lastWeek && LocalDate.now().dayOfWeek.value <= 1) Text(message(now.daysPracticed), style = MaterialTheme.typography.bodySmall, color = Night.sun)
     }
+    if (bare) Column(modifier, content = body) else GlassCard(modifier, highlight = true, content = body)
+}
+
+/** One line for a closed section: "3/7 days · 25 reviews". */
+fun recapSummary(state: AppState, lastWeek: Boolean): String {
+    val start = Stats.weekStart().let { if (lastWeek) it.minusWeeks(1) else it }
+    val w = Stats.week(state, start)
+    return "${w.daysPracticed}/7 days · ${w.reviews} reviews · ${w.minutes} min"
 }
 
 private fun signed(n: Int) = if (n > 0) "+$n" else "$n"

@@ -40,6 +40,8 @@ import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ProgressRing
 import com.dudlatitat.nextchapter.ui.components.SectionLabel
+import com.dudlatitat.nextchapter.ui.components.Collapsible
+import androidx.compose.foundation.clickable
 import com.dudlatitat.nextchapter.ui.theme.Night
 import java.time.LocalTime
 
@@ -67,7 +69,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(helloZh, style = MaterialTheme.typography.titleMedium, color = Night.sun)
-                Text("$hello, Rudy", style = MaterialTheme.typography.headlineLarge, color = Night.ink)
+                Text("$hello, Rudy", style = MaterialTheme.typography.headlineMedium, color = Night.ink)
             }
             if (streak > 0) Pill("🔥 $streak", Night.sun)
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.muted) }
@@ -81,31 +83,43 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
 
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
 
-        // The daily rhythm: morning card, tonight's plan / call time / check-in, Sunday review.
+        // "Now": the one card that fits this time of day (morning prayer and A+, tonight's plan,
+        // call time, the check-in). Sundays add the week review.
         val part = com.dudlatitat.nextchapter.data.Life.partOf(LocalTime.now())
         if (part == com.dudlatitat.nextchapter.data.Life.Part.MORNING) MorningCard(state, vm, onAPlus) else EveningCard(state, vm, part)
-        com.dudlatitat.nextchapter.ui.life.ComingUpCard(state, onOpenLife)
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm)
 
+        Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
+
+        // Everything else stays folded until you want it.
+        if (part != com.dudlatitat.nextchapter.data.Life.Part.MORNING) {
+            val prayer = com.dudlatitat.nextchapter.data.Prayers.forDay(com.dudlatitat.nextchapter.data.today())
+            val prayed = com.dudlatitat.nextchapter.data.today() in state.prayedDays
+            Collapsible("today.prayer", "🙏 Prayer", summary = prayer.title + if (prayed) " · prayed today ✓" else "") {
+                PrayerBlock(vm, prayer)
+                Spacer(Modifier.height(6.dp))
+                AmenButton(state, vm)
+            }
+        }
+        com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)?.let { summary ->
+            Collapsible("today.comingup", "Coming up", summary = summary, defaultOpen = true) {
+                com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife)
+            }
+        }
+        state.phraseOfTheDay()?.let { card ->
+            Collapsible("today.phrase", "Phrase of the day", summary = "${card.hanzi} · ${card.pinyin}") {
+                PhraseOfDay(card, vm)
+            }
+        }
         // Monday: a look back at last week.
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
-            com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true)
-        }
-        val wide = LocalConfiguration.current.screenWidthDp >= 600
-        if (wide) {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
-                    MoveStep(state, onOpenMove, Modifier)
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    PhraseOfDay(state, vm, Modifier)
-                }
+            Collapsible("today.lastweek", "Last week", summary = com.dudlatitat.nextchapter.ui.progress.recapSummary(state, lastWeek = true)) {
+                com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true, bare = true)
             }
-        } else {
-            Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
-            PhraseOfDay(state, vm, Modifier)
-            MoveStep(state, onOpenMove, Modifier)
+        }
+        val next = state.tasks.firstOrNull { !it.done }
+        Collapsible("today.move", "Toward the move", summary = "${(state.moveReady() * 100).toInt()}% ready" + (next?.let { " · next: ${it.title}" } ?: "")) {
+            MoveStep(state, onOpenMove)
         }
         Spacer(Modifier.height(8.dp))
     }
@@ -170,46 +184,31 @@ private fun Practice(state: AppState, queue: List<com.dudlatitat.nextchapter.dat
 }
 
 @Composable
-private fun PhraseOfDay(state: AppState, vm: MainViewModel, modifier: Modifier) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Phrase of the day
-        state.phraseOfTheDay()?.let { card ->
-            SectionLabel("Phrase of the day")
-            GlassCard(modifier) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(card.hanzi, fontSize = 30.sp, color = Night.ink, fontWeight = FontWeight.Medium)
-                        PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium)
-                        Text(card.english, style = MaterialTheme.typography.bodyLarge, color = Night.muted)
-                    }
-                    IconButton(onClick = { vm.speaker.say(card.hanzi) }) {
-                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Listen", tint = Night.ink)
-                    }
-                }
-            }
+private fun PhraseOfDay(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewModel) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(card.hanzi, fontSize = 30.sp, color = Night.ink, fontWeight = FontWeight.Medium)
+            PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium)
+            Text(card.english, style = MaterialTheme.typography.bodyLarge, color = Night.muted)
         }
-
+        IconButton(onClick = { vm.speaker.say(card.hanzi) }) {
+            Icon(Icons.Rounded.PlayArrow, contentDescription = "Listen", tint = Night.ink)
+        }
     }
 }
 
 @Composable
-private fun MoveStep(state: AppState, onOpenMove: () -> Unit, modifier: Modifier) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Next move step
-        SectionLabel("Toward the move")
-        GlassCard(modifier, onClick = onOpenMove) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(state.moveReady(), 64.dp, Night.sun, stroke = 7.dp) {
-                    Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    val next = state.tasks.firstOrNull { !it.done }
-                    Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    Text(next?.title ?: "Every step checked off!", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                    if (next != null) Text("Next step · ${next.group}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                }
-            }
+private fun MoveStep(state: AppState, onOpenMove: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onOpenMove), verticalAlignment = Alignment.CenterVertically) {
+        ProgressRing(state.moveReady(), 64.dp, Night.sun, stroke = 7.dp) {
+            Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            val next = state.tasks.firstOrNull { !it.done }
+            Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            Text(next?.title ?: "Every step checked off!", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+            if (next != null) Text("Next step · ${next.group} · open Move →", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
     }
 }

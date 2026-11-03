@@ -149,8 +149,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Daily rhythm (Today's morning card, evening plan, Sunday review) ----
     fun markEarlyStart() = store.edit { s -> if (today() in s.wakeDays) s else s.copy(wakeDays = com.dudlatitat.nextchapter.data.Life.addDay(s.wakeDays, today())) }
     fun prayed() = store.edit { s -> s.copy(prayedDays = com.dudlatitat.nextchapter.data.Life.addDay(s.prayedDays, today())) }
-    fun setGoal(text: String) = store.edit { s ->
-        s.copy(goals = com.dudlatitat.nextchapter.data.Life.withGoal(s.goals, com.dudlatitat.nextchapter.data.DayGoal(today(), text.trim())))
+    fun setGoal(text: String, day: Long = today()) = store.edit { s ->
+        s.copy(goals = com.dudlatitat.nextchapter.data.Life.withGoal(s.goals, com.dudlatitat.nextchapter.data.DayGoal(day, text.trim())))
     }
     fun answerGoal(done: Boolean) = store.edit { s ->
         val g = com.dudlatitat.nextchapter.data.Life.goalFor(s) ?: return@edit s

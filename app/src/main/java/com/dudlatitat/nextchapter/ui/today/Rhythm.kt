@@ -48,10 +48,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun MorningCard(state: AppState, vm: MainViewModel, onAPlus: () -> Unit = {}) {
     val day = today()
     val prayer = Prayers.forDay(day)
-    val prayedToday = day in state.prayedDays
     val early = Srs.streak(state.wakeDays)
-    var chinese by remember { mutableStateOf(false) }
-    val amenScale by animateFloatAsState(if (prayedToday) 1f else 0.96f, label = "amen")
 
     GlassCard(highlight = true, modifier = Modifier.animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -60,33 +57,9 @@ fun MorningCard(state: AppState, vm: MainViewModel, onAPlus: () -> Unit = {}) {
         }
         Spacer(Modifier.height(10.dp))
 
-        // Today's prayer, opened with the Sign of the Cross.
-        Text("✝  ${prayer.title} · ${prayer.titleZh}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Spacer(Modifier.height(4.dp))
-        Text(Prayers.signOfTheCross.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        PrayerBlock(vm, prayer)
         Spacer(Modifier.height(6.dp))
-        Text(prayer.english, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
-        TextButton(onClick = { chinese = !chinese }) { Text(if (chinese) "中文 ▴" else "中文 + pinyin ▾", color = Night.violet) }
-        AnimatedVisibility(chinese) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    Prayers.signOfTheCross.hanzi, style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-                    modifier = Modifier.clickable { vm.speaker.say(Prayers.signOfTheCross.hanzi) },
-                )
-                Text(
-                    "${prayer.hanzi}  🔊", style = MaterialTheme.typography.titleMedium, color = Night.ink,
-                    modifier = Modifier.clickable { vm.speaker.say(prayer.hanzi) },
-                )
-                PinyinText(prayer.pinyin, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        if (prayedToday) Pill("🙏 Amen · prayed today", Night.jade)
-        else Button(
-            onClick = { vm.prayed() },
-            modifier = Modifier.scale(amenScale),
-            colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-        ) { Text("Amen 🙏") }
+        AmenButton(state, vm)
 
         Spacer(Modifier.height(14.dp))
         com.dudlatitat.nextchapter.ui.life.MorningAPlus(state, vm, onMore = onAPlus)
@@ -116,7 +89,14 @@ fun EveningCard(state: AppState, vm: MainViewModel, part: Life.Part) {
             goal?.takeIf { it.done == null }?.let { Text("After: ${it.text}", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
         }
         Life.Part.LATE -> {
-            if (goal == null) return
+            if (goal == null) {
+                GlassCard {
+                    Text("Evening · 晚上 🌙", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                    Spacer(Modifier.height(8.dp))
+                    GoalPicker(state, vm, title = "Plan tomorrow's one goal", day = today() + 1)
+                }
+                return
+            }
             GlassCard(modifier = Modifier.animateContentSize()) {
                 Text("Tonight · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                 Text(goal.text, style = MaterialTheme.typography.titleLarge, color = Night.ink)
@@ -138,11 +118,46 @@ fun EveningCard(state: AppState, vm: MainViewModel, part: Life.Part) {
     }
 }
 
+/** Today's prayer, opened with the Sign of the Cross; Chinese and pinyin on a tap. */
+@Composable
+fun PrayerBlock(vm: MainViewModel, prayer: com.dudlatitat.nextchapter.data.Prayer = Prayers.forDay(today())) {
+    var chinese by remember { mutableStateOf(false) }
+    Text("✝  ${prayer.title} · ${prayer.titleZh}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+    Spacer(Modifier.height(4.dp))
+    Text(Prayers.signOfTheCross.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    Spacer(Modifier.height(6.dp))
+    Text(prayer.english, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+    TextButton(onClick = { chinese = !chinese }) { Text(if (chinese) "中文 ▴" else "中文 + pinyin ▾", color = Night.violet) }
+    AnimatedVisibility(chinese) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                Prayers.signOfTheCross.hanzi, style = MaterialTheme.typography.bodyMedium, color = Night.muted,
+                modifier = Modifier.clickable { vm.speaker.say(Prayers.signOfTheCross.hanzi) },
+            )
+            Text(
+                "${prayer.hanzi}  🔊", style = MaterialTheme.typography.titleMedium, color = Night.ink,
+                modifier = Modifier.clickable { vm.speaker.say(prayer.hanzi) },
+            )
+            PinyinText(prayer.pinyin, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/** The Amen button (or "prayed today"), shared by the morning card and the prayer row. */
+@Composable
+fun AmenButton(state: AppState, vm: MainViewModel) {
+    if (today() in state.prayedDays) Pill("🙏 Amen · prayed today", Night.jade)
+    else Button(
+        onClick = { vm.prayed() },
+        colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
+    ) { Text("Amen 🙏") }
+}
+
 /** Pick tonight's one goal: a quick choice, or your own words. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GoalPicker(state: AppState, vm: MainViewModel, title: String) {
-    val goal = Life.goalFor(state)
+private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: Long = today()) {
+    val goal = Life.goalFor(state, day)
     var changing by remember { mutableStateOf(false) }
     var writing by remember { mutableStateOf(false) }
     Text(title, style = MaterialTheme.typography.labelMedium, color = Night.muted)
@@ -155,7 +170,7 @@ private fun GoalPicker(state: AppState, vm: MainViewModel, title: String) {
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Life.goalIdeas.forEach { idea ->
-            FilterChip(selected = goal?.text == idea, onClick = { vm.setGoal(idea); changing = false }, label = { Text(idea) })
+            FilterChip(selected = goal?.text == idea, onClick = { vm.setGoal(idea, day); changing = false }, label = { Text(idea) })
         }
         FilterChip(selected = false, onClick = { writing = true }, label = { Text("Other…") })
     }
@@ -166,7 +181,7 @@ private fun GoalPicker(state: AppState, vm: MainViewModel, title: String) {
             title = { Text("Tonight's goal") },
             text = { OutlinedTextField(text, { text = it.take(60) }, singleLine = true, label = { Text("e.g. Finish the subnetting chapter") }) },
             confirmButton = {
-                TextButton(onClick = { if (text.isNotBlank()) vm.setGoal(text); writing = false; changing = false }) { Text("Set", color = Night.sun) }
+                TextButton(onClick = { if (text.isNotBlank()) vm.setGoal(text, day); writing = false; changing = false }) { Text("Set", color = Night.sun) }
             },
             dismissButton = { TextButton(onClick = { writing = false }) { Text("Cancel", color = Night.muted) } },
         )
@@ -223,10 +238,10 @@ private fun WeekStat(value: String, label: String, color: androidx.compose.ui.gr
 
 /** Past Sunday notes, newest first (on Progress). */
 @Composable
-fun WeekNotes(state: AppState) {
+fun WeekNotes(state: AppState, bare: Boolean = false) {
     if (state.weekNotes.isEmpty()) return
     val fmt = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
-    GlassCard {
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         state.weekNotes.entries.sortedByDescending { it.key }.take(12).forEach { (week, line) ->
             val start = try { java.time.LocalDate.parse(week) } catch (_: Exception) { null }
             Row(Modifier.fillMaxWidth()) {
@@ -236,4 +251,5 @@ fun WeekNotes(state: AppState) {
             Spacer(Modifier.height(6.dp))
         }
     }
+    if (bare) Column(content = body) else GlassCard(content = body)
 }

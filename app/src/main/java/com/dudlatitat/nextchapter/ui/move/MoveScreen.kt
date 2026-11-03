@@ -285,13 +285,14 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewModel, modifier: Modifier, onDelete: (MoveTask) -> Unit) {
-    GlassCard(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(group, style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-            Text("${tasks.count { it.done }}/${tasks.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-        }
-        Spacer(Modifier.height(6.dp))
-        Bar(tasks.count { it.done }.toFloat() / tasks.size, Night.sun)
+    val done = tasks.count { it.done }
+    val next = tasks.firstOrNull { !it.done }
+    // Closed: the group's count and its next step. Tap to see every step.
+    com.dudlatitat.nextchapter.ui.components.Collapsible(
+        "move.group.$group", "$group · $done/${tasks.size}", modifier,
+        summary = next?.let { "Next: ${it.title}" } ?: "All done ✓",
+    ) {
+        Bar(done.toFloat() / tasks.size, Night.sun)
         Spacer(Modifier.height(6.dp))
         tasks.forEach { task ->
             Row(

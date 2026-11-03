@@ -1,5 +1,8 @@
 package com.dudlatitat.nextchapter.ui.learn
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -65,6 +68,7 @@ import com.dudlatitat.nextchapter.data.Srs
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
+import com.dudlatitat.nextchapter.ui.components.Collapsible
 import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ScreenTitle
@@ -117,7 +121,6 @@ private fun Overview(
 ) {
     val doneToday = today().let { d -> state.cards.count { it.last == d } }
     val queue = Srs.queue(state)
-    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -146,30 +149,28 @@ private fun Overview(
                 }
             }
         }
+        // Tools: small tiles, four to a row, so they fit on one screen.
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("声调", "Tone trainer", "Hear it or say it", Night.violet, Modifier.weight(1f)) { onTool("tones") }
-                    ToolCard("对话", "Dialogues", "Real scenes, answer out loud", Night.jade, Modifier.weight(1f)) { onTool("dialogues") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("写字", "Writing", "Trace with stroke order", Night.sun, Modifier.weight(1f)) { onTool("writing") }
-                    ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("语法", "Grammar", "Patterns that build sentences", Night.violet, Modifier.weight(1f)) { onTool("grammar") }
-                    ToolCard("故事", "Stories", "Read, tap any word", Night.rose, Modifier.weight(1f)) { onTool("stories") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("开车", "Drive mode", "Hands-free on your commute", Night.jade, Modifier.weight(1f)) { onTool("drive") }
-                    ToolCard("礼节", "Etiquette", "Meeting her family, holidays", Night.sun, Modifier.weight(1f)) { onTool("culture") }
+            val tools = listOf(
+                Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade,
+                Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose,
+                Triple("语法", "Grammar", "grammar") to Night.violet, Triple("故事", "Stories", "stories") to Night.rose,
+                Triple("开车", "Drive", "drive") to Night.jade, Triple("礼节", "Etiquette", "culture") to Night.sun,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                tools.chunked(4).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
+                    }
                 }
             }
         }
         item { WeakTones(state, onDrill) }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionLabel("Decks", Modifier.weight(1f))
+            val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
+            val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
+            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all", defaultOpen = false) {
+                visible.forEach { deck -> DeckRow(deck, state) { onDeck(deck.id) } }
                 TextButton(onClick = onAdd) {
                     Icon(Icons.Rounded.Add, null, tint = Night.sun)
                     Spacer(Modifier.width(4.dp))
@@ -177,38 +178,23 @@ private fun Overview(
                 }
             }
         }
-        val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
-        items(visible.chunked(if (wide) 2 else 1), key = { row -> row.first().id }) { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { deck -> DeckCard(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
-                if (row.size == 1 && wide) Spacer(Modifier.weight(1f))
-            }
-        }
     }
 }
 
+/** One deck as a single compact line: name, progress bar, count. */
 @Composable
-private fun DeckCard(deck: Deck, state: AppState, modifier: Modifier, onClick: () -> Unit) {
+private fun DeckRow(deck: Deck, state: AppState, onClick: () -> Unit) {
     val cards = state.cards.filter { it.deck == deck.id }
-    val known = cards.count { it.isKnown }
     val started = cards.count { !it.isNew }
-    GlassCard(modifier, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(deck.hanzi, fontSize = if (deck.hanzi.length > 3) 16.sp else 22.sp, maxLines = 1, color = Night.sun, modifier = Modifier.width(76.dp))
-            Column(Modifier.weight(1f)) {
-                Text(deck.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                Spacer(Modifier.height(8.dp))
-                Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (started == 0) "Not started" else "${started - known} learning · $known known",
-                    style = MaterialTheme.typography.labelSmall, color = Night.muted,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Text("$started/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
+    val known = cards.count { it.isKnown }
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(deck.hanzi, fontSize = if (deck.hanzi.length > 3) 13.sp else 17.sp, maxLines = 1, color = Night.sun, modifier = Modifier.width(60.dp))
+        Column(Modifier.weight(1f)) {
+            Text(deck.title, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+            Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
         }
+        Spacer(Modifier.width(10.dp))
+        Text(if (known > 0) "$known✓ $started/${cards.size}" else "$started/${cards.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
     }
 }
 
@@ -519,14 +505,18 @@ fun AddPhraseDialog(initialHanzi: String = "", onDismiss: () -> Unit, onAdd: (St
 }
 
 @Composable
-private fun ToolCard(zh: String, title: String, blurb: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    GlassCard(modifier, onClick = onClick) {
-        Text(zh, fontSize = 22.sp, color = color)
-        Spacer(Modifier.height(4.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Text(blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+private fun ToolTile(zh: String, title: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    // A smaller cousin of GlassCard: four fit across even the Fold's cover screen.
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+    Column(
+        modifier.clip(shape).background(Night.card.copy(alpha = 0.85f)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(zh, fontSize = 18.sp, color = color, maxLines = 1)
+        Text(title, fontSize = 11.sp, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
+
 
 /** Accuracy for each tone lately, and a drill for the pair you mix up most. */
 @Composable
@@ -534,9 +524,8 @@ private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
     val acc = com.dudlatitat.nextchapter.data.Stats.toneAccuracy(state)
     if (acc.values.all { it == null }) return
     val pair = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
-    GlassCard {
-        Text("Your tones · last 30 days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-        Spacer(Modifier.height(8.dp))
+    val summary = (1..4).joinToString("  ") { t -> "T$t ${acc[t]?.let { "${(it * 100).toInt()}%" } ?: "–"}" }
+    Collapsible("learn.tones", "Your tones · last 30 days", summary = summary) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             (1..4).forEach { t ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {

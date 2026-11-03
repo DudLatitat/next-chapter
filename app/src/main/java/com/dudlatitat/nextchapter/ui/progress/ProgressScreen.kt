@@ -61,11 +61,12 @@ fun ProgressScreen(state: AppState) {
             }
         }
 
-        SectionLabel("Last 12 weeks")
-        GlassCard { Heatmap(com.dudlatitat.nextchapter.data.Stats.practiceDays(state)) }
+        val practiced = com.dudlatitat.nextchapter.data.Stats.practiceDays(state)
+        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.heatmap", "Last 12 weeks", summary = "${practiced.count { it > com.dudlatitat.nextchapter.data.today() - 84 }} days practiced", defaultOpen = true) {
+            Heatmap(practiced)
+        }
 
-        SectionLabel("Move-ready")
-        GlassCard {
+        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.move", "Move-ready · ${(state.moveReady() * 100).toInt()}%", summary = "Checklist and savings") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProgressRing(state.moveReady(), 96.dp, Night.sun, stroke = 10.dp) {
                     Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleLarge, color = Night.ink)
@@ -80,16 +81,18 @@ fun ProgressScreen(state: AppState) {
             }
         }
 
-        SectionLabel("Milestones")
-        MilestoneGrid(state)
-
-        if (state.weekNotes.isNotEmpty()) {
-            SectionLabel("Your weeks")
-            com.dudlatitat.nextchapter.ui.today.WeekNotes(state)
+        val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
+        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.milestones", "Milestones · ${all.count { it.done }} of ${all.size}", summary = all.firstOrNull { !it.done }?.let { "Next: ${it.emoji} ${it.title}" }) {
+            MilestoneGrid(state)
         }
 
-        SectionLabel("By deck")
-        GlassCard {
+        if (state.weekNotes.isNotEmpty()) {
+            com.dudlatitat.nextchapter.ui.components.Collapsible("progress.weeks", "Your weeks · ${state.weekNotes.size}", summary = state.weekNotes.entries.maxByOrNull { it.key }?.value) {
+                com.dudlatitat.nextchapter.ui.today.WeekNotes(state, bare = true)
+            }
+        }
+
+        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.decks", "By deck", summary = "${state.cards.count { it.isKnown }} known of ${state.cards.size}") {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Decks.forEach { deck ->
                     val cards = state.cards.filter { it.deck == deck.id }
@@ -146,9 +149,7 @@ private fun bestStreak(days: List<Long>): Int {
 @Composable
 private fun MilestoneGrid(state: AppState) {
     val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
-    GlassCard {
-        Text("${all.count { it.done }} of ${all.size} reached", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-        Spacer(Modifier.height(8.dp))
+    Column {
         all.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { m ->
