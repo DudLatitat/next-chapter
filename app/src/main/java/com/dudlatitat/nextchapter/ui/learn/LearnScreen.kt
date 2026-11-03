@@ -524,8 +524,9 @@ private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
     val acc = com.dudlatitat.nextchapter.data.Stats.toneAccuracy(state)
     if (acc.values.all { it == null }) return
     val pair = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
-    val summary = (1..4).joinToString("  ") { t -> "T$t ${acc[t]?.let { "${(it * 100).toInt()}%" } ?: "–"}" }
-    Collapsible("learn.tones", "Your tones · last 30 days", summary = summary) {
+    GlassCard {
+        Text("Your tones · last 30 days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             (1..4).forEach { t ->
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {

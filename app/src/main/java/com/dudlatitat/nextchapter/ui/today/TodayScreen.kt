@@ -91,7 +91,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
 
         Practice(state, queue, studiedToday, onStudy, onRedo, Modifier)
 
-        // Everything else stays folded until you want it.
+        // Short things show directly; only the long ones (the full prayer, last week) fold.
         if (part != com.dudlatitat.nextchapter.data.Life.Part.MORNING) {
             val prayer = com.dudlatitat.nextchapter.data.Prayers.forDay(com.dudlatitat.nextchapter.data.today())
             val prayed = com.dudlatitat.nextchapter.data.today() in state.prayedDays
@@ -102,12 +102,14 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
             }
         }
         com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)?.let { summary ->
-            Collapsible("today.comingup", "Coming up", summary = summary, defaultOpen = true) {
+            GlassCard {
+                Text("Coming up", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                 com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife)
             }
         }
         state.phraseOfTheDay()?.let { card ->
-            Collapsible("today.phrase", "Phrase of the day", summary = "${card.hanzi} · ${card.pinyin}") {
+            GlassCard {
+                Text("Phrase of the day", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                 PhraseOfDay(card, vm)
             }
         }
@@ -117,10 +119,7 @@ fun TodayScreen(state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenM
                 com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true, bare = true)
             }
         }
-        val next = state.tasks.firstOrNull { !it.done }
-        Collapsible("today.move", "Toward the move", summary = "${(state.moveReady() * 100).toInt()}% ready" + (next?.let { " · next: ${it.title}" } ?: "")) {
-            MoveStep(state, onOpenMove)
-        }
+        GlassCard { MoveStep(state, onOpenMove) }
         Spacer(Modifier.height(8.dp))
     }
 }

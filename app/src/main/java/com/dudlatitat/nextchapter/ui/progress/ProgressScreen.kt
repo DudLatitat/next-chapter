@@ -66,7 +66,9 @@ fun ProgressScreen(state: AppState) {
             Heatmap(practiced)
         }
 
-        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.move", "Move-ready · ${(state.moveReady() * 100).toInt()}%", summary = "Checklist and savings") {
+        GlassCard {
+            Text("Move-ready", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProgressRing(state.moveReady(), 96.dp, Night.sun, stroke = 10.dp) {
                     Text("${(state.moveReady() * 100).toInt()}%", style = MaterialTheme.typography.titleLarge, color = Night.ink)

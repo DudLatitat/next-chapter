@@ -250,11 +250,8 @@ private fun certColor(status: String) = when (status) { "studying" -> Night.viol
 @Composable
 private fun CertPath(state: AppState, vm: MainViewModel) {
     val certs = Career.certs(state)
-    val current = certs.firstOrNull { it.status != "passed" }
-    Collapsible(
-        "life.certs", "Certifications · ${certs.count { it.status == "passed" }}/${certs.size} passed",
-        summary = current?.let { "${it.name} · ${it.status}" } ?: "All passed 🎉",
-    ) {
+    GlassCard {
+        Text("Certifications · ${certs.count { it.status == "passed" }}/${certs.size} passed", style = MaterialTheme.typography.titleMedium, color = Night.ink)
         Text("Tap one to move it along: planned → studying → booked → passed", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
