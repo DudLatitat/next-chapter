@@ -86,6 +86,7 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
     androidx.compose.runtime.LaunchedEffect(startAPlus) { if (startAPlus) { page = "aplus"; onStarted() } }
     when {
         page == "aplus" -> { APlusReview(state, vm, onBack = { page = null }); return }
+        page == "test" -> { PracticeTestScreen(vm, onBack = { page = null }); return }
         page?.startsWith("person:") == true -> {
             val p = state.people.firstOrNull { it.id == page!!.removePrefix("person:") }
             if (p != null) { PersonScreen(state, p, vm, onBack = { page = null }); return } else page = null
@@ -102,7 +103,8 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("Life", "生活 · study, career and people") }
-        item { APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }) }
+        item { APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" }) }
+        item { StudyTimer(state, vm) }
 
         item { SectionLabel("Career path") }
         item { CertPath(state, vm) }
@@ -127,7 +129,7 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
 // ---- A+ ----
 
 @Composable
-private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, onPickExam: () -> Unit) {
+private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, onPickExam: () -> Unit, onTest: () -> Unit) {
     val queue = APlus.queue(state)
     val strength = APlus.strength(state)
     val weakest = APlus.weakest(state)
@@ -175,6 +177,17 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
         ) { Text(if (queue.isEmpty()) "All done for today ✓" else "Study ${queue.size} cards · about ${maxOf(1, queue.size / 4)} min") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onTest, modifier = Modifier.fillMaxWidth()) {
+            Text("📝 Practice test · 20 questions · 20 min", color = Night.violet)
+        }
+        state.tests.lastOrNull()?.let { t ->
+            val pct = t.score * 100 / maxOf(1, t.total)
+            Text(
+                "Last test: ${t.score}/${t.total} ($pct%)" + if (pct >= 75) " · pass level ✓" else " · pass is ~75%",
+                style = MaterialTheme.typography.labelSmall, color = if (pct >= 75) Night.jade else Night.muted,
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("New cards a day: ${state.aplusPerDay}", style = MaterialTheme.typography.bodySmall, color = Night.muted, modifier = Modifier.weight(1f))
             TextButton(onClick = { vm.setAPlusPerDay(state.aplusPerDay - 2) }) { Text("−", color = Night.muted) }
@@ -602,3 +615,149 @@ fun MorningAPlus(state: AppState, vm: MainViewModel, onMore: () -> Unit) {
     }
 }
 
+
+
+// ---- Study timer ----
+
+/** Start/stop a timer for what you're studying; today's and this week's minutes underneath. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun StudyTimer(state: AppState, vm: MainViewModel) {
+    var subject by rememberSaveable { mutableStateOf(com.dudlatitat.nextchapter.data.Study.subjects.first()) }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    val running = state.timerStart != null
+    // Tick once a second while the timer runs (the start time is saved, so it survives closing the app).
+    androidx.compose.runtime.LaunchedEffect(state.timerStart) {
+        while (state.timerStart != null) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) }
+    }
+    val S = com.dudlatitat.nextchapter.data.Study
+    val week = S.week(state, com.dudlatitat.nextchapter.data.Stats.weekStart())
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Study timer ⏱", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Text("Today ${S.label(S.dayTotal(state))} · this week ${S.label(week.values.sum())}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            }
+            if (running) {
+                val secs = ((now - state.timerStart!!) / 1000).coerceAtLeast(0)
+                Text("%d:%02d".format(secs / 60, secs % 60), style = MaterialTheme.typography.headlineSmall, color = Night.sun)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (!running) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            S.subjects.forEach { sub -> FilterChip(selected = subject == sub, onClick = { subject = sub }, label = { Text(sub) }) }
+        } else Text("Studying ${state.timerSubject}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = { if (running) vm.stopTimer() else vm.startTimer(subject) },
+                colors = ButtonDefaults.buttonColors(containerColor = if (running) Night.coral else Night.jade, contentColor = Night.ground2),
+            ) { Text(if (running) "■ Stop and save" else "▶ Start") }
+            if (!running) TextButton(onClick = { vm.addStudy(subject, 15) }) { Text("+15 min I forgot", color = Night.muted) }
+        }
+        if (week.isNotEmpty()) Text(
+            "This week: " + week.entries.sortedByDescending { it.value }.joinToString(" · ") { "${it.key} ${S.label(it.value)}" },
+            style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 6.dp),
+        )
+    }
+}
+
+// ---- Practice test ----
+
+/** 20 mixed questions, about a minute each like the real exam; misses come back in your reviews. */
+@Composable
+private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
+    BackHandler(onBack = onBack)
+    val questions = remember { com.dudlatitat.nextchapter.data.PracticeTest.build(20) }
+    var index by remember { mutableIntStateOf(0) }
+    var picked by remember { mutableStateOf<Int?>(null) }
+    val missed = remember { mutableStateListOf<String>() }
+    val startedAt = remember { System.currentTimeMillis() }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    var finished by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(finished) { while (!finished) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) } }
+    val elapsed = ((now - startedAt) / 1000).toInt()
+    val limit = questions.size * 60
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp)) {
+        Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            Column(Modifier.weight(1f)) {
+                Text("A+ practice test", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                Text(if (finished) "Finished" else "Question ${index + 1} of ${questions.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            }
+            val left = limit - elapsed
+            Text(
+                if (left >= 0) "%d:%02d".format(left / 60, left % 60) else "+%d:%02d".format(-left / 60, -left % 60),
+                style = MaterialTheme.typography.titleMedium, color = if (left < 120) Night.coral else Night.sun,
+            )
+        }
+        Bar((if (finished) questions.size else index) / questions.size.toFloat(), Night.violet, Modifier.padding(vertical = 8.dp))
+
+        if (finished) {
+            val score = questions.size - missed.size
+            val pct = score * 100 / questions.size
+            val passed = pct >= (com.dudlatitat.nextchapter.data.PracticeTest.PASS * 100).toInt()
+            Spacer(Modifier.height(20.dp))
+            Text("$score / ${questions.size}", style = MaterialTheme.typography.displaySmall, color = if (passed) Night.jade else Night.sun, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text(
+                if (passed) "$pct% · that's pass level. 太棒了!" else "$pct% · pass is about 75%. You're getting there.",
+                style = MaterialTheme.typography.bodyLarge, color = Night.ink, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+            )
+            Text("Time ${elapsed / 60} min ${elapsed % 60} s", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            if (missed.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("Missed (they're back in today's A+ cards)", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                missed.forEach { id ->
+                    val q = questions.first { it.card.id == id }.card
+                    GlassCard(Modifier.padding(top = 8.dp)) {
+                        Text(q.q, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+                        Text(q.a, style = MaterialTheme.typography.bodyMedium, color = Night.sun)
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back to Life", color = Night.sun) }
+            return@Column
+        }
+
+        val q = questions[index]
+        Spacer(Modifier.height(8.dp))
+        GlassCard(highlight = true) {
+            Text(APlus.domains.getValue(q.card.domain).first, style = MaterialTheme.typography.labelMedium, color = Night.violet)
+            Spacer(Modifier.height(8.dp))
+            Text(q.card.q, style = MaterialTheme.typography.titleLarge, color = Night.ink)
+        }
+        Spacer(Modifier.height(12.dp))
+        q.options.forEachIndexed { i, option ->
+            val color = when {
+                picked == null -> Night.ink
+                i == q.correct -> Night.jade
+                i == picked -> Night.coral
+                else -> Night.muted
+            }
+            OutlinedButton(
+                onClick = {
+                    if (picked != null) return@OutlinedButton
+                    picked = i
+                    if (i != q.correct) missed.add(q.card.id)
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            ) { Text(option, color = color, modifier = Modifier.fillMaxWidth()) }
+        }
+        if (picked != null) {
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    picked = null
+                    if (index + 1 < questions.size) index++ else {
+                        finished = true
+                        vm.saveTest(questions.size - missed.size, questions.size, elapsed, missed.toList())
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
+            ) { Text(if (index + 1 < questions.size) "Next" else "See my score") }
+        }
+    }
+}

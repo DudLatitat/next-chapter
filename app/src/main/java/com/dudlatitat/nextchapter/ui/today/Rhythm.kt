@@ -235,6 +235,15 @@ fun SundayReview(state: AppState, vm: MainViewModel) {
             WeekStat("${life.earlyStarts}/7", "early starts", Night.sun)
             WeekStat(if (life.goalsSet == 0) "–" else "${life.goalsDone}/${life.goalsSet}", "goals done", Night.rose)
         }
+        val studied = com.dudlatitat.nextchapter.data.Study.week(state, start)
+        if (studied.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "⏱ Studied ${com.dudlatitat.nextchapter.data.Study.label(studied.values.sum())}: " +
+                    studied.entries.sortedByDescending { it.value }.joinToString(" · ") { "${it.key} ${com.dudlatitat.nextchapter.data.Study.label(it.value)}" },
+                style = MaterialTheme.typography.bodySmall, color = Night.ink,
+            )
+        }
         Spacer(Modifier.height(12.dp))
         if (saved != null && !editing) {
             Text("“$saved”", style = MaterialTheme.typography.bodyLarge, color = Night.ink)

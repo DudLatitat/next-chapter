@@ -201,6 +201,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun deleteNote(id: String) = store.edit { s -> s.copy(notes = s.notes.filterNot { it.id == id }) }
 
+    // ---- Study timer and practice tests ----
+    fun startTimer(subject: String) = store.edit { it.copy(timerStart = System.currentTimeMillis(), timerSubject = subject) }
+    fun stopTimer() = store.edit { s ->
+        val start = s.timerStart ?: return@edit s
+        val mins = com.dudlatitat.nextchapter.data.Study.minutes(start, System.currentTimeMillis())
+        s.copy(
+            study = com.dudlatitat.nextchapter.data.Study.add(s.study, com.dudlatitat.nextchapter.data.StudySession(today(), s.timerSubject ?: "Other", mins)),
+            timerStart = null, timerSubject = null,
+        )
+    }
+    fun addStudy(subject: String, minutes: Int) = store.edit { s ->
+        s.copy(study = com.dudlatitat.nextchapter.data.Study.add(s.study, com.dudlatitat.nextchapter.data.StudySession(today(), subject, minutes)))
+    }
+    /** Saves a practice test; missed cards come back in your A+ reviews today. */
+    fun saveTest(score: Int, total: Int, seconds: Int, missed: List<String>) = store.edit { s ->
+        var aplus = s.aplus
+        missed.forEach { id ->
+            aplus = com.dudlatitat.nextchapter.data.APlus.withReview(aplus, com.dudlatitat.nextchapter.data.APlus.grade(com.dudlatitat.nextchapter.data.APlus.review(s.copy(aplus = aplus), id), Grade.AGAIN))
+        }
+        s.copy(aplus = aplus, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), score, total, seconds, missed)).takeLast(100))
+    }
+
     fun setEveningCheck(on: Boolean) {
         store.edit { it.copy(eveningCheck = on) }
         com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)

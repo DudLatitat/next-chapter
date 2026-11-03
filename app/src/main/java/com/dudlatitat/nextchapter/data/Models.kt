@@ -228,4 +228,10 @@ data class AppState(
     val jobReminders: Boolean = true,
     val people: List<Person> = emptyList(),
     val notes: List<PersonNote> = emptyList(),
+    // ---- Study timer and practice tests (1.40) ----
+    val study: List<StudySession> = emptyList(),
+    /** A running timer: when it started (epoch ms) and for what; null when stopped. */
+    val timerStart: Long? = null,
+    val timerSubject: String? = null,
+    val tests: List<TestResult> = emptyList(),
 )
