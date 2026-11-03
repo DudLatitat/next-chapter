@@ -41,10 +41,12 @@ fun WeeklyRecap(state: AppState, lastWeek: Boolean = false, modifier: Modifier =
         )
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            RecapStat("${now.daysPracticed}/7", "days", now.daysPracticed - before.daysPracticed, Night.sun)
-            RecapStat("${now.reviews}", "reviews", now.reviews - before.reviews, Night.jade)
-            RecapStat("${now.minutes}", "minutes", now.minutes - before.minutes, Night.violet)
-            RecapStat("${now.newPhrases}", "new", now.newPhrases - before.newPhrases, Night.rose)
+            // Mid-week, a half-done week next to a whole one looks bad: only show gains until it's over.
+            fun d(x: Int) = if (lastWeek) x else x.coerceAtLeast(0)
+            RecapStat("${now.daysPracticed}/7", "days", d(now.daysPracticed - before.daysPracticed), Night.sun)
+            RecapStat("${now.reviews}", "reviews", d(now.reviews - before.reviews), Night.jade)
+            RecapStat("${now.minutes}", "minutes", d(now.minutes - before.minutes), Night.violet)
+            RecapStat("${now.newPhrases}", "new", d(now.newPhrases - before.newPhrases), Night.rose)
         }
         Spacer(Modifier.height(10.dp))
         val tone = now.toneAccuracy

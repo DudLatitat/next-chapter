@@ -49,7 +49,7 @@ object Reminder {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         val due = Srs.queue(state).size
-        val streak = Srs.streak(state.studyDays)
+        val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
         if (due == 0 || today() in state.studyDays) return
 
         val manager = context.getSystemService(NotificationManager::class.java)

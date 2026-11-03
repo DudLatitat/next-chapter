@@ -7,7 +7,7 @@ object Milestones {
     fun all(s: AppState): List<Milestone> {
         val started = s.cards.count { !it.isNew }
         val known = s.cards.count { it.isKnown }
-        val best = bestStreak(s.studyDays)
+        val best = bestStreak(Stats.practiceDays(s))
         val spoken = s.toneEvents.filter { it.spoken }
         val toneAcc = (1..4).map { t -> s.toneEvents.filter { it.target == t }.let { e -> if (e.size < 10) 0f else e.count { it.got == t }.toFloat() / e.size } }
         val bookedUnder = s.flightTarget > 0 && s.trips.any { it.booked && it.price in 1..s.flightTarget }

@@ -43,8 +43,8 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun ProgressScreen(state: AppState, onOpenDeck: (String) -> Unit = {}) {
     val known = state.cards.count { it.isKnown }
     val learning = state.cards.count { !it.isNew && !it.isKnown }
-    val streak = Srs.streak(state.studyDays)
-    val best = bestStreak(state.studyDays)
+    val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
+    val best = bestStreak(com.dudlatitat.nextchapter.data.Stats.practiceDays(state))
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),

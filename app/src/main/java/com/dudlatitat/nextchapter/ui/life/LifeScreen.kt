@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.APlus
 import com.dudlatitat.nextchapter.data.AppState
@@ -164,9 +165,9 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
                 val s0 = strength[d] ?: 0f
                 val c = if (d == weakest) Night.sun else Night.jade
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(short.getValue(d), style = MaterialTheme.typography.labelSmall, color = if (d == weakest) Night.sun else Night.muted, maxLines = 1)
+                    Text(short.getValue(d), fontSize = 10.sp, color = if (d == weakest) Night.sun else Night.muted, maxLines = 1, softWrap = false)
                     Bar(s0, c, Modifier.padding(vertical = 3.dp))
-                    Text("${(s0 * 100).toInt()}% · ${info.second}", style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1)
+                    Text("${(s0 * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1)
                 }
             }
         }
@@ -179,7 +180,7 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
         ) { Text(if (queue.isEmpty()) "All done for today ✓" else "Study ${queue.size} cards · about ${maxOf(1, queue.size / 4)} min") }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onTest, modifier = Modifier.fillMaxWidth()) {
-            Text("📝 Practice test · 20 questions · 20 min", color = Night.violet)
+            Text("📝 Practice test · 20 questions", color = Night.violet, maxLines = 1)
         }
         state.tests.lastOrNull()?.let { t ->
             val pct = t.score * 100 / maxOf(1, t.total)

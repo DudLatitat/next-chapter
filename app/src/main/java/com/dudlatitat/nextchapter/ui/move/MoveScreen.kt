@@ -129,11 +129,8 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
                     listOf(50, 100, 500).forEach { n ->
                         androidx.compose.material3.AssistChip(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, label = { Text("+$$n", color = Night.jade) })
                     }
-                    if (state.flightTarget > 0) {
-                        Spacer(Modifier.weight(1f))
-                        Text("✈ ≤ ${money(state.flightTarget)}", style = MaterialTheme.typography.labelMedium, color = Night.rose)
-                    }
                 }
+                if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose)
             }
         }
 

@@ -147,7 +147,7 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
         else -> "Good evening" to "晚上好"
     }
     val herSky = if (her.hour in 6..18) "☀️" else "🌙"
-    val streak = Srs.streak(state.studyDays)
+    val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
     val early = Srs.streak(state.wakeDays)
     val trip = daysUntil(state.nextTripDate())
     val move = daysUntil(state.moveDate)
@@ -155,7 +155,7 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(helloZh, style = MaterialTheme.typography.titleMedium, color = Night.sun)
-                Text("$hello, Rudy", style = MaterialTheme.typography.headlineSmall, color = Night.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("$hello, Rudy", style = MaterialTheme.typography.titleLarge, color = Night.ink, maxLines = 2)
             }
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.muted) }
         }
@@ -238,8 +238,8 @@ private fun Tiles(state: AppState, onTool: (String) -> Unit, onPhrasebook: () ->
         Tile("📕", "Phrasebook", "big text") { onPhrasebook() },
         Tile("🚗", "Drive", "hands-free") { onTool("drive") },
         Tile("✈️", "Move", "${(state.moveReady() * 100).toInt()}% ready") { onOpenMove() },
-        Tile("💛", "People", if (soon != null) "something soon" else "${state.people.size} people") { onOpenLife() },
-        Tile("📈", "Progress", "${Srs.streak(state.studyDays)}-day streak") { onOpenProgress() },
+        Tile("💛", "People", when { soon != null -> "something soon"; state.people.isEmpty() -> "add someone"; else -> "${state.people.size} people" }) { onOpenLife() },
+        Tile("📈", "Progress", com.dudlatitat.nextchapter.data.Stats.streak(state).let { if (it > 0) "🔥 $it-day streak" else "start a streak" }) { onOpenProgress() },
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         tiles.chunked(3).forEach { row ->

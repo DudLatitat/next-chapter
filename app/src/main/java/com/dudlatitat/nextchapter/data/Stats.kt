@@ -21,6 +21,12 @@ object Stats {
     fun practiceDays(state: AppState): List<Long> =
         (state.studyDays + state.days.filterValues { it.reviews > 0 }.keys).distinct().sorted()
 
+    /**
+     * Days in a row you practiced (ending today or yesterday). Any day you answered a card
+     * counts, the same as the 12-week grid, not only days you finished a whole session.
+     */
+    fun streak(state: AppState, day: Long = today()): Int = Srs.streak(practiceDays(state), day)
+
     fun week(state: AppState, start: LocalDate): WeekStats {
         val from = start.toEpochDay()
         val to = from + 6
