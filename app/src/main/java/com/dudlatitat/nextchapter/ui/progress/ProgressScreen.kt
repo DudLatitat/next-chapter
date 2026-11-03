@@ -62,7 +62,7 @@ fun ProgressScreen(state: AppState) {
         }
 
         SectionLabel("Last 12 weeks")
-        GlassCard { Heatmap(state.studyDays) }
+        GlassCard { Heatmap(com.dudlatitat.nextchapter.data.Stats.practiceDays(state)) }
 
         SectionLabel("Move-ready")
         GlassCard {

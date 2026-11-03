@@ -17,6 +17,10 @@ data class WeekStats(
 object Stats {
     fun weekStart(day: LocalDate = LocalDate.now()): LocalDate = day.with(DayOfWeek.MONDAY)
 
+    /** Days you practiced: finished a session, or answered at least one card. */
+    fun practiceDays(state: AppState): List<Long> =
+        (state.studyDays + state.days.filterValues { it.reviews > 0 }.keys).distinct().sorted()
+
     fun week(state: AppState, start: LocalDate): WeekStats {
         val from = start.toEpochDay()
         val to = from + 6

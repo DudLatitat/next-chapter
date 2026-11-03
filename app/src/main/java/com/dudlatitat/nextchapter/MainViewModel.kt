@@ -133,7 +133,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteCard(card: Card) = store.edit { s -> s.copy(cards = s.cards.filterNot { it.id == card.id }) }
 
     fun toggleTask(task: MoveTask) = store.edit { s ->
-        s.copy(tasks = s.tasks.map { if (it.id == task.id) it.copy(done = !it.done) else it })
+        // Steps linked to the Life tab (certs, the degree) are updated there and mirrored here.
+        com.dudlatitat.nextchapter.data.Career.tickFromMove(s, task.id, !task.done)
+            ?: s.copy(tasks = s.tasks.map { if (it.id == task.id) it.copy(done = !it.done) else it })
     }
 
     fun addTask(title: String, group: String) = store.edit { s ->
@@ -166,13 +168,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun setAPlusPerDay(n: Int) = store.edit { it.copy(aplusPerDay = n.coerceIn(3, 30)) }
     fun cycleCert(id: String) = store.edit { s ->
         val certs = com.dudlatitat.nextchapter.data.Career.certs(s)
-        s.copy(certs = certs.map { if (it.id == id) it.copy(status = com.dudlatitat.nextchapter.data.Career.nextStatus(it.status)) else it })
+        com.dudlatitat.nextchapter.data.Career.sync(
+            s.copy(certs = certs.map { if (it.id == id) it.copy(status = com.dudlatitat.nextchapter.data.Career.nextStatus(it.status)) else it }),
+        )
     }
     fun addClass(name: String, term: String) = store.edit { s ->
-        s.copy(classes = s.classes + com.dudlatitat.nextchapter.data.SchoolClass("class:${System.currentTimeMillis()}", name.trim(), term.trim()))
+        com.dudlatitat.nextchapter.data.Career.sync(s.copy(classes = s.classes + com.dudlatitat.nextchapter.data.SchoolClass("class:${System.currentTimeMillis()}", name.trim(), term.trim())))
     }
-    fun toggleClass(id: String) = store.edit { s -> s.copy(classes = s.classes.map { if (it.id == id) it.copy(done = !it.done) else it }) }
-    fun deleteClass(id: String) = store.edit { s -> s.copy(classes = s.classes.filterNot { it.id == id }) }
+    fun toggleClass(id: String) = store.edit { s -> com.dudlatitat.nextchapter.data.Career.sync(s.copy(classes = s.classes.map { if (it.id == id) it.copy(done = !it.done) else it })) }
+    fun deleteClass(id: String) = store.edit { s -> com.dudlatitat.nextchapter.data.Career.sync(s.copy(classes = s.classes.filterNot { it.id == id })) }
     fun saveJob(job: com.dudlatitat.nextchapter.data.JobPosting) {
         store.edit { s -> s.copy(jobs = if (s.jobs.any { it.id == job.id }) s.jobs.map { if (it.id == job.id) job else it } else s.jobs + job) }
         com.dudlatitat.nextchapter.notify.Deadlines.schedule(getApplication(), store.state.value)

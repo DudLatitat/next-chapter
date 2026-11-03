@@ -194,7 +194,7 @@ private fun DeckCard(deck: Deck, state: AppState, modifier: Modifier, onClick: (
     val started = cards.count { !it.isNew }
     GlassCard(modifier, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(deck.hanzi, fontSize = 22.sp, color = Night.sun, modifier = Modifier.width(76.dp))
+            Text(deck.hanzi, fontSize = if (deck.hanzi.length > 3) 16.sp else 22.sp, maxLines = 1, color = Night.sun, modifier = Modifier.width(76.dp))
             Column(Modifier.weight(1f)) {
                 Text(deck.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)

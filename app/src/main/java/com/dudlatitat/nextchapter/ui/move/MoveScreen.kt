@@ -302,12 +302,17 @@ private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewMode
                     checked = task.done, onCheckedChange = { vm.toggleTask(task) },
                     colors = CheckboxDefaults.colors(checkedColor = Night.sun, uncheckedColor = Night.muted, checkmarkColor = MaterialTheme.colorScheme.onPrimary),
                 )
-                Text(
-                    task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (task.done) Night.muted else Night.ink,
-                    textDecoration = if (task.done) TextDecoration.LineThrough else null,
-                )
+                Column {
+                    Text(
+                        task.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (task.done) Night.muted else Night.ink,
+                        textDecoration = if (task.done) TextDecoration.LineThrough else null,
+                    )
+                    if (task.id in com.dudlatitat.nextchapter.data.Career.linkedTasks) {
+                        Text("Linked to the Life tab", style = MaterialTheme.typography.labelSmall, color = Night.violet)
+                    }
+                }
             }
         }
     }

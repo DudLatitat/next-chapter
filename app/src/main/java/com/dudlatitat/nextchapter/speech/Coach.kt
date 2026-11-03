@@ -116,7 +116,7 @@ class Coach(private val context: Context) {
         if (!heard.ok) return null
         val times = Judge.matchTimes(chars, Judge.charsOf(heard.words))
 
-        val guesses: List<Pair<Int, Float>?> = if (chars.length == 1) listOf(single?.let { it.tone to 1f }) else withContext(Dispatchers.Default) {
+        val guesses: List<Pair<Int, Float>?> = if (chars.length == 1) listOf(single?.let { it.tone to it.confidence }) else withContext(Dispatchers.Default) {
             Judge.phraseTones(times.map { t -> t?.let { (s, e) -> Pitch.syllable(Judge.slice(hz, s, e))?.let(p::normalize) } })
         }
         val results = chars.indices.map { i ->
@@ -125,7 +125,7 @@ class Coach(private val context: Context) {
             when {
                 times[i] == null -> CharResult(chars[i], t, Mark.MISSED)
                 accepted[i].isEmpty() -> CharResult(chars[i], t, Mark.RIGHT) // neutral tone: not judged
-                g == null || g.second < SURE -> CharResult(chars[i], t, Mark.RIGHT, sure = false)
+                g == null || g.second < (if (chars.length == 1) SINGLE_SURE else SURE) -> CharResult(chars[i], t, Mark.RIGHT, sure = false)
                 g.first in accepted[i] -> CharResult(chars[i], t, Mark.RIGHT)
                 else -> CharResult(chars[i], t, Mark.TONE, Judge.retone(t, g.first))
             }
@@ -145,5 +145,12 @@ class Coach(private val context: Context) {
     companion object {
         /** Below this, the phrase tone model isn't sure enough to call a tone wrong (~91% right above it on native phrases). */
         const val SURE = 0.7f
+
+        /**
+         * The same for one character said alone (Pitch.classify's confidence). On the app's
+         * native recordings at four voice pitches, 99.4% of guesses at or above it were right
+         * and the only wrong one fell below it.
+         */
+        const val SINGLE_SURE = 0.5f
     }
 }

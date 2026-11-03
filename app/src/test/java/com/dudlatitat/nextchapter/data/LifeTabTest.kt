@@ -76,4 +76,46 @@ class LifeTabTest {
         val up = People.upcoming(s, today)
         assertEquals(1, up.size); assertEquals(17L, up[0].days)
     }
+
+    private val moveTasks = listOf(
+        MoveTask("School & certs:Finish the AS in CIS at SAC", "Finish the AS", "School & certs"),
+        MoveTask("School & certs:Pass CompTIA A+", "Pass CompTIA A+", "School & certs"),
+        MoveTask("School & certs:Pass CompTIA Network+", "Pass CompTIA Network+", "School & certs"),
+        MoveTask("Documents:Passport", "Passport", "Documents", done = true),
+    )
+
+    @Test fun lifeTicksMovesLinkedSteps() {
+        var s = AppState(tasks = moveTasks)
+        // A+ needs both cores passed.
+        s = Career.sync(s.copy(certs = Career.defaultCerts.map { if (it.id == "aplus1") it.copy(status = "passed") else it }))
+        assertTrue(s.tasks.none { it.id.endsWith("A+") && it.done })
+        s = Career.sync(s.copy(certs = Career.certs(s).map { if (it.id == "aplus2") it.copy(status = "passed") else it }))
+        assertTrue(s.tasks.first { it.id.endsWith("A+") }.done)
+        // The degree ticks itself only once classes are listed and all done.
+        assertTrue(!s.tasks.first { it.id.contains("AS in CIS") }.done)
+        s = Career.sync(s.copy(classes = listOf(SchoolClass("c1", "CIS 101", done = true), SchoolClass("c2", "CIS 102"))))
+        assertTrue(!s.tasks.first { it.id.contains("AS in CIS") }.done)
+        s = Career.sync(s.copy(classes = s.classes.map { it.copy(done = true) }))
+        assertTrue(s.tasks.first { it.id.contains("AS in CIS") }.done)
+        // Unlinked steps are left alone.
+        assertTrue(s.tasks.first { it.id == "Documents:Passport" }.done)
+    }
+
+    @Test fun tickingInMoveUpdatesLife() {
+        val s = AppState(tasks = moveTasks)
+        val after = Career.tickFromMove(s, "School & certs:Pass CompTIA Network+", done = true)!!
+        assertEquals("passed", Career.certs(after).first { it.id == "netplus" }.status)
+        assertTrue(after.tasks.first { it.id.endsWith("Network+") }.done)
+        val undone = Career.tickFromMove(after, "School & certs:Pass CompTIA Network+", done = false)!!
+        assertEquals("studying", Career.certs(undone).first { it.id == "netplus" }.status)
+        assertTrue(!undone.tasks.first { it.id.endsWith("Network+") }.done)
+        // Not linked → Move handles it; degree with no classes listed → Move handles it too.
+        assertNull(Career.tickFromMove(s, "Documents:Passport", true))
+        assertNull(Career.tickFromMove(s, "School & certs:Finish the AS in CIS at SAC", true))
+    }
+
+    @Test fun aDayWithReviewsCountsEvenIfTheSessionWasntFinished() {
+        val s = AppState(studyDays = listOf(10, 11), days = mapOf(12L to DayLog(reviews = 4), 13L to DayLog(reviews = 0)))
+        assertEquals(listOf(10L, 11L, 12L), Stats.practiceDays(s))
+    }
 }

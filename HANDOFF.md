@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.34** (Life tab: A+ Core 1, career path, classes, job postings, people & gift notes; 1.32–1.33 daily rhythm, prayers, Identity V) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.35** (Life tab: A+ Core 1, career path, classes, job postings, people & gift notes; 1.32–1.33 daily rhythm, prayers, Identity V) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
@@ -52,6 +52,7 @@ tools/
 - `ui/today/Rhythm.kt`: MorningCard, EveningCard, SundayReview, WeekNotes (on Progress). `notify/Evening.kt`: 8:30 pm check-in if a goal is set and unanswered (Settings switch, `eveningCheck`).
 - Identity V deck (`idv`, Seed.VERSION 4): terms checked against Bilibili/Moegirl player guides (Rudy won't ask Yuling about slang).
 - **Life tab (1.34, `ui/life/LifeScreen.kt`):** A+ Core 1 deck (`data/APlus.kt`, ~140 original cards from the 220-1201 objectives; progress in `AppState.aplus` as `Review`s, scheduled by `Srs` via `APlus.grade`, never mixed into the Chinese queue), exam-date countdown, domain strength bars weighted by exam share (`APlus.weakest`). Career (`data/Career.kt`): cert path (tap cycles planned→studying→booked→passed), AS classes, job postings with deadline reminders (`notify/Deadlines.kt`, 12:15, 3 and 1 days before). People: dates (MonthDay, Feb 29 safe) and notes (gift idea / likes / size / moment); Today's "Coming up" card shows birthdays ≤14 days and deadlines ≤7 days. Morning card shows one A+ card. Tests: `LifeTabTest`.
+- **1.35:** Move's School & certs steps are linked to Life (`Career.linkedTasks`, `sync`, `tickFromMove`: certs passed ↔ ticked, AS ticks when all listed classes are done). Progress grid uses `Stats.practiceDays` (any day with reviews). Single-character tones only count/judge at `Coach.SINGLE_SURE` 0.5 (measured on native recordings).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

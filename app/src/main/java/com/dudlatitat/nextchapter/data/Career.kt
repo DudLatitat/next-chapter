@@ -51,6 +51,43 @@ object Career {
             .mapNotNull { j -> daysLeft(j, today)?.takeIf { it in 0..within }?.let { j to it } }
             .sortedBy { it.second }
 
+    // ---- Move checklist steps that mirror the Life tab ----
+
+    /** Seed task ids in Move → what ticks them in Life. */
+    val linkedTasks = mapOf(
+        "School & certs:Finish the AS in CIS at SAC" to "classes",
+        "School & certs:Pass CompTIA A+" to "aplus",
+        "School & certs:Pass CompTIA Network+" to "netplus",
+        "School & certs:Pass CompTIA Security+" to "secplus",
+    )
+
+    private fun passed(state: AppState, id: String) = certs(state).firstOrNull { it.id == id }?.status == "passed"
+
+    /** Whether a linked step is done according to Life; null when Life doesn't know (no classes entered). */
+    fun linkedDone(state: AppState, link: String): Boolean? = when (link) {
+        "classes" -> if (state.classes.isEmpty()) null else state.classes.all { it.done }
+        "aplus" -> passed(state, "aplus1") && passed(state, "aplus2")
+        else -> passed(state, link)
+    }
+
+    /** Ticks or unticks Move's linked steps to match Life. Run after any change to certs or classes. */
+    fun sync(state: AppState): AppState = state.copy(tasks = state.tasks.map { t ->
+        val done = linkedTasks[t.id]?.let { linkedDone(state, it) }
+        if (done == null || done == t.done) t else t.copy(done = done)
+    })
+
+    /**
+     * Ticking a linked step in Move updates Life instead: a cert becomes "passed" (or back to
+     * "studying" when unticked). Returns null for steps Move handles itself; returns the state
+     * unchanged for the degree when classes are listed (it ticks itself when they're all done).
+     */
+    fun tickFromMove(state: AppState, taskId: String, done: Boolean): AppState? {
+        val link = linkedTasks[taskId] ?: return null
+        val ids = when (link) { "classes" -> return if (state.classes.isEmpty()) null else state; "aplus" -> setOf("aplus1", "aplus2"); else -> setOf(link) }
+        val certs = certs(state).map { if (it.id in ids) it.copy(status = if (done) "passed" else "studying") else it }
+        return sync(state.copy(certs = certs))
+    }
+
     /** Postings to remind about today: 3 days and 1 day before the deadline. */
     fun remindToday(state: AppState, today: LocalDate): List<JobPosting> =
         deadlinesSoon(state, today, 3).filter { it.second == 3L || it.second == 1L }.map { it.first }
