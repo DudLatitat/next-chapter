@@ -170,7 +170,6 @@ private fun Overview(
                 }
             }
         }
-        item { WeakTones(state, onDrill) }
         item {
             val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
             val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
@@ -192,6 +191,8 @@ private fun Overview(
                 }
             }
         }
+        // Rudy's layout: decks first, then tones.
+        item { WeakTones(state, onDrill) }
     }
 }
 

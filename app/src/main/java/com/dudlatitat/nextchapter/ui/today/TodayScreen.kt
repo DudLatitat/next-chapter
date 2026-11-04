@@ -203,7 +203,7 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
     GlassCard {
         Text("Today · 今天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Ring("Chinese", if (zhTotal == 0) 1f else zhDone / zhTotal.toFloat(), Night.jade, if (queue.isEmpty()) "✓" else "$zhDone/$zhTotal", onChinese)
             Ring("A+", if (aTotal == 0) 1f else aDone / aTotal.toFloat(), Night.violet, if (aTotal == 0 || aDone == aTotal) "✓" else "$aDone/$aTotal", onAPlus)
             Ring("Prayer", if (prayed) 1f else 0f, Night.sun, if (prayed) "✓" else "🙏", onPrayer)
@@ -231,15 +231,11 @@ private fun Ring(label: String, progress: Float, color: Color, center: String, o
 /** Tiles into the rest of the app, each with a word on how it's going. */
 @Composable
 private fun Tiles(state: AppState, onTool: (String) -> Unit, onPhrasebook: () -> Unit, onOpenMove: () -> Unit, onOpenLife: () -> Unit, onOpenProgress: () -> Unit) {
-    val weakest = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
-    val soon = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
     val tiles = listOf(
-        Tile("🗣", "Tones", weakest?.let { "tones ${it.first} & ${it.second}" } ?: "train your ear") { onTool("tones") },
+        // Rudy's layout (Layout Studio, Nov 2026): one row of three.
+        Tile("📈", "Progress", com.dudlatitat.nextchapter.data.Stats.streak(state).let { if (it > 0) "🔥 $it-day streak" else "start a streak" }) { onOpenProgress() },
         Tile("📕", "Phrasebook", "big text") { onPhrasebook() },
         Tile("🚗", "Drive", "hands-free") { onTool("drive") },
-        Tile("✈️", "Move", "${(state.moveReady() * 100).toInt()}% ready") { onOpenMove() },
-        Tile("💛", "People", when { soon != null -> "something soon"; state.people.isEmpty() -> "add someone"; else -> "${state.people.size} people" }) { onOpenLife() },
-        Tile("📈", "Progress", com.dudlatitat.nextchapter.data.Stats.streak(state).let { if (it > 0) "🔥 $it-day streak" else "start a streak" }) { onOpenProgress() },
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         tiles.chunked(3).forEach { row ->

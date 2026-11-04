@@ -112,8 +112,6 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
         item { Classes(state, vm, onAdd = { addingClass = true }) }
         item { Jobs(state, onEdit = { editingJob = it }, onAdd = { editingJob = JobPosting("job:${System.currentTimeMillis()}", "") }) }
 
-        item { SectionLabel("People") }
-        item { PeopleList(state, vm, onOpen = { page = "person:${it.id}" }, onAdd = { addingPerson = true }) }
         item { Spacer(Modifier.height(8.dp)) }
     }
 
@@ -556,7 +554,7 @@ private fun TwoFieldDialog(title: String, first: String, second: String?, onDism
 /** On Today: one line for the closed "Coming up" row, or null when nothing is coming up. */
 fun comingUpSummary(state: AppState): String? {
     val today = LocalDate.now()
-    val dates = People.upcoming(state, today, within = 14)
+    val dates = emptyList<People.Upcoming>() // People was removed from the app (Nov 2026); its saved notes stay in the data
     val jobs = Career.deadlinesSoon(state, today, within = 7)
     if (dates.isEmpty() && jobs.isEmpty()) return null
     return listOfNotNull(
@@ -569,7 +567,7 @@ fun comingUpSummary(state: AppState): String? {
 @Composable
 fun ComingUpList(state: AppState, onOpen: () -> Unit) {
     val today = LocalDate.now()
-    val dates = People.upcoming(state, today, within = 14)
+    val dates = emptyList<People.Upcoming>()
     val jobs = Career.deadlinesSoon(state, today, within = 7)
     Column(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
         dates.forEach { u ->
