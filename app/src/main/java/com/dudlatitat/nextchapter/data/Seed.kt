@@ -2,7 +2,23 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 4
+    const val VERSION = 5
+
+    /**
+     * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
+     * They're removed from saved data only if never studied, so no progress is lost.
+     */
+    val retired = setOf(
+        "idv:我来救你", "idv:监管者来了", "idv:屠夫来了", "idv:我来溜鬼", "idv:我被追了", "idv:我在修机", "idv:压机",
+        "idv:开门", "idv:地窖", "idv:我倒地了", "idv:别救了，先修机", "idv:小心！", "idv:快走！", "idv:我们赢了！",
+    )
+
+    /** Saved cards plus any new starter cards, minus retired ones you never studied. */
+    fun merge(saved: List<Card>): List<Card> {
+        val kept = saved.filterNot { it.id in retired && it.isNew }
+        val have = kept.map { it.id }.toSet()
+        return kept + (cards + Vocab.cards).filter { it.id !in have }
+    }
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
         Card(id = "$deck:$hanzi", hanzi = hanzi, pinyin = pinyin, english = english, deck = deck)
@@ -20,27 +36,29 @@ object Seed {
         c("yuling", "我很快就来找你", "wǒ hěn kuài jiù lái zhǎo nǐ", "I'm coming to you soon"),
         c("yuling", "你是我的一切", "nǐ shì wǒ de yíqiè", "You are my everything"),
 
-        // Identity V (第五人格): callouts for matches with Yuling. Game terms (压机, 溜鬼, 屠夫, 快走 as the
-        // quick signal) checked against Chinese player guides on Bilibili and Moegirl, Nov 2026.
+        // Identity V (第五人格), for 加页手记 (Cryptic Notes), the PvE loot-and-extract mode Rudy and Yuling
+        // play. Mode terms (辞章 pages, 异象 anomalies, 撤离 extract, 搜刮 loot, 墨迹 ink, 智者/主角 classes,
+        // 金柜 gold cabinet, 急救针 first-aid shot) checked against Chinese player guides (Sina, 233乐园, 九游), Nov 2026.
+        c("idv", "我们玩加页手记吧", "wǒmen wán jiā yè shǒujì ba", "Let's play Cryptic Notes"),
+        c("idv", "你选智者，我选主角", "nǐ xuǎn zhìzhě, wǒ xuǎn zhǔjué", "You pick the Sage, I'll pick the Protagonist"),
+        c("idv", "先买装备", "xiān mǎi zhuāngbèi", "Buy gear first"),
+        c("idv", "墨迹够吗？", "mòjì gòu ma?", "Do we have enough ink (to buy gear)?"),
+        c("idv", "跟着我", "gēnzhe wǒ", "Follow me"),
+        c("idv", "等等我！", "děngděng wǒ!", "Wait for me!"),
+        c("idv", "我去搜刮", "wǒ qù sōuguā", "I'll go loot"),
+        c("idv", "这里有辞章", "zhèlǐ yǒu cízhāng", "There's a page (辞章) here"),
+        c("idv", "我开金柜", "wǒ kāi jīnguì", "I'll open the gold cabinet"),
+        c("idv", "小心异象！", "xiǎoxīn yìxiàng!", "Watch out for the anomaly!"),
+        c("idv", "异象来了！", "yìxiàng lái le!", "The anomaly is coming!"),
         c("idv", "快跑！", "kuài pǎo!", "Run!"),
         c("idv", "救我！", "jiù wǒ!", "Save me!"),
-        c("idv", "我来救你", "wǒ lái jiù nǐ", "I'm coming to rescue you"),
-        c("idv", "快走！", "kuài zǒu!", "Go! (the in-game quick signal)"),
-        c("idv", "监管者来了", "jiānguǎnzhě lái le", "The hunter is coming"),
-        c("idv", "屠夫来了", "túfū lái le", "The hunter's coming (players call the hunter 屠夫, \"butcher\")"),
-        c("idv", "我来溜鬼", "wǒ lái liū guǐ", "I'll kite the hunter"),
-        c("idv", "我被追了", "wǒ bèi zhuī le", "I'm being chased"),
-        c("idv", "我在修机", "wǒ zài xiū jī", "I'm decoding (a cipher machine)"),
-        c("idv", "压机", "yā jī", "Hold the last cipher (don't pop it yet)"),
-        c("idv", "开门", "kāi mén", "Open the gate"),
-        c("idv", "地窖", "dìjiào", "The dungeon (escape hatch)"),
-        c("idv", "我倒地了", "wǒ dǎo dì le", "I'm down"),
-        c("idv", "别救了，先修机", "bié jiù le, xiān xiū jī", "Don't rescue, decode first"),
-        c("idv", "小心！", "xiǎoxīn!", "Careful!"),
+        c("idv", "我没血了", "wǒ méi xiě le", "I'm out of health"),
+        c("idv", "给我急救针", "gěi wǒ jíjiùzhēn", "Give me a first-aid shot"),
+        c("idv", "快撤离！", "kuài chèlí!", "Extract now!"),
+        c("idv", "我们撤出来了！", "wǒmen chè chūlái le!", "We made it out!"),
         c("idv", "打得好！", "dǎ de hǎo!", "Nice play!"),
-        c("idv", "我们赢了！", "wǒmen yíng le!", "We won!"),
         c("idv", "你好厉害", "nǐ hǎo lìhai", "You're so good"),
-        c("idv", "再来一局？", "zài lái yì jú?", "One more match?"),
+        c("idv", "再来一局？", "zài lái yì jú?", "One more run?"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),

@@ -38,10 +38,9 @@ class Store private constructor(context: Context) {
     /** Adds starter phrases and tasks the saved state doesn't have yet. */
     private fun seed(s: AppState): AppState {
         if (s.seeded >= Seed.VERSION) return s
-        val haveCards = s.cards.map { it.id }.toSet()
         val haveTasks = s.tasks.map { it.id }.toSet()
         return s.copy(
-            cards = s.cards + (Seed.cards + Vocab.cards).filter { it.id !in haveCards },
+            cards = Seed.merge(s.cards),
             tasks = s.tasks + Seed.tasks.filter { it.id !in haveTasks },
             packing = s.packing.ifEmpty { Seed.packing },
             budget = s.budget.ifEmpty { Seed.budget },
