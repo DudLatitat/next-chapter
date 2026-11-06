@@ -37,7 +37,8 @@ data class Deck(val id: String, val title: String, val hanzi: String, val blurb:
 
 val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
-    Deck("idv", "Identity V", "第五人格", "Callouts for playing with Yuling"),
+    Deck("idv", "Identity V", "第五人格", "Cryptic Notes callouts for playing with Yuling"),
+    Deck("games", "Gaming together", "一起玩", "Teaming up, cheering each other on, calling it a night"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
     Deck("daily", "Everyday", "日常", "Getting by, asking for help"),

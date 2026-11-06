@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 5
+    const val VERSION = 6
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -59,6 +59,33 @@ object Seed {
         c("idv", "打得好！", "dǎ de hǎo!", "Nice play!"),
         c("idv", "你好厉害", "nǐ hǎo lìhai", "You're so good"),
         c("idv", "再来一局？", "zài lái yì jú?", "One more run?"),
+
+        // Gaming together (一起玩): everyday talk for any game with Yuling. Common gaming words: 开黑
+        // (team up on voice), 拉我 (invite me), 卡了 (lagging), 掉线 (disconnected), 带飞 (carry), 菜 (bad at it).
+        c("games", "一起玩游戏吗？", "yìqǐ wán yóuxì ma?", "Want to play a game together?"),
+        c("games", "来开黑吗？", "lái kāihēi ma?", "Want to team up (on voice chat)?"),
+        c("games", "拉我一下", "lā wǒ yíxià", "Invite me in (to your team)"),
+        c("games", "我准备好了", "wǒ zhǔnbèi hǎo le", "I'm ready"),
+        c("games", "等我一下", "děng wǒ yíxià", "Give me a second"),
+        c("games", "你听得到我吗？", "nǐ tīng de dào wǒ ma?", "Can you hear me?"),
+        c("games", "我卡了", "wǒ kǎ le", "I'm lagging"),
+        c("games", "我掉线了", "wǒ diàoxiàn le", "I got disconnected"),
+        c("games", "过来这里", "guòlái zhèlǐ", "Come over here"),
+        c("games", "往左走", "wǎng zuǒ zǒu", "Go left"),
+        c("games", "往右走", "wǎng yòu zǒu", "Go right"),
+        c("games", "在你后面！", "zài nǐ hòumiàn!", "Behind you!"),
+        c("games", "我保护你", "wǒ bǎohù nǐ", "I'll protect you"),
+        c("games", "带我飞！", "dài wǒ fēi!", "Carry me!"),
+        c("games", "我太菜了", "wǒ tài cài le", "I'm so bad at this"),
+        c("games", "你太强了！", "nǐ tài qiáng le!", "You're amazing!"),
+        c("games", "差一点！", "chà yìdiǎn!", "So close!"),
+        c("games", "没关系，下次赢", "méi guānxi, xià cì yíng", "It's okay, we'll win next time"),
+        c("games", "跟你玩输了也开心", "gēn nǐ wán shū le yě kāixīn", "Even losing is fun with you"),
+        c("games", "你赢了，我请你吃饭", "nǐ yíng le, wǒ qǐng nǐ chīfàn", "You won, dinner's on me"),
+        c("games", "最后一局", "zuìhòu yì jú", "Last round"),
+        c("games", "我先下了", "wǒ xiān xià le", "I'm logging off now"),
+        c("games", "该睡觉了", "gāi shuìjiào le", "Time for bed"),
+        c("games", "明天再玩", "míngtiān zài wán", "Let's play again tomorrow"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),

@@ -21,4 +21,12 @@ class SeedTest {
     @Test fun noStarterCardIsAlsoRetired() {
         assertTrue((Seed.cards + Vocab.cards).none { it.id in Seed.retired })
     }
+
+    @Test fun everyStarterCardBelongsToARealDeckAndIdsAreUnique() {
+        val ids = (Seed.cards + Vocab.cards).map { it.id }
+        assertEquals(ids.size, ids.toSet().size)
+        val decks = Decks.map { it.id }.toSet()
+        assertTrue((Seed.cards + Vocab.cards).all { it.deck in decks })
+        assertEquals(24, Seed.cards.count { it.deck == "games" })
+    }
 }
