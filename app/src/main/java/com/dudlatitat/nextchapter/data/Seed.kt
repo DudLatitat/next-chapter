@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 8
+    const val VERSION = 9
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -112,6 +112,33 @@ object Seed {
         c("games", "下次见面一起玩", "xià cì jiànmiàn yìqǐ wán", "Next time we see each other, let's play together"),
         c("games", "再陪我玩一局嘛", "zài péi wǒ wán yì jú ma", "Play one more with me, pleeease"),
         c("games", "晚安，做个好梦", "wǎn'ān, zuò ge hǎo mèng", "Good night, sweet dreams"),
+
+        // Sweet talk (甜言蜜语, "sweet words and honeyed talk"): compliments and flirting. 小仙女 ("little fairy")
+        // is a common, sweet way to compliment a girlfriend; 吃醋 ("eat vinegar") means to be jealous.
+        c("sweet", "你好漂亮", "nǐ hǎo piàoliang", "You're so pretty"),
+        c("sweet", "你今天真美", "nǐ jīntiān zhēn měi", "You look beautiful today"),
+        c("sweet", "你笑起来真好看", "nǐ xiào qǐlái zhēn hǎokàn", "You're so pretty when you smile"),
+        c("sweet", "你越来越漂亮了", "nǐ yuè lái yuè piàoliang le", "You get prettier every time I see you"),
+        c("sweet", "你穿这个很好看", "nǐ chuān zhège hěn hǎokàn", "You look great in that"),
+        c("sweet", "你怎么这么可爱？", "nǐ zěnme zhème kě'ài?", "How are you this cute?"),
+        c("sweet", "你好聪明", "nǐ hǎo cōngming", "You're so smart"),
+        c("sweet", "你真厉害", "nǐ zhēn lìhai", "You're amazing"),
+        c("sweet", "你在我心里最美", "nǐ zài wǒ xīn lǐ zuì měi", "To me, you're the most beautiful"),
+        c("sweet", "我喜欢你", "wǒ xǐhuan nǐ", "I like you"),
+        c("sweet", "我爱你", "wǒ ài nǐ", "I love you"),
+        c("sweet", "我越来越喜欢你了", "wǒ yuè lái yuè xǐhuan nǐ le", "I like you more and more"),
+        c("sweet", "我一直在想你", "wǒ yìzhí zài xiǎng nǐ", "I keep thinking about you"),
+        c("sweet", "看到你我就开心", "kàndào nǐ wǒ jiù kāixīn", "Seeing you makes me happy"),
+        c("sweet", "你让我心跳加快", "nǐ ràng wǒ xīntiào jiākuài", "You make my heart race"),
+        c("sweet", "我被你迷住了", "wǒ bèi nǐ mízhù le", "I'm totally under your spell"),
+        c("sweet", "你是我的唯一", "nǐ shì wǒ de wéiyī", "You're my one and only"),
+        c("sweet", "我好幸运", "wǒ hǎo xìngyùn", "I'm so lucky"),
+        c("sweet", "遇见你真好", "yùjiàn nǐ zhēn hǎo", "I'm so glad I met you"),
+        c("sweet", "你是我的小仙女", "nǐ shì wǒ de xiǎo xiānnǚ", "You're my little fairy"),
+        c("sweet", "想抱抱你", "xiǎng bàobao nǐ", "I want to hug you"),
+        c("sweet", "亲一个", "qīn yí ge", "Kiss me / give me a kiss"),
+        c("sweet", "你是不是想我了？", "nǐ shì bu shì xiǎng wǒ le?", "You miss me, don't you?"),
+        c("sweet", "你吃醋了？", "nǐ chīcù le?", "Are you jealous?"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),

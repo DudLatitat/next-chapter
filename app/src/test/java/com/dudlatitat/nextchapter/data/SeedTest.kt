@@ -29,5 +29,6 @@ class SeedTest {
         assertTrue((Seed.cards + Vocab.cards).all { it.deck in decks })
         assertEquals(48, Seed.cards.count { it.deck == "games" })
         assertEquals(35, Seed.cards.count { it.deck == "daily" })
+        assertEquals(24, Seed.cards.count { it.deck == "sweet" })
     }
 }
