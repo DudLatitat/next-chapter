@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 7
+    const val VERSION = 8
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -138,6 +138,31 @@ object Seed {
         c("daily", "等一下", "děng yíxià", "Wait a moment"),
         c("daily", "我明白了", "wǒ míngbai le", "I get it now"),
         c("daily", "晚安", "wǎn'ān", "Good night"),
+        // Your day, out loud: what you'd tell her on a call or in a message, plus small getting-by lines.
+        c("daily", "你今天怎么样？", "nǐ jīntiān zěnmeyàng?", "How was your day?"),
+        c("daily", "你呢？", "nǐ ne?", "And you?"),
+        c("daily", "我也是", "wǒ yě shì", "Me too"),
+        c("daily", "我起床了", "wǒ qǐchuáng le", "I'm up"),
+        c("daily", "我去上班了", "wǒ qù shàngbān le", "I'm heading to work"),
+        c("daily", "我在开车", "wǒ zài kāichē", "I'm driving"),
+        c("daily", "我下班了", "wǒ xiàbān le", "I'm off work"),
+        c("daily", "我到家了", "wǒ dào jiā le", "I'm home"),
+        c("daily", "我有点忙", "wǒ yǒudiǎn máng", "I'm a little busy"),
+        c("daily", "今天好累", "jīntiān hǎo lèi", "Today was so tiring"),
+        c("daily", "我饿了", "wǒ è le", "I'm hungry"),
+        c("daily", "我渴了", "wǒ kě le", "I'm thirsty"),
+        c("daily", "我要洗澡了", "wǒ yào xǐzǎo le", "I'm going to shower"),
+        c("daily", "好热啊", "hǎo rè a", "It's so hot"),
+        c("daily", "好冷啊", "hǎo lěng a", "It's so cold"),
+        c("daily", "你在哪儿？", "nǐ zài nǎr?", "Where are you?"),
+        c("daily", "现在几点了？", "xiànzài jǐ diǎn le?", "What time is it now?"),
+        c("daily", "一会儿见", "yíhuìr jiàn", "See you in a bit"),
+        c("daily", "我知道了", "wǒ zhīdào le", "Got it"),
+        c("daily", "我忘了", "wǒ wàng le", "I forgot"),
+        c("daily", "慢慢来", "mànman lái", "Take your time"),
+        c("daily", "不好意思", "bù hǎoyìsi", "Excuse me / sorry"),
+        c("daily", "麻烦你了", "máfan nǐ le", "Sorry for the trouble (thanks for helping)"),
+        c("daily", "不用了，谢谢", "bú yòng le, xièxie", "No need, thanks"),
 
         // Eating out
         c("food", "服务员", "fúwùyuán", "Waiter / server"),

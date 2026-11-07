@@ -28,5 +28,6 @@ class SeedTest {
         val decks = Decks.map { it.id }.toSet()
         assertTrue((Seed.cards + Vocab.cards).all { it.deck in decks })
         assertEquals(48, Seed.cards.count { it.deck == "games" })
+        assertEquals(35, Seed.cards.count { it.deck == "daily" })
     }
 }
