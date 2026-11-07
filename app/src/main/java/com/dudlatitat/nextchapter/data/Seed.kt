@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 6
+    const val VERSION = 7
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -86,6 +86,32 @@ object Seed {
         c("games", "我先下了", "wǒ xiān xià le", "I'm logging off now"),
         c("games", "该睡觉了", "gāi shuìjiào le", "Time for bed"),
         c("games", "明天再玩", "míngtiān zài wán", "Let's play again tomorrow"),
+        // More for playing with her while your Chinese catches up: asking her to slow down, being sweet,
+        // teamwork, checking in on her, and good night.
+        c("games", "我想跟你一起玩", "wǒ xiǎng gēn nǐ yìqǐ wán", "I want to play with you"),
+        c("games", "你教我好不好？", "nǐ jiāo wǒ hǎo bu hǎo?", "Will you teach me?"),
+        c("games", "我听不懂，再说一遍", "wǒ tīng bu dǒng, zài shuō yí biàn", "I didn't get that, say it again"),
+        c("games", "我的中文不好，别笑我", "wǒ de Zhōngwén bù hǎo, bié xiào wǒ", "My Chinese isn't good, don't laugh at me"),
+        c("games", "你笑什么？", "nǐ xiào shénme?", "What are you laughing at?"),
+        c("games", "我在学中文，为了你", "wǒ zài xué Zhōngwén, wèile nǐ", "I'm learning Chinese for you"),
+        c("games", "你好可爱", "nǐ hǎo kě'ài", "You're so cute"),
+        c("games", "你的声音很好听", "nǐ de shēngyīn hěn hǎotīng", "Your voice sounds so nice"),
+        c("games", "有你在，我不怕", "yǒu nǐ zài, wǒ bú pà", "With you here, I'm not scared"),
+        c("games", "别丢下我！", "bié diūxià wǒ!", "Don't leave me behind!"),
+        c("games", "我来了，等我！", "wǒ lái le, děng wǒ!", "I'm coming, wait for me!"),
+        c("games", "你先走，我掩护你", "nǐ xiān zǒu, wǒ yǎnhù nǐ", "You go first, I'll cover you"),
+        c("games", "谢谢你救我", "xièxie nǐ jiù wǒ", "Thanks for saving me"),
+        c("games", "我们是最好的队友", "wǒmen shì zuì hǎo de duìyǒu", "We're the best team"),
+        c("games", "你又赢了！", "nǐ yòu yíng le!", "You won again!"),
+        c("games", "对不起，是我的错", "duìbuqǐ, shì wǒ de cuò", "Sorry, that was my fault"),
+        c("games", "你生气了吗？", "nǐ shēngqì le ma?", "Are you mad at me?"),
+        c("games", "你累不累？", "nǐ lèi bu lèi?", "Are you tired?"),
+        c("games", "休息一下吧", "xiūxi yíxià ba", "Let's take a little break"),
+        c("games", "你那边几点了？", "nǐ nàbiān jǐ diǎn le?", "What time is it over there?"),
+        c("games", "真希望你在我身边", "zhēn xīwàng nǐ zài wǒ shēnbiān", "I wish you were right here next to me"),
+        c("games", "下次见面一起玩", "xià cì jiànmiàn yìqǐ wán", "Next time we see each other, let's play together"),
+        c("games", "再陪我玩一局嘛", "zài péi wǒ wán yì jú ma", "Play one more with me, pleeease"),
+        c("games", "晚安，做个好梦", "wǎn'ān, zuò ge hǎo mèng", "Good night, sweet dreams"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),

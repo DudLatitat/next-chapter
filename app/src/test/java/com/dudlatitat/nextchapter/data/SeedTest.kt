@@ -27,6 +27,6 @@ class SeedTest {
         assertEquals(ids.size, ids.toSet().size)
         val decks = Decks.map { it.id }.toSet()
         assertTrue((Seed.cards + Vocab.cards).all { it.deck in decks })
-        assertEquals(24, Seed.cards.count { it.deck == "games" })
+        assertEquals(48, Seed.cards.count { it.deck == "games" })
     }
 }
