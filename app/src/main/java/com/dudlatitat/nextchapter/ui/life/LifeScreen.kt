@@ -82,12 +82,14 @@ private val dayFmt = DateTimeFormatter.ofPattern("MMM d", Locale.US)
 
 /** The Life tab: A+ study, the career path, and notes about the people who matter. */
 @Composable
-fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, onStarted: () -> Unit = {}) {
+fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, onStarted: () -> Unit = {}, startPage: String? = null, onPageStarted: () -> Unit = {}) {
     var page by rememberSaveable { mutableStateOf<String?>(null) }
     androidx.compose.runtime.LaunchedEffect(startAPlus) { if (startAPlus) { page = "aplus"; onStarted() } }
+    androidx.compose.runtime.LaunchedEffect(startPage) { if (startPage != null) { page = startPage.takeIf { it != "timer" }; onPageStarted() } }
     when {
         page == "aplus" -> { APlusReview(state, vm, onBack = { page = null }); return }
         page == "test" -> { PracticeTestScreen(vm, onBack = { page = null }); return }
+        page == "routine" -> { RoutineScreen(state, vm, onBack = { page = null }); return }
         page?.startsWith("person:") == true -> {
             val p = state.people.firstOrNull { it.id == page!!.removePrefix("person:") }
             if (p != null) { PersonScreen(state, p, vm, onBack = { page = null }); return } else page = null
@@ -106,6 +108,7 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
         item { ScreenTitle("Life", "生活 · study, career and people") }
         item { APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" }) }
         item { StudyTimer(state, vm) }
+        item { RoutineSummary(state, onOpen = { page = "routine" }) }
 
         item { SectionLabel("Career path") }
         item { CertPath(state, vm) }

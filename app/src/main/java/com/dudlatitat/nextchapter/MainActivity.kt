@@ -15,20 +15,31 @@ class MainActivity : ComponentActivity() {
 
     /** Set when opened from the reminder or widget with reviews waiting. */
     private val openStudy = mutableStateOf(false)
+    /** Set when opened from a routine notification: show Today. */
+    private val openToday = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) openStudy.value = intent.getBooleanExtra(EXTRA_STUDY, false)
-        setContent { NextChapterTheme { NextChapterApp(vm, openStudy.value, onStudyOpened = { openStudy.value = false }) } }
+        if (savedInstanceState == null) {
+            openStudy.value = intent.getBooleanExtra(EXTRA_STUDY, false)
+            openToday.value = intent.getBooleanExtra(EXTRA_TODAY, false)
+        }
+        setContent {
+            NextChapterTheme {
+                NextChapterApp(vm, openStudy.value, onStudyOpened = { openStudy.value = false }, openToday = openToday.value, onTodayOpened = { openToday.value = false })
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_STUDY, false)) openStudy.value = true
+        if (intent.getBooleanExtra(EXTRA_TODAY, false)) openToday.value = true
     }
 
     companion object {
         const val EXTRA_STUDY = "study"
+        const val EXTRA_TODAY = "today"
     }
 }

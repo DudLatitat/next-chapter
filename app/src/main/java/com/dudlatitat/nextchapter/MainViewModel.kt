@@ -222,7 +222,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         missed.forEach { id ->
             aplus = com.dudlatitat.nextchapter.data.APlus.withReview(aplus, com.dudlatitat.nextchapter.data.APlus.grade(com.dudlatitat.nextchapter.data.APlus.review(s.copy(aplus = aplus), id), Grade.AGAIN))
         }
-        s.copy(aplus = aplus, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), score, total, seconds, missed)).takeLast(100))
+        val R = com.dudlatitat.nextchapter.data.Routine
+        val job = R.jobFor(s.routine, java.time.LocalDate.now())
+        val checks = if (job.kind == "aplus" && R.checkFor(s.routineChecks, today()) == null)
+            R.withCheck(s.routineChecks, com.dudlatitat.nextchapter.data.RoutineCheck(today(), com.dudlatitat.nextchapter.data.CheckIn.DONE))
+        else s.routineChecks
+        s.copy(aplus = aplus, routineChecks = checks, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), score, total, seconds, missed)).takeLast(100))
+    }
+
+    // ---- Weekly routine ----
+    fun checkIn(status: com.dudlatitat.nextchapter.data.CheckIn, day: Long = today()) = store.edit { s ->
+        s.copy(routineChecks = com.dudlatitat.nextchapter.data.Routine.withCheck(s.routineChecks, com.dudlatitat.nextchapter.data.RoutineCheck(day, status)))
+    }
+    fun saveRoutineDay(day: com.dudlatitat.nextchapter.data.RoutineDay) = store.edit { s ->
+        s.copy(routine = com.dudlatitat.nextchapter.data.Routine.withDay(s.routine, day))
+    }
+    fun setRoutineReview(weekStart: String, review: com.dudlatitat.nextchapter.data.RoutineReview) = store.edit { s ->
+        s.copy(routineReviews = (s.routineReviews + (weekStart to review)).entries.sortedBy { it.key }.takeLast(104).associate { it.toPair() })
+    }
+    fun setRoutineTimes(wake: Int, home: Int, windDown: Int) {
+        store.edit { it.copy(wakeMinutes = wake, homeMinutes = home, windDownMinutes = windDown) }
+        com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)
     }
 
     fun setEveningCheck(on: Boolean) {

@@ -65,6 +65,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
+    var pickingRoutine by remember { mutableStateOf<String?>(null) }
 
     val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setReminder(granted, state.reminderMinutes)
@@ -122,8 +123,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Evening check-in", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                    Text("At 8:30 pm, after her call: did you get to tonight's goal? Only if you set one.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    Text("Evening routine", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("\"You're home\" with tonight's job, and a wind-down note at bedtime. Quiet during her call.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                 }
                 Switch(
                     checked = state.eveningCheck,
@@ -136,6 +137,18 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
                 )
             }
+            Spacer(Modifier.height(8.dp))
+            listOf(
+                Triple("wake", "Wake up", state.wakeMinutes),
+                Triple("home", "You're home", state.homeMinutes),
+                Triple("wind", "Wind down", state.windDownMinutes),
+            ).forEach { (key, label, m) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { pickingRoutine = key }) { Text(timeLabel(m), color = Night.sun) }
+                }
+            }
+            Text("Early starts count until 30 minutes after your wake time.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
         }
 
         GlassCard {
@@ -221,6 +234,27 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         Spacer(Modifier.width(1.dp).height(24.dp))
     }
 
+    pickingRoutine?.let { key ->
+        val current = when (key) { "wake" -> state.wakeMinutes; "home" -> state.homeMinutes; else -> state.windDownMinutes }
+        val picker = rememberTimePickerState(current / 60, current % 60, is24Hour = false)
+        AlertDialog(
+            onDismissRequest = { pickingRoutine = null },
+            title = { Text(when (key) { "wake" -> "Wake-up time"; "home" -> "\"You're home\" note"; else -> "Wind-down note" }) },
+            text = { TimePicker(picker) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val m = picker.hour * 60 + picker.minute
+                    vm.setRoutineTimes(
+                        wake = if (key == "wake") m else state.wakeMinutes,
+                        home = if (key == "home") m else state.homeMinutes,
+                        windDown = if (key == "wind") m else state.windDownMinutes,
+                    )
+                    pickingRoutine = null
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { pickingRoutine = null }) { Text("Cancel") } },
+        )
+    }
     if (pickingTime) {
         val picker = rememberTimePickerState(state.reminderMinutes / 60, state.reminderMinutes % 60, is24Hour = false)
         AlertDialog(

@@ -33,6 +33,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
+import com.dudlatitat.nextchapter.data.CheckIn
+import com.dudlatitat.nextchapter.data.Routine
+import com.dudlatitat.nextchapter.data.RoutineDay
 import com.dudlatitat.nextchapter.data.Life
 import com.dudlatitat.nextchapter.data.Prayers
 import com.dudlatitat.nextchapter.data.Srs
@@ -43,79 +46,83 @@ import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.theme.Night
 
-/** Before noon: today's prayer, your early-start streak, and tonight's one goal. */
-@Composable
-fun MorningCard(state: AppState, vm: MainViewModel, onAPlus: () -> Unit = {}) {
-    val day = today()
-    val prayer = Prayers.forDay(day)
-    val early = Srs.streak(state.wakeDays)
-
-    GlassCard(highlight = true, modifier = Modifier.animateContentSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Morning · 早上", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-            if (early > 0) Pill("☀️ $early ${if (early == 1) "early start" else "early starts"}", Night.sun)
-        }
-        Spacer(Modifier.height(10.dp))
-
-        PrayerBlock(vm, prayer)
-        Spacer(Modifier.height(6.dp))
-        AmenButton(state, vm)
-
-        Spacer(Modifier.height(14.dp))
-        com.dudlatitat.nextchapter.ui.life.MorningAPlus(state, vm, onMore = onAPlus)
-        Spacer(Modifier.height(14.dp))
-        GoalPicker(state, vm, title = "Tonight's goal")
-    }
-}
-
 /**
- * The evening: pick tonight's goal (5–7 pm), call time with Yuling (7–8 pm, nothing else), and
- * a gentle "did you get to it?" after 8. Shows nothing in the afternoon.
+ * Tonight's one job from the weekly routine: the task, the tiny first step, the bad-day minimum,
+ * a big Start, then Done / Did the minimum / Skip. Nothing to choose: that's the point.
  */
 @Composable
-fun EveningCard(state: AppState, vm: MainViewModel, part: Life.Part) {
-    val goal = Life.goalFor(state)
-    when (part) {
-        Life.Part.PLAN -> GlassCard {
-            Text("Tonight · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-            Spacer(Modifier.height(8.dp))
-            GoalPicker(state, vm, title = "One thing before her call")
-            Spacer(Modifier.height(8.dp))
-            Text("7–8 pm is call time 💛 No reminders then.", style = MaterialTheme.typography.bodySmall, color = Night.rose)
+fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit, bare: Boolean = false) {
+    val job = Routine.jobFor(state.routine, java.time.LocalDate.now())
+    val checked = Routine.checkFor(state.routineChecks, today())
+    val streak = Routine.streak(state.routineChecks, today())
+    val her = state.herName
+    var changing by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Tonight's job · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
+            if (streak > 0) Pill("🔥 $streak", Night.sun)
         }
-        Life.Part.CALL -> GlassCard {
-            Text("Call time · 💛", style = MaterialTheme.typography.titleLarge, color = Night.rose)
-            Text("Everything else can wait until 8.", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-            goal?.takeIf { it.done == null }?.let { Text("After: ${it.text}", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
-        }
-        Life.Part.LATE -> {
-            if (goal == null) {
-                GlassCard {
-                    Text("Evening · 晚上 🌙", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                    Spacer(Modifier.height(8.dp))
-                    GoalPicker(state, vm, title = "Plan tomorrow's one goal", day = today() + 1)
-                }
-                return
+        Spacer(Modifier.height(6.dp))
+        Text(Routine.text(job.task, her), style = MaterialTheme.typography.titleLarge, color = Night.ink)
+        if (checked == null || changing) {
+            Spacer(Modifier.height(6.dp))
+            Text("👣 First step: ${Routine.text(job.firstStep, her)}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+            Text("Bad day? ${Routine.text(job.minimum, her)} still counts.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            Spacer(Modifier.height(12.dp))
+            if (checked == null) Button(
+                onClick = { onStart(job) }, modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Night.rose, contentColor = Night.ground2),
+            ) { Text("Start ▶", style = MaterialTheme.typography.titleMedium) }
+            if (job.kind == "chinese") TextButton(onClick = { saving = true }) { Text("✍ Save a sentence ${Routine.text("{her}", her)} taught you", color = Night.sun) }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = { vm.checkIn(CheckIn.DONE); changing = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Night.jade, contentColor = Night.ground2),
+                ) { Text("Done ✓") }
+                OutlinedButton(onClick = { vm.checkIn(CheckIn.MINIMUM); changing = false }) { Text("Did the minimum", color = Night.sun) }
             }
-            GlassCard(modifier = Modifier.animateContentSize()) {
-                Text("Tonight · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                Text(goal.text, style = MaterialTheme.typography.titleLarge, color = Night.ink)
-                Spacer(Modifier.height(8.dp))
-                when (goal.done) {
-                    null -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(
-                            onClick = { vm.answerGoal(true) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Night.jade, contentColor = Night.ground2),
-                        ) { Text("Done ✓") }
-                        OutlinedButton(onClick = { vm.answerGoal(false) }) { Text("Not today", color = Night.muted) }
-                    }
-                    true -> Text("Done ✓ 很好! One step closer.", style = MaterialTheme.typography.bodyMedium, color = Night.jade)
-                    false -> Text("That's okay. Tomorrow's another day. 明天见.", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-                }
+            TextButton(onClick = { vm.checkIn(CheckIn.SKIPPED); changing = false }) { Text("Skip today", color = Night.muted) }
+        } else {
+            Spacer(Modifier.height(8.dp))
+            // A little bounce when you check in.
+            var shown by remember(checked) { mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(checked) { shown = true }
+            val pop by animateFloatAsState(if (shown) 1f else 0.7f, androidx.compose.animation.core.spring(dampingRatio = 0.4f), label = "pop")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(Routine.cheer(checked), style = MaterialTheme.typography.bodyMedium, color = com.dudlatitat.nextchapter.ui.life.checkColor(checked).takeIf { checked != CheckIn.SKIPPED } ?: Night.muted, modifier = Modifier.weight(1f).scale(pop))
+                TextButton(onClick = { changing = true }) { Text("Change", color = Night.muted) }
             }
         }
-        else -> {}
     }
+    if (bare) Column(Modifier.animateContentSize(), content = body) else GlassCard(highlight = checked == null, modifier = Modifier.animateContentSize(), content = body)
+
+    if (saving) SaveSentence(vm, her, onClose = { saving = false })
+}
+
+/** A sentence she taught you goes straight into My phrases, pinyin filled in for you. */
+@Composable
+private fun SaveSentence(vm: MainViewModel, her: String, onClose: () -> Unit) {
+    var zh by remember { mutableStateOf("") }
+    var en by remember { mutableStateOf("") }
+    val auto = remember(zh) { if (zh.isBlank()) "" else com.dudlatitat.nextchapter.data.Pinyin.fromHanzi(zh.trim()) ?: "" }
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("What did ${Routine.text("{her}", her)} teach you?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(zh, { zh = it.take(40) }, label = { Text("Chinese") }, singleLine = true)
+                if (auto.isNotEmpty()) PinyinText(auto, style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(en, { en = it.take(60) }, label = { Text("What it means") }, singleLine = true)
+                Text("It goes into My phrases, first in line for review.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { vm.addCard(zh, auto, en); onClose() }, enabled = zh.isNotBlank()) { Text("Save 💛", color = Night.sun) }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Cancel", color = Night.muted) } },
+    )
 }
 
 /** Today's prayer, opened with the Sign of the Cross; Chinese and pinyin on a tap. */
@@ -175,48 +182,9 @@ fun AmenButton(state: AppState, vm: MainViewModel) {
     ) { Text("Amen 🙏") }
 }
 
-/** Pick tonight's one goal: a quick choice, or your own words. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun GoalChooser(state: AppState, vm: MainViewModel, day: Long, onPicked: () -> Unit) = GoalPicker(state, vm, "", day, onPicked)
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun GoalPicker(state: AppState, vm: MainViewModel, title: String, day: Long = today(), onPicked: () -> Unit = {}) {
-    val goal = Life.goalFor(state, day)
-    var changing by remember { mutableStateOf(false) }
-    var writing by remember { mutableStateOf(false) }
-    if (title.isNotEmpty()) Text(title, style = MaterialTheme.typography.labelMedium, color = Night.muted)
-    if (goal != null && !changing) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🎯 ${goal.text}", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-            if (goal.done == null) TextButton(onClick = { changing = true }) { Text("Change", color = Night.muted) }
-        }
-        return
-    }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Life.goalIdeas.forEach { idea ->
-            FilterChip(selected = goal?.text == idea, onClick = { vm.setGoal(idea, day); changing = false; onPicked() }, label = { Text(idea) })
-        }
-        FilterChip(selected = false, onClick = { writing = true }, label = { Text("Other…") })
-    }
-    if (writing) {
-        var text by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { writing = false },
-            title = { Text("Tonight's goal") },
-            text = { OutlinedTextField(text, { text = it.take(60) }, singleLine = true, label = { Text("e.g. Finish the subnetting chapter") }) },
-            confirmButton = {
-                TextButton(onClick = { if (text.isNotBlank()) vm.setGoal(text, day); writing = false; changing = false; onPicked() }) { Text("Set", color = Night.sun) }
-            },
-            dismissButton = { TextButton(onClick = { writing = false }) { Text("Cancel", color = Night.muted) } },
-        )
-    }
-}
-
 /** Sundays: the week in numbers, and one line to remember it by. */
 @Composable
-fun SundayReview(state: AppState, vm: MainViewModel) {
+fun SundayReview(state: AppState, vm: MainViewModel, onOpenRoutine: () -> Unit = {}) {
     val start = Stats.weekStart()
     val key = start.toString()
     val chinese = Stats.week(state, start)
@@ -233,8 +201,11 @@ fun SundayReview(state: AppState, vm: MainViewModel) {
             WeekStat("${chinese.daysPracticed}/7", "Chinese days", Night.jade)
             WeekStat("${life.prayed}/7", "prayed", Night.violet)
             WeekStat("${life.earlyStarts}/7", "early starts", Night.sun)
-            WeekStat(if (life.goalsSet == 0) "–" else "${life.goalsDone}/${life.goalsSet}", "goals done", Night.rose)
+            WeekStat(if (life.jobsChecked == 0) "–" else "${life.jobsWon}/7", "evening jobs", Night.rose)
         }
+        Spacer(Modifier.height(12.dp))
+        com.dudlatitat.nextchapter.ui.life.WeekDots(state)
+        RoutineQuestions(state, vm, key, onOpenRoutine)
         val studied = com.dudlatitat.nextchapter.data.Study.week(state, start)
         if (studied.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -259,6 +230,35 @@ fun SundayReview(state: AppState, vm: MainViewModel) {
                 enabled = note.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
             ) { Text("Save") }
+        }
+    }
+}
+
+/** The routine's Sunday questions: what worked, what to change. Then the schedule is one tap away. */
+@Composable
+private fun RoutineQuestions(state: AppState, vm: MainViewModel, key: String, onOpenRoutine: () -> Unit) {
+    val saved = state.routineReviews[key]
+    var worked by remember(key) { mutableStateOf(saved?.worked ?: "") }
+    var change by remember(key) { mutableStateOf(saved?.change ?: "") }
+    var editing by remember(key) { mutableStateOf(saved == null) }
+    Spacer(Modifier.height(12.dp))
+    if (!editing && saved != null) {
+        if (saved.worked.isNotBlank()) Text("✓ Worked: ${saved.worked}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+        if (saved.change.isNotBlank()) Text("↻ Change: ${saved.change}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+        Row {
+            TextButton(onClick = { editing = true }) { Text("Edit", color = Night.muted) }
+            TextButton(onClick = onOpenRoutine) { Text("Edit the schedule →", color = Night.sun) }
+        }
+    } else {
+        OutlinedTextField(worked, { worked = it.take(120) }, modifier = Modifier.fillMaxWidth(), label = { Text("What worked this week?") })
+        OutlinedTextField(change, { change = it.take(120) }, modifier = Modifier.fillMaxWidth(), label = { Text("What would you change?") })
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = { vm.setRoutineReview(key, com.dudlatitat.nextchapter.data.RoutineReview(worked.trim(), change.trim())); editing = false },
+                enabled = worked.isNotBlank() || change.isNotBlank(),
+            ) { Text("Save", color = Night.sun) }
+            TextButton(onClick = onOpenRoutine) { Text("Edit the schedule →", color = Night.sun) }
         }
     }
 }

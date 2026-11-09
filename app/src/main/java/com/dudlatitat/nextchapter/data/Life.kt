@@ -30,8 +30,9 @@ object Life {
     /** Where the move goes, for the Move tab: her city from Settings, or just Sichuan. */
     fun moveTo(city: String): String = city.trim().ifEmpty { "Sichuan" }
 
-    /** Opening the app between 3 and 7 am counts as an early start. */
-    fun earlyStart(t: LocalTime): Boolean = t.hour >= 3 && t.isBefore(LocalTime.of(7, 0))
+    /** Opening the app from 3 am until 30 minutes after your wake time counts as an early start. */
+    fun earlyStart(t: LocalTime, wakeMinutes: Int = 6 * 60 + 30): Boolean =
+        t.hour >= 3 && t.isBefore(LocalTime.MIDNIGHT.plusMinutes((wakeMinutes + 30).coerceAtMost(12 * 60).toLong()))
 
     val goalIdeas = listOf("Chinese practice", "A+ study", "A project", "Rest")
 
@@ -41,7 +42,7 @@ object Life {
     fun withGoal(goals: List<DayGoal>, goal: DayGoal): List<DayGoal> =
         (goals.filterNot { it.day == goal.day } + goal).filter { it.day > goal.day - 120 }.sortedBy { it.day }
 
-    data class Week(val prayed: Int, val earlyStarts: Int, val goalsSet: Int, val goalsDone: Int)
+    data class Week(val prayed: Int, val earlyStarts: Int, val goalsSet: Int, val goalsDone: Int, val jobsChecked: Int = 0, val jobsWon: Int = 0)
 
     /** The Sunday review's numbers for the week starting on Monday [start]. */
     fun week(state: AppState, start: LocalDate): Week {
@@ -52,6 +53,8 @@ object Life {
             earlyStarts = state.wakeDays.count { it in days },
             goalsSet = goals.size,
             goalsDone = goals.count { it.done == true },
+            jobsChecked = state.routineChecks.count { it.day in days },
+            jobsWon = state.routineChecks.count { it.day in days && Routine.isWin(it.status) },
         )
     }
 

@@ -190,6 +190,14 @@ data class AppState(
      *  this phone (and its backups), never in the code, which is public. */
     val herName: String = "",
     val herCity: String = "",
+    /** The weekly routine (one job per evening), its check-ins and Sunday answers. */
+    val routine: List<RoutineDay> = Routine.seed,
+    val routineChecks: List<RoutineCheck> = emptyList(),
+    val routineReviews: Map<String, RoutineReview> = emptyMap(),
+    /** Wake time (early starts count before it plus 30 min), "you're home" and wind-down notifications. */
+    val wakeMinutes: Int = 7 * 60 + 30,
+    val homeMinutes: Int = 17 * 60 + 45,
+    val windDownMinutes: Int = 23 * 60 + 30,
     val allergyZh: String = "",
     val trips: List<Trip> = emptyList(),
     val prices: List<PriceSeen> = emptyList(),

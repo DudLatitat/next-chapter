@@ -65,21 +65,33 @@ import java.util.Locale
 private val clock = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 
 /**
- * Today is the hub: a warm header (your time and Yuling's, the trip), four rings for today's
- * small things (Chinese, A+, prayer, tonight's goal), and tiles into the rest of the app.
+ * Today is the hub: a warm header (your time and hers, the trip), four rings for today's small
+ * things (Chinese, A+, prayer, tonight's routine job), tonight's job card, and tiles into the rest.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit,
     onPhrasebook: () -> Unit = {}, onOpenLife: () -> Unit = {}, onAPlus: () -> Unit = {},
-    onTool: (String) -> Unit = {}, onOpenProgress: () -> Unit = {},
+    onTool: (String) -> Unit = {}, onOpenProgress: () -> Unit = {}, onLifePage: (String) -> Unit = {},
 ) {
-    // Opening the app before 7 am counts toward the early-start streak.
-    LaunchedEffect(Unit) { if (Life.earlyStart(LocalTime.now())) vm.markEarlyStart() }
+    // Opening the app by 30 minutes after your wake time counts toward the early-start streak.
+    LaunchedEffect(Unit) { if (Life.earlyStart(LocalTime.now(), state.wakeMinutes)) vm.markEarlyStart() }
     val part = Life.partOf(LocalTime.now())
     var prayerOpen by remember { mutableStateOf(false) }
-    var goalOpen by remember { mutableStateOf(false) }
+    var jobOpen by remember { mutableStateOf(false) }
+    // Start opens the right place for tonight's job; anything else starts the study timer.
+    val startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit = { job ->
+        jobOpen = false
+        when (job.kind) {
+            "aplus" -> onLifePage("test")
+            "aplus-review" -> onAPlus()
+            else -> {
+                if (state.timerStart == null) vm.startTimer(if (job.kind == "chinese") "Chinese" else "Other")
+                onLifePage("timer")
+            }
+        }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
@@ -87,12 +99,14 @@ fun TodayScreen(
     ) {
         Hero(state, part, onSettings, onOpenMove)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
-        TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onGoal = { goalOpen = true })
+        TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true })
 
-        // After 8 pm, a goal that's waiting for an answer gets its gentle check-in.
-        val goal = Life.goalFor(state)
-        if (part == Life.Part.LATE && goal != null && goal.done == null) EveningCard(state, vm, part)
-        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm)
+        // From just before you get home (or the job's own start) until you check in, outside call time.
+        val job = com.dudlatitat.nextchapter.data.Routine.jobFor(state.routine, java.time.LocalDate.now())
+        val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
+        val unanswered = com.dudlatitat.nextchapter.data.Routine.checkFor(state.routineChecks, today()) == null
+        if (unanswered && part != Life.Part.CALL && nowMin >= minOf(state.homeMinutes, job.minutes) - 15) TonightJob(state, vm, startJob)
+        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
             com.dudlatitat.nextchapter.ui.components.Collapsible(
                 "today.lastweek", "Last week", summary = com.dudlatitat.nextchapter.ui.progress.recapSummary(state, lastWeek = true),
@@ -122,15 +136,17 @@ fun TodayScreen(
             }
         }
     }
-    if (goalOpen) {
-        // In the evening after the call, with tonight answered (or nothing set), plan tomorrow.
-        val tomorrow = part == Life.Part.LATE && Life.goalFor(state)?.done != null
-        AlertDialog(
-            onDismissRequest = { goalOpen = false },
-            title = { Text(if (tomorrow) "Tomorrow's one goal" else "Tonight's one goal") },
-            text = { Column { GoalChooser(state, vm, day = today() + if (tomorrow) 1 else 0, onPicked = { goalOpen = false }) } },
-            confirmButton = { TextButton(onClick = { goalOpen = false }) { Text("Done", color = Night.sun) } },
-        )
+    if (jobOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { jobOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Night.ground1,
+        ) {
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(bottom = 32.dp)) {
+                TonightJob(state, vm, startJob, bare = true)
+                TextButton(onClick = { jobOpen = false; onLifePage("routine") }) { Text("The whole week →", color = Night.sun) }
+            }
+        }
     }
 }
 
@@ -191,7 +207,7 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
 
 /** Four rings for today's small things. Tap one to do it. */
 @Composable
-private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onGoal: () -> Unit) {
+private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit) {
     val d = today()
     val queue = Srs.queue(state)
     val zhDone = state.cards.count { it.last == d && it.due > d }
@@ -199,7 +215,9 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
     val aDone = state.aplus.count { it.last == d }
     val aTotal = aDone + APlus.queue(state).size
     val prayed = d in state.prayedDays
-    val goal = Life.goalFor(state)
+    val R = com.dudlatitat.nextchapter.data.Routine
+    val job = R.jobFor(state.routine, java.time.LocalDate.now())
+    val checked = R.checkFor(state.routineChecks, d)
     GlassCard {
         Text("Today · 今天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(10.dp))
@@ -208,9 +226,9 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
             Ring("A+", if (aTotal == 0) 1f else aDone / aTotal.toFloat(), Night.violet, if (aTotal == 0 || aDone == aTotal) "✓" else "$aDone/$aTotal", onAPlus)
             Ring("Prayer", if (prayed) 1f else 0f, Night.sun, if (prayed) "✓" else "🙏", onPrayer)
             Ring(
-                "Goal", when (goal?.done) { true -> 1f; null -> if (goal != null) 0.5f else 0f; false -> 0f }, Night.rose,
-                when { goal?.done == true -> "✓"; goal != null -> "🎯"; else -> "+" }, onGoal,
-                sub = goal?.text,
+                "Tonight", when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> 1f; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> 0.6f; else -> 0f }, Night.rose,
+                when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> "✓"; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> "½"; com.dudlatitat.nextchapter.data.CheckIn.SKIPPED -> "🌙"; null -> "→" }, onJob,
+                sub = R.text(job.task, state.herName),
             )
         }
     }
