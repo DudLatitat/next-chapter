@@ -12,7 +12,7 @@ object Dialogues {
 
     val all = listOf(
         Dialogue(
-            "mom", "Meeting her mom", "见阿姨", "You arrive at her mom's home in Zizhong.",
+            "mom", "Meeting her mom", "见阿姨", "You arrive at her mom's home.",
             listOf(
                 them("你来了！快进来坐。", "nǐ lái le! kuài jìnlái zuò.", "You're here! Come in and sit."),
                 you("阿姨好！这是给您的礼物。", "āyí hǎo! zhè shì gěi nín de lǐwù.", "Hello, auntie! This gift is for you."),

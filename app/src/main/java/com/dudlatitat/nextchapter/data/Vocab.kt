@@ -85,7 +85,7 @@ object Vocab {
 
         // Places and getting around
         v("中国", "Zhōngguó", "China"), v("美国", "Měiguó", "USA"), v("成都", "Chéngdū", "Chengdu"), v("四川", "Sìchuān", "Sichuan"),
-        v("内江", "Nèijiāng", "Neijiang"), v("资中", "Zīzhōng", "Zizhong"), v("洛杉矶", "Luòshānjī", "Los Angeles"), v("机场", "jīchǎng", "airport"),
+        v("重庆", "Chóngqìng", "Chongqing"), v("老家", "lǎojiā", "hometown"), v("洛杉矶", "Luòshānjī", "Los Angeles"), v("机场", "jīchǎng", "airport"),
         v("飞机", "fēijī", "airplane"), v("火车", "huǒchē", "train"), v("出租车", "chūzūchē", "taxi"), v("地铁", "dìtiě", "subway"),
         v("公交车", "gōngjiāochē", "bus"), v("车", "chē", "car, vehicle"), v("路", "lù", "road"), v("商店", "shāngdiàn", "shop"),
         v("超市", "chāoshì", "supermarket"), v("饭店", "fàndiàn", "restaurant"), v("银行", "yínháng", "bank"), v("医院", "yīyuàn", "hospital"),

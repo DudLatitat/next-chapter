@@ -54,7 +54,7 @@ import java.util.Locale
 
 fun yuan(n: Number): String = "¥" + NumberFormat.getIntegerInstance(Locale.US).format(n.toLong())
 
-/** Dollars ⇄ yuan, and a monthly budget for life in Neijiang. */
+/** Dollars ⇄ yuan, and a monthly budget for life in Sichuan. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {

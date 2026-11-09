@@ -87,7 +87,7 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("The move", "搬到中国 · Neijiang, Sichuan") }
+        item { ScreenTitle("The move", "搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity)) }
 
         // Dates
         item {

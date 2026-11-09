@@ -166,7 +166,7 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
                 Text(now.format(clock), style = MaterialTheme.typography.titleMedium, color = Night.ink)
             }
             Column {
-                Text("玉玲 · Neijiang $herSky", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                Text("${Life.herLabel(state.herName, state.herCity)} $herSky", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 Text(her.format(clock) + " " + Life.herDayWord(now), style = MaterialTheme.typography.titleMedium, color = Night.rose)
             }
         }
@@ -184,7 +184,7 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
         }
         if (part == Life.Part.CALL) {
             Spacer(Modifier.height(10.dp))
-            Text("💛 Call time with Yuling. Everything else can wait until 8.", style = MaterialTheme.typography.bodyMedium, color = Night.rose)
+            Text("💛 Call time" + state.herName.trim().let { if (it.isEmpty()) "" else " with $it" } + ". Everything else can wait until 8.", style = MaterialTheme.typography.bodyMedium, color = Night.rose)
         }
     }
 }

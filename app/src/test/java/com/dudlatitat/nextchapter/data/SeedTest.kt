@@ -18,6 +18,16 @@ class SeedTest {
         assertEquals("no duplicates", ids.size, ids.toSet().size)
     }
 
+    @Test fun starterCardsThatLeftTheListGoOnlyIfNeverStudied() {
+        val gone = Card("family:old", "旧", "jiù", "old line", "family")
+        val goneStudied = Card("core:old", "旧", "jiù", "old word", "core", firstSeen = 100, due = 101, interval = 1, reps = 1)
+        val mine = Card("mine:1", "我的", "wǒ de", "mine", "mine", custom = true)
+        val ids = Seed.merge(listOf(gone, goneStudied, mine)).map { it.id }
+        assertTrue("never-studied old starter card is removed", "family:old" !in ids)
+        assertTrue("an old card you studied stays", "core:old" in ids)
+        assertTrue("your own phrases always stay", "mine:1" in ids)
+    }
+
     @Test fun noStarterCardIsAlsoRetired() {
         assertTrue((Seed.cards + Vocab.cards).none { it.id in Seed.retired })
     }
@@ -29,6 +39,6 @@ class SeedTest {
         assertTrue((Seed.cards + Vocab.cards).all { it.deck in decks })
         assertEquals(48, Seed.cards.count { it.deck == "games" })
         assertEquals(35, Seed.cards.count { it.deck == "daily" })
-        assertEquals(24, Seed.cards.count { it.deck == "sweet" })
+        assertEquals(25, Seed.cards.count { it.deck == "sweet" })
     }
 }

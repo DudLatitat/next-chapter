@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 10
+    const val VERSION = 11
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -17,9 +17,13 @@ object Seed {
 
     /** Saved cards plus any new starter cards, minus retired ones you never studied. */
     fun merge(saved: List<Card>): List<Card> {
-        val kept = saved.filterNot { it.id in retired && it.isNew }
+        val starters = cards + Vocab.cards
+        val starterIds = starters.map { it.id }.toSet()
+        // A starter card that's gone from the list (or retired) is dropped only if you never studied it;
+        // your own phrases (custom) and anything with progress always stay.
+        val kept = saved.filterNot { it.isNew && !it.custom && (it.id in retired || it.id !in starterIds) }
         val have = kept.map { it.id }.toSet()
-        return kept + (cards + Vocab.cards).filter { it.id !in have }
+        return kept + starters.filter { it.id !in have }
     }
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
@@ -121,6 +125,7 @@ object Seed {
         c("sweet", "你今天真美", "nǐ jīntiān zhēn měi", "You look beautiful today"),
         c("sweet", "你笑起来真好看", "nǐ xiào qǐlái zhēn hǎokàn", "You're so pretty when you smile"),
         c("sweet", "你越来越漂亮了", "nǐ yuè lái yuè piàoliang le", "You get prettier every time I see you"),
+        c("sweet", "你的眼睛很漂亮", "nǐ de yǎnjing hěn piàoliang", "Your eyes are beautiful"),
         c("sweet", "你穿这个很好看", "nǐ chuān zhège hěn hǎokàn", "You look great in that"),
         c("sweet", "你怎么这么可爱？", "nǐ zěnme zhème kě'ài?", "How are you this cute?"),
         c("sweet", "你好聪明", "nǐ hǎo cōngming", "You're so smart"),
@@ -146,7 +151,7 @@ object Seed {
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),
         c("family", "叔叔好", "shūshu hǎo", "Hello, uncle"),
         c("family", "很高兴认识您", "hěn gāoxìng rènshi nín", "Very nice to meet you (polite)"),
-        c("family", "我是玉玲的男朋友", "wǒ shì Yùlíng de nánpéngyou", "I'm Yuling's boyfriend"),
+        c("family", "我是她男朋友", "wǒ shì tā nánpéngyou", "I'm her boyfriend"),
         c("family", "太好吃了", "tài hǎochī le", "This is delicious"),
         c("family", "我吃饱了", "wǒ chī bǎo le", "I'm full"),
         c("family", "您辛苦了", "nín xīnkǔ le", "Thank you for all your hard work"),

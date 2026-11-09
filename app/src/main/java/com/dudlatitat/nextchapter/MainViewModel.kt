@@ -42,6 +42,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun wroteChar() = store.edit { it.copy(charsWritten = it.charsWritten + 1) }
     fun seeMilestones(ids: List<String>) = store.edit { s -> s.copy(milestonesSeen = (s.milestonesSeen + ids).distinct()) }
     fun setTripMode(mode: String) = store.edit { it.copy(tripMode = mode) }
+    fun setHer(name: String, city: String) = store.edit { it.copy(herName = name.trim().take(30), herCity = city.trim().take(40)) }
 
     // Fare alerts
     fun saveAlert(a: com.dudlatitat.nextchapter.data.FareAlert) {

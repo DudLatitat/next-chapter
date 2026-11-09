@@ -23,6 +23,13 @@ object Life {
     /** Call time with Yuling: notifications arriving now stay silent. */
     fun isCallTime(t: LocalTime): Boolean = partOf(t) == Part.CALL
 
+    /** Today's label for her clock: "name · city" from Settings, or a plain fallback when unset. */
+    fun herLabel(name: String, city: String): String =
+        listOf(name.trim(), city.trim()).filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "Her time" }
+
+    /** Where the move goes, for the Move tab: her city from Settings, or just Sichuan. */
+    fun moveTo(city: String): String = city.trim().ifEmpty { "Sichuan" }
+
     /** Opening the app between 3 and 7 am counts as an early start. */
     fun earlyStart(t: LocalTime): Boolean = t.hour >= 3 && t.isBefore(LocalTime.of(7, 0))
 
@@ -48,10 +55,10 @@ object Life {
         )
     }
 
-    /** Yuling's zone: Neijiang, Sichuan (China has no daylight saving). */
+    /** Her zone: Sichuan (all of China is on one time, with no daylight saving). */
     val HER_ZONE: java.time.ZoneId = java.time.ZoneId.of("Asia/Shanghai")
 
-    /** The same moment in Neijiang. */
+    /** The same moment in Sichuan. */
     fun herTime(now: java.time.ZonedDateTime): java.time.ZonedDateTime = now.withZoneSameInstant(HER_ZONE)
 
     /** "today", "tomorrow" or "yesterday": her calendar day compared with yours. */

@@ -188,7 +188,7 @@ fun PhrasebookScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             title = { Text(if (field == "address") "Address in Chinese" else "Allergic to… (in Chinese)") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (field == "address") Text("Ask Yuling to send it to you on WeChat and paste it here.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    if (field == "address") Text("Ask her to send it to you on WeChat and paste it here.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     OutlinedTextField(text, { text = it })
                 }
             },

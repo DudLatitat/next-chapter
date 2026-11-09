@@ -23,6 +23,15 @@ class LifeTest {
         assertEquals(Life.Part.LATE, Life.partOf(at(20, 0)))
     }
 
+    @Test fun herLabelAndMoveCityComeFromSettingsWithFallbacks() {
+        assertEquals("Her time", Life.herLabel("", " "))
+        assertEquals("A · B", Life.herLabel(" A ", "B"))
+        assertEquals("A", Life.herLabel("A", ""))
+        assertEquals("B", Life.herLabel("", "B"))
+        assertEquals("Sichuan", Life.moveTo("  "))
+        assertEquals("B", Life.moveTo("B"))
+    }
+
     @Test fun notificationsStaySilentOnlyDuringTheCall() {
         assertFalse(Life.isCallTime(at(18, 59)))
         assertTrue(Life.isCallTime(at(19, 0)))
@@ -76,7 +85,7 @@ class LifeTest {
 
     @Test fun yulingsTimeFollowsDaylightSaving() {
         val la = java.time.ZoneId.of("America/Los_Angeles")
-        // Winter (PST): 16 hours ahead. 8 pm Tuesday in LA is noon Wednesday in Neijiang.
+        // Winter (PST): 16 hours ahead. 8 pm Tuesday in LA is noon Wednesday in Sichuan.
         val winter = java.time.ZonedDateTime.of(2026, 12, 1, 20, 0, 0, 0, la)
         assertEquals(16, Life.hoursAhead(winter))
         assertEquals(java.time.LocalTime.NOON, Life.herTime(winter).toLocalTime())

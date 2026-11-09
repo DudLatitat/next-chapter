@@ -49,7 +49,7 @@ val Decks = listOf(
     Deck("home", "Home & renting", "住房", "Finding and running a place"),
     Deck("paperwork", "Paperwork", "手续", "Visa, bank, registration"),
     Deck("health", "Health", "看病", "When you're not feeling well"),
-    Deck("sichuan", "Sichuanese", "四川话", "Local words you'll hear in Neijiang"),
+    Deck("sichuan", "Sichuanese", "四川话", "Local words you'll hear around Sichuan"),
     Deck("mine", "My phrases", "我的", "Things you added yourself"),
 )
 
@@ -186,6 +186,10 @@ data class AppState(
     val reminderMinutes: Int = 7 * 60 + 30,
     /** Shown big in the phrasebook: your address there, and an allergy, both in Chinese. */
     val addressZh: String = "",
+    /** Her name and home city, as shown on Today and Move. Typed in Settings, so they live only on
+     *  this phone (and its backups), never in the code, which is public. */
+    val herName: String = "",
+    val herCity: String = "",
     val allergyZh: String = "",
     val trips: List<Trip> = emptyList(),
     val prices: List<PriceSeen> = emptyList(),
