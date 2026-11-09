@@ -60,6 +60,8 @@ object Reminder {
         )
         val title = if (streak > 0) "Keep your 🔥 $streak-day streak going" else "Time for a little Chinese"
         val note = NotificationCompat.Builder(context, CHANNEL)
+            // Nothing buzzes during the 7–8 pm call: it still shows, silently.
+            .setSilent(com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now()))
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title)
             .setContentText("$due phrases waiting · about ${maxOf(1, due / 3)} min")

@@ -23,6 +23,13 @@ class LifeTest {
         assertEquals(Life.Part.LATE, Life.partOf(at(20, 0)))
     }
 
+    @Test fun notificationsStaySilentOnlyDuringTheCall() {
+        assertFalse(Life.isCallTime(at(18, 59)))
+        assertTrue(Life.isCallTime(at(19, 0)))
+        assertTrue(Life.isCallTime(at(19, 59)))
+        assertFalse(Life.isCallTime(at(20, 0)))
+    }
+
     @Test fun earlyStartIsThreeToSeven() {
         assertTrue(Life.earlyStart(at(6, 59)))
         assertTrue(Life.earlyStart(at(3, 0)))

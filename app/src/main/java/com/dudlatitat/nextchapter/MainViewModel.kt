@@ -113,7 +113,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val c = java.net.URL("https://open.er-api.com/v6/latest/USD").openConnection() as java.net.HttpURLConnection
             c.connectTimeout = 8000; c.readTimeout = 8000
             val text = c.inputStream.bufferedReader().use { it.readText() }
-            val rate = Regex("\"CNY\"\\s*:\\s*([0-9.]+)").find(text)?.groupValues?.get(1)?.toDoubleOrNull() ?: return@withContext false
+            // A missing or unbelievable rate (e.g. 0) is ignored, so conversions never divide by zero.
+            val rate = com.dudlatitat.nextchapter.data.Money.parseCny(text) ?: return@withContext false
             setRate(rate, java.time.LocalDate.now().toString())
             true
         } catch (_: Exception) { false }

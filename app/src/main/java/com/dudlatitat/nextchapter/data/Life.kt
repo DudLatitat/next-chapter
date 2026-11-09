@@ -20,6 +20,9 @@ object Life {
         else -> Part.LATE
     }
 
+    /** Call time with Yuling: notifications arriving now stay silent. */
+    fun isCallTime(t: LocalTime): Boolean = partOf(t) == Part.CALL
+
     /** Opening the app between 3 and 7 am counts as an early start. */
     fun earlyStart(t: LocalTime): Boolean = t.hour >= 3 && t.isBefore(LocalTime.of(7, 0))
 

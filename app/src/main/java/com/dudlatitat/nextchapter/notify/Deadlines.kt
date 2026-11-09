@@ -58,6 +58,8 @@ object Deadlines {
         val first = due.first()
         val left = Career.daysLeft(first, LocalDate.now())
         val note = NotificationCompat.Builder(context, CHANNEL)
+            // Nothing buzzes during the 7–8 pm call: it still shows, silently.
+            .setSilent(com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now()))
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(if (due.size == 1) "Closes ${if (left == 1L) "tomorrow" else "in $left days"}: ${first.title}" else "${due.size} job postings close soon")
             .setContentText(due.joinToString(" · ") { it.title + if (it.org.isNotBlank()) " (${it.org})" else "" })

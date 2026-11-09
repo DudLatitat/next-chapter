@@ -58,6 +58,7 @@ tools/
 - **1.40:** `data/Study.kt`: study timer/log (`AppState.study`, running timer saved in `timerStart`/`timerSubject`, capped at 4 h) and A+ practice tests (`PracticeTest.build`: 20 questions weighted like the exam, distractors = other answers in the same domain; results in `AppState.tests`; missed cards graded AGAIN so they return in reviews). UI in Life (StudyTimer card, PracticeTestScreen); Sunday review shows study time. Tests: `StudyTest`.
 - **1.42 (Rudy's Layout Studio edits):** Today tiles = Progress, Phrasebook, Drive (one row); rings evenly spaced; Learn shows Decks before Your tones; People section removed from Life (Person/PersonNote data and `people`/`notes` fields kept, so nothing saved is lost; Coming up now only shows job deadlines). Layout Studio artifact: https://claude.ai/artifact/Ut6ht23RAZrdeLU3CL4qzP (db `screens/<tab>`).
 - **1.43–1.48 (phrases):** `idv` rebuilt for Cryptic Notes (old callouts in `Seed.retired`); `games` deck (48); `daily` +24; new `sweet` deck (Sweet talk · 甜言蜜语, 24; Rudy wants it natural, not corny, so five cheesy lines were retired in v10). Seed.VERSION 10; `SeedTest` pins deck counts. 睛 alone is not in the Vosk vocabulary.
+- **1.49 (rules audit):** money math moved to `data/Money.kt` (rounds instead of truncating, savings pace rounds up, a bad or zero downloaded rate is ignored instead of dividing by zero); reminders, fare alerts and deadline notes arrive silently during the 7–8 pm call (`Life.isCallTime`).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful
@@ -109,7 +110,7 @@ What we learned on his phone (from the Settings → Mic & recognition test):
 - Tone classifier: 40/40 on native recordings, 39/40 male-shifted; real learner voices are harder. Voice setup (calibration) improves it a lot.
 - Erhua words (一点儿, 哪儿) don't split one syllable per character; the judge falls back to per-character pinyin from ICU.
 - Pitch prototype and tests live in `tools/tone_proto/` (Python, uses the APK's recordings).
-- There are no Kotlin unit tests yet (CLAUDE.md asks for tests with bug fixes). A JVM test source set for `Srs`, `Pinyin`, `Pitch`, `Stats`, `Plan` would be a good first addition.
+- Unit tests (CI runs them before every build): `SrsTest`, `PlanTest`, `MoneyTest`, `LifeTest`, `LifeTabTest`, `StudyTest`, `SeedTest`, `JudgeTest`, `VoskJsonTest`. Not yet covered: `Stats`, `Pitch`, `Pinyin` (uses android.icu, so it needs Robolectric or a JVM stand-in).
 - Ideas Rudy liked but hasn't picked yet: Sichuanese dialect deck/audio, conversation challenges, more stories.
 
 ## Other repos

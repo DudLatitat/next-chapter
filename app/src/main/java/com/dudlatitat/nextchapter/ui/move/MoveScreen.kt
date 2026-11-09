@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
+import com.dudlatitat.nextchapter.data.Money
 import com.dudlatitat.nextchapter.data.MoveTask
 import com.dudlatitat.nextchapter.data.TaskGroups
 import com.dudlatitat.nextchapter.data.daysUntil
@@ -185,10 +186,8 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
 /** "Save $420/month to make it" when there's a goal and a move date. */
 private fun perMonth(state: AppState): String? {
     val days = daysUntil(state.moveDate) ?: return null
-    val left = state.savingsGoal - state.saved
-    if (state.savingsGoal <= 0 || left <= 0 || days <= 0) return null
-    val months = (days / 30.4).coerceAtLeast(1.0)
-    return "Save ${money((left / months).toInt())}/month to make it"
+    val each = Money.savePerMonth(state.savingsGoal, state.saved, days) ?: return null
+    return "Save ${money(each)}/month to make it"
 }
 
 @Composable
