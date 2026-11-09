@@ -1,8 +1,8 @@
-# Handoff · state of Next Chapter (Nov 2, 2026)
+# Handoff · state of Next Chapter (Nov 9, 2026)
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.36** (Life tab: A+ Core 1, career path, classes, job postings, people & gift notes; 1.32–1.33 daily rhythm, prayers, Identity V) (GitHub release `latest`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.48** (1.43–1.48: Identity V deck for Cryptic Notes, Gaming together 48 cards, Everyday +24, new Sweet talk deck; earlier: Life tab, homey Today, study timer, practice tests) (GitHub release `latest`). Builds 1.32+ are on the session branch, not yet merged to `main`. All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
@@ -57,6 +57,7 @@ tools/
 - **1.39 (homey hub):** Today = Hero (greeting, your time + Yuling's via `Life.herTime` Asia/Shanghai, trip/move pills, streaks, call-time note), 4 rings (Chinese, A+, Prayer → bottom sheet, Goal → dialog), late check-in, Sunday/Monday items, Coming up, 6 tiles (Tones, Phrasebook, Drive, Move, People, Progress), slim phrase line. Learn tones: bars + kind words + weekly trend (`Stats.toneAccuracyBetween/toneWord`); decks as a 2/3-column tile grid. Life: A+ domains in one row, certs 2×2. Move savings compact. Progress: one week+totals card, no move-ready repeat, By deck uses Learn's numbers and opens the deck.
 - **1.40:** `data/Study.kt`: study timer/log (`AppState.study`, running timer saved in `timerStart`/`timerSubject`, capped at 4 h) and A+ practice tests (`PracticeTest.build`: 20 questions weighted like the exam, distractors = other answers in the same domain; results in `AppState.tests`; missed cards graded AGAIN so they return in reviews). UI in Life (StudyTimer card, PracticeTestScreen); Sunday review shows study time. Tests: `StudyTest`.
 - **1.42 (Rudy's Layout Studio edits):** Today tiles = Progress, Phrasebook, Drive (one row); rings evenly spaced; Learn shows Decks before Your tones; People section removed from Life (Person/PersonNote data and `people`/`notes` fields kept, so nothing saved is lost; Coming up now only shows job deadlines). Layout Studio artifact: https://claude.ai/artifact/Ut6ht23RAZrdeLU3CL4qzP (db `screens/<tab>`).
+- **1.43–1.48 (phrases):** `idv` rebuilt for Cryptic Notes (old callouts in `Seed.retired`); `games` deck (48); `daily` +24; new `sweet` deck (Sweet talk · 甜言蜜语, 24; Rudy wants it natural, not corny, so five cheesy lines were retired in v10). Seed.VERSION 10; `SeedTest` pins deck counts. 睛 alone is not in the Vosk vocabulary.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful
