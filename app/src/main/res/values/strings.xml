@@ -3,4 +3,7 @@
     <string name="app_name">Next Chapter</string>
     <string name="widget_description">Countdown, today\'s phrase and reviews due</string>
     <string name="quick_add">Add to Next Chapter</string>
+    <string name="widget_week_name">Weekly routine</string>
+    <string name="widget_week_title">This week · 每周</string>
+    <string name="widget_week_description">This week\'s evenings and tonight\'s job</string>
 </resources>

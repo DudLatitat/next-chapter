@@ -154,6 +154,27 @@ private fun Overview(
                 }
             }
         }
+        // Practice tools right under the review card (always open), grouped by what you're doing.
+        item {
+            val groups = listOf(
+                "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
+                "Read & write" to listOf(Triple("故事", "Stories", "stories") to Night.rose, Triple("写字", "Writing", "writing") to Night.sun, Triple("语法", "Grammar", "grammar") to Night.violet),
+                "Out in China" to listOf(Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
+            )
+            GlassCard {
+                Text("Practice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Spacer(Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    groups.forEach { (label, row) ->
+                        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+        }
         item {
             val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
             val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
@@ -175,26 +196,7 @@ private fun Overview(
                 }
             }
         }
-        // Decks first (what you study), then the tools, your tones, and how it's going.
-        // Practice tools, grouped by what you're doing, three to a row.
-        item {
-            val groups = listOf(
-                "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
-                "Read & write" to listOf(Triple("故事", "Stories", "stories") to Night.rose, Triple("写字", "Writing", "writing") to Night.sun, Triple("语法", "Grammar", "grammar") to Night.violet),
-                "Out in China" to listOf(Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
-            )
-            Collapsible("learn.tools", "Practice", summary = "Tones, dialogues, drive, stories, writing, phrasebook…", defaultOpen = true) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    groups.forEach { (label, row) ->
-                        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
-                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
-                    }
-                }
-            }
-        }
+        // Then your tones and how it's going.
         item { WeakTones(state, onDrill) }
         item { SectionLabel("How it's going") }
         item { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) }

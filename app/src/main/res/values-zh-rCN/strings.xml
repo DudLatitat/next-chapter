@@ -3,4 +3,7 @@
     <string name="app_name">新篇章</string>
     <string name="widget_description">倒计时、今日短语和待复习</string>
     <string name="quick_add">加到新篇章</string>
+    <string name="widget_week_name">每周作息</string>
+    <string name="widget_week_title">这周</string>
+    <string name="widget_week_description">这周的晚上和今晚的任务</string>
 </resources>

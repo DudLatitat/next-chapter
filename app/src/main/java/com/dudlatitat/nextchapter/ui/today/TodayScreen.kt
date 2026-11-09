@@ -100,7 +100,7 @@ fun TodayScreen(
     ) {
         Hero(state, part, onSettings, onOpenMove)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
-        TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true })
+        TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
         NowCard(state, vm, part, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus)
         val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
@@ -269,7 +269,7 @@ private fun NowLine(title: String, line: String, button: String, color: Color, o
 
 /** Four rings for today's small things. Tap one to do it. */
 @Composable
-private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit) {
+private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit, onWeek: () -> Unit) {
     val d = today()
     val queue = Srs.queue(state)
     val zhDone = state.cards.count { it.last == d && it.due > d }
@@ -292,6 +292,17 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
                 when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> "✓"; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> "½"; com.dudlatitat.nextchapter.data.CheckIn.SKIPPED -> "🌙"; null -> "→" }, onJob,
                 sub = R.text(job.task, state.herName),
             )
+        }
+        // Your week of evenings, at a glance (tap for the whole routine).
+        Spacer(Modifier.height(14.dp))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onWeek).padding(vertical = 4.dp)) {
+            val streak = R.streak(state.routineChecks, d)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("This week", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
+                if (streak > 0) Text("🔥 $streak", style = MaterialTheme.typography.labelMedium, color = Night.sun)
+            }
+            Spacer(Modifier.height(6.dp))
+            com.dudlatitat.nextchapter.ui.life.WeekDots(state)
         }
     }
 }

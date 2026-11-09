@@ -159,10 +159,10 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
 
     picking?.let { field ->
         PickDate(
-            initial = if (field == DateField.MOVE) state.moveDate else state.tripDate,
+            initial = if (field == DateField.MOVE) state.moveDate else state.nextTripDate(),
             onDismiss = { picking = null },
             onPick = { iso ->
-                vm.updatePlan { if (field == DateField.MOVE) it.copy(moveDate = iso) else it.copy(tripDate = iso) }
+                vm.updatePlan { if (field == DateField.MOVE) it.copy(moveDate = iso) else it.withNextTripDate(iso) }
                 picking = null
             },
         )

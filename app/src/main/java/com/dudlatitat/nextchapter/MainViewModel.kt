@@ -26,8 +26,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val coach = com.dudlatitat.nextchapter.speech.Coach(app)
 
     init {
-        store.onChange = { PhraseWidget.refresh(app, it) }
+        store.onChange = { PhraseWidget.refresh(app, it); com.dudlatitat.nextchapter.widget.WeekWidget.refresh(app, it) }
         PhraseWidget.refresh(app, store.state.value)
+        com.dudlatitat.nextchapter.widget.WeekWidget.refresh(app, store.state.value)
         Reminder.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Deadlines.schedule(app, store.state.value)
