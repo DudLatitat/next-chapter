@@ -65,15 +65,16 @@ import java.util.Locale
 private val clock = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 
 /**
- * Today is the hub: a warm header (your time and hers, the trip), four rings for today's small
- * things (Chinese, A+, prayer, tonight's routine job), tonight's job card, and tiles into the rest.
+ * Today answers "what now?": a warm header (your time and hers, the trip), four rings for today's
+ * small things, then ONE card for this moment (prayer, practice, tonight's job, call time, wind
+ * down), and what's coming up. Everything else lives in its own tab.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit,
     onPhrasebook: () -> Unit = {}, onOpenLife: () -> Unit = {}, onAPlus: () -> Unit = {},
-    onTool: (String) -> Unit = {}, onOpenProgress: () -> Unit = {}, onLifePage: (String) -> Unit = {},
+    onTool: (String) -> Unit = {}, onLifePage: (String) -> Unit = {},
 ) {
     // Opening the app by 30 minutes after your wake time counts toward the early-start streak.
     LaunchedEffect(Unit) { if (Life.earlyStart(LocalTime.now(), state.wakeMinutes)) vm.markEarlyStart() }
@@ -101,12 +102,9 @@ fun TodayScreen(
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true })
 
-        // From just before you get home (or the job's own start) until you check in, outside call time.
-        val job = com.dudlatitat.nextchapter.data.Routine.jobFor(state.routine, java.time.LocalDate.now())
-        val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
-        val unanswered = com.dudlatitat.nextchapter.data.Routine.checkFor(state.routineChecks, today()) == null
-        if (unanswered && part != Life.Part.CALL && nowMin >= minOf(state.homeMinutes, job.minutes) - 15) TonightJob(state, vm, startJob)
-        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
+        NowCard(state, vm, part, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus)
+        val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
+        if (sundayAfternoon) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
             com.dudlatitat.nextchapter.ui.components.Collapsible(
                 "today.lastweek", "Last week", summary = com.dudlatitat.nextchapter.ui.progress.recapSummary(state, lastWeek = true),
@@ -116,8 +114,6 @@ fun TodayScreen(
             GlassCard { com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife) }
         }
 
-        Tiles(state, onTool, onPhrasebook, onOpenMove, onOpenLife, onOpenProgress)
-        state.phraseOfTheDay()?.let { PhraseLine(it, vm) }
         Spacer(Modifier.height(8.dp))
     }
 
@@ -198,9 +194,75 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
                 if (early > 0) Pill("☀️ $early early", Night.jade)
             }
         }
-        if (part == Life.Part.CALL) {
-            Spacer(Modifier.height(10.dp))
-            Text("💛 Call time" + state.herName.trim().let { if (it.isEmpty()) "" else " with $it" } + ". Everything else can wait until 8.", style = MaterialTheme.typography.bodyMedium, color = Night.rose)
+    }
+}
+
+/**
+ * The one card for right now, picked by the time of day so there's never a list to choose from:
+ * call time → tonight's job → morning prayer → phrases waiting → A+ cards → wind down → all caught up.
+ */
+@Composable
+private fun NowCard(
+    state: AppState, vm: MainViewModel, part: Life.Part, startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit,
+    onPray: () -> Unit, onChinese: () -> Unit, onAPlus: () -> Unit,
+) {
+    val R = com.dudlatitat.nextchapter.data.Routine
+    val job = R.jobFor(state.routine, java.time.LocalDate.now())
+    val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
+    val unanswered = R.checkFor(state.routineChecks, today()) == null
+    val her = state.herName.trim()
+    val waiting = Srs.queue(state).size
+    val aplus = APlus.queue(state).size
+    when {
+        part == Life.Part.CALL -> GlassCard(highlight = true) {
+            Text("Call time 💛", style = MaterialTheme.typography.headlineSmall, color = Night.rose)
+            Text(
+                (if (her.isEmpty()) "She's" else "$her is") + " starting her day. Everything else can wait until 8.",
+                style = MaterialTheme.typography.bodyMedium, color = Night.ink,
+            )
+            if (unanswered) Text("After: ${R.text(job.task, her)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
+        unanswered && nowMin >= minOf(state.homeMinutes, job.minutes) - 15 -> TonightJob(state, vm, startJob)
+        part == Life.Part.MORNING && today() !in state.prayedDays -> NowLine(
+            "Good morning ☀️", "Start with today's prayer: ${Prayers.forDay(today()).title}.", "Pray", Night.sun, onPray,
+        )
+        waiting > 0 -> NowLine(
+            "${waiting} ${if (waiting == 1) "phrase is" else "phrases are"} waiting",
+            "A few minutes of Chinese. Say them out loud.", "Practice", Night.jade, onChinese,
+        )
+        aplus > 0 -> NowLine(
+            "$aplus A+ ${if (aplus == 1) "card" else "cards"} for today", "Quick ones, one at a time.", "Study", Night.violet, onAPlus,
+        )
+        part == Life.Part.LATE -> GlassCard {
+            Text("Winding down 🌙", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+            Text(
+                "You did enough today. Phone down by ${com.dudlatitat.nextchapter.ui.life.clockLabel(state.windDownMinutes)}.",
+                style = MaterialTheme.typography.bodyMedium, color = Night.muted,
+            )
+            state.phraseOfTheDay()?.let { Spacer(Modifier.height(10.dp)); PhraseRow(it, vm) }
+        }
+        else -> GlassCard {
+            Text("All caught up ✓", style = MaterialTheme.typography.titleLarge, color = Night.jade)
+            Text("Nothing waiting right now. Here's a line for today:", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+            state.phraseOfTheDay()?.let { Spacer(Modifier.height(10.dp)); PhraseRow(it, vm) }
+        }
+    }
+}
+
+/** A Now card with one sentence and one button. */
+@Composable
+private fun NowLine(title: String, line: String, button: String, color: Color, onClick: () -> Unit) {
+    GlassCard(highlight = true, onClick = onClick) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                Text(line, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+            }
+            Spacer(Modifier.width(10.dp))
+            androidx.compose.material3.Button(
+                onClick = onClick,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = color, contentColor = Night.ground2),
+            ) { Text(button) }
         }
     }
 }
@@ -246,40 +308,10 @@ private fun Ring(label: String, progress: Float, color: Color, center: String, o
     }
 }
 
-/** Tiles into the rest of the app, each with a word on how it's going. */
+/** Phrase of the day as one slim row, tap ▶ to hear it. */
 @Composable
-private fun Tiles(state: AppState, onTool: (String) -> Unit, onPhrasebook: () -> Unit, onOpenMove: () -> Unit, onOpenLife: () -> Unit, onOpenProgress: () -> Unit) {
-    val tiles = listOf(
-        // Rudy's layout (Layout Studio, Nov 2026): one row of three.
-        Tile("📈", "Progress", com.dudlatitat.nextchapter.data.Stats.streak(state).let { if (it > 0) "🔥 $it-day streak" else "start a streak" }) { onOpenProgress() },
-        Tile("📕", "Phrasebook", "big text") { onPhrasebook() },
-        Tile("🚗", "Drive", "hands-free") { onTool("drive") },
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        tiles.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { t ->
-                    Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(Night.card.copy(alpha = 0.85f))
-                            .clickable(onClick = t.onClick).padding(vertical = 12.dp, horizontal = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(t.emoji, fontSize = 22.sp)
-                        Text(t.title, style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1)
-                        Text(t.sub, fontSize = 10.sp, color = Night.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private class Tile(val emoji: String, val title: String, val sub: String, val onClick: () -> Unit)
-
-/** Phrase of the day as one slim line, tap ▶ to hear it. */
-@Composable
-private fun PhraseLine(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewModel) {
-    GlassCard {
+private fun PhraseRow(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewModel) {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Phrase of the day", style = MaterialTheme.typography.labelSmall, color = Night.muted)

@@ -131,42 +131,26 @@ private fun Overview(
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("Learn", "学中文 · phrases for your life there") }
+        item { ScreenTitle("Chinese", "学中文 · for real life there") }
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (queue.isEmpty()) "You're caught up" else "${queue.size} to review", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                        Text(if (queue.isEmpty()) "You're all caught up ✓" else "${queue.size} waiting for you", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                         val fresh = queue.count { it.isNew }
                         Text(
-                            if (queue.isEmpty()) "New phrases unlock tomorrow" else "${queue.size - fresh} reviews · $fresh new",
+                            if (queue.isEmpty()) "New phrases arrive tomorrow" else "${queue.size - fresh} to remember · $fresh new today",
                             style = MaterialTheme.typography.bodyMedium, color = Night.muted,
                         )
                     }
                     Button(
                         onClick = onReview, enabled = queue.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-                    ) { Text("Review") }
+                    ) { Text("Practice") }
                 }
                 if (doneToday > 0) {
                     Spacer(Modifier.height(6.dp))
                     TextButton(onClick = onRedo) { Text("↻  Redo today ($doneToday)", color = Night.sun) }
-                }
-            }
-        }
-        // Tools: small tiles, four to a row, so they fit on one screen.
-        item {
-            val tools = listOf(
-                Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade,
-                Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose,
-                Triple("语法", "Grammar", "grammar") to Night.violet, Triple("故事", "Stories", "stories") to Night.rose,
-                Triple("开车", "Drive", "drive") to Night.jade, Triple("礼节", "Etiquette", "culture") to Night.sun,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                tools.chunked(4).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
-                    }
                 }
             }
         }
@@ -191,8 +175,29 @@ private fun Overview(
                 }
             }
         }
-        // Rudy's layout: decks first, then tones.
+        // Decks first (what you study), then the tools, your tones, and how it's going.
+        // Practice tools, grouped by what you're doing, three to a row.
+        item {
+            val groups = listOf(
+                "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
+                "Read & write" to listOf(Triple("故事", "Stories", "stories") to Night.rose, Triple("写字", "Writing", "writing") to Night.sun, Triple("语法", "Grammar", "grammar") to Night.violet),
+                "Out in China" to listOf(Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
+            )
+            Collapsible("learn.tools", "Practice", summary = "Tones, dialogues, drive, stories, writing, phrasebook…", defaultOpen = true) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    groups.forEach { (label, row) ->
+                        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+        }
         item { WeakTones(state, onDrill) }
+        item { SectionLabel("How it's going") }
+        item { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) }
     }
 }
 

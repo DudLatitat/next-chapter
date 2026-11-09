@@ -39,18 +39,18 @@ import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.components.Stat
 import com.dudlatitat.nextchapter.ui.theme.Night
 
+/**
+ * Your Chinese progress, at the bottom of the Chinese tab: this week, streaks, the 12-week grid
+ * and each deck. (It used to be its own Progress tab; now it sits next to what it measures.)
+ */
 @Composable
-fun ProgressScreen(state: AppState, onOpenDeck: (String) -> Unit = {}) {
+fun ChineseProgress(state: AppState, onOpenDeck: (String) -> Unit = {}) {
     val known = state.cards.count { it.isKnown }
     val learning = state.cards.count { !it.isNew && !it.isKnown }
     val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
     val best = bestStreak(com.dudlatitat.nextchapter.data.Stats.practiceDays(state))
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ScreenTitle("Progress", "进步 · every day counts")
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // One card for the week and the totals (they used to be two cards saying similar things).
         GlassCard(highlight = true) {
             WeeklyRecap(state, bare = true)
@@ -68,6 +68,13 @@ fun ProgressScreen(state: AppState, onOpenDeck: (String) -> Unit = {}) {
             Heatmap(practiced)
         }
 
+    }
+}
+
+/** Wins on the Life tab: milestones and the lines you wrote each Sunday. */
+@Composable
+fun LifeWins(state: AppState) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
         com.dudlatitat.nextchapter.ui.components.Collapsible("progress.milestones", "Milestones · ${all.count { it.done }} of ${all.size}", summary = all.firstOrNull { !it.done }?.let { "Next: ${it.emoji} ${it.title}" }) {
             MilestoneGrid(state)
@@ -79,23 +86,6 @@ fun ProgressScreen(state: AppState, onOpenDeck: (String) -> Unit = {}) {
             }
         }
 
-        val started = state.cards.count { !it.isNew }
-        com.dudlatitat.nextchapter.ui.components.Collapsible("progress.decks", "By deck", summary = "$started of ${state.cards.size} started · $known known") {
-            Text("Same as Learn: the bar is how much you've started, ✓ is what you know (remembered a week+). Tap one to open it.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-            Spacer(Modifier.height(6.dp))
-            Decks.forEach { deck ->
-                val cards = state.cards.filter { it.deck == deck.id }
-                if (cards.isEmpty()) return@forEach
-                val s0 = cards.count { !it.isNew }
-                val k0 = cards.count { it.isKnown }
-                Row(Modifier.fillMaxWidth().clickable { onOpenDeck(deck.id) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(deck.title, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.width(130.dp))
-                    Bar(s0.toFloat() / cards.size, Night.jade, Modifier.weight(1f))
-                    Text("  $s0/${cards.size}" + if (k0 > 0) " · $k0✓" else "", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
     }
 }
 

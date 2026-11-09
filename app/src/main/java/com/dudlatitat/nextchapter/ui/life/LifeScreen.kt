@@ -105,15 +105,19 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("Life", "生活 · study, career and people") }
+        item { ScreenTitle("Life", "生活 · your evenings, your study, your path") }
+        // Your week first: it's what the evenings run on.
+        item { RoutineSummary(state, onOpen = { page = "routine" }) }
+        item { SectionLabel("A+ exam") }
         item { APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" }) }
         item { StudyTimer(state, vm) }
-        item { RoutineSummary(state, onOpen = { page = "routine" }) }
 
         item { SectionLabel("Career path") }
         item { CertPath(state, vm) }
         item { Classes(state, vm, onAdd = { addingClass = true }) }
         item { Jobs(state, onEdit = { editingJob = it }, onAdd = { editingJob = JobPosting("job:${System.currentTimeMillis()}", "") }) }
+        item { SectionLabel("Wins") }
+        item { com.dudlatitat.nextchapter.ui.progress.LifeWins(state) }
 
         item { Spacer(Modifier.height(8.dp)) }
     }

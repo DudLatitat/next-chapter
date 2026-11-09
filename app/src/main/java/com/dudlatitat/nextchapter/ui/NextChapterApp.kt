@@ -32,18 +32,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.ui.learn.LearnScreen
 import com.dudlatitat.nextchapter.ui.move.MoveScreen
-import com.dudlatitat.nextchapter.ui.progress.ProgressScreen
 import com.dudlatitat.nextchapter.ui.theme.Night
 import com.dudlatitat.nextchapter.ui.theme.StarryBackdrop
 import com.dudlatitat.nextchapter.ui.today.TodayScreen
 import com.dudlatitat.nextchapter.ui.settings.SettingsScreen
 
 enum class Tab(val label: String, val icon: ImageVector) {
+    // Four tabs, each one question: what now, practice, getting better, the plan.
     TODAY("Today", Icons.Rounded.Home),
-    LEARN("Learn", Icons.Rounded.Star),
-    MOVE("Move", Icons.Rounded.Place),
+    LEARN("Chinese", Icons.Rounded.Star),
     LIFE("Life", Icons.Rounded.Person),
-    PROGRESS("Progress", Icons.Rounded.CheckCircle),
+    MOVE("Move", Icons.Rounded.Place),
 }
 
 @Composable
@@ -113,11 +112,10 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE }, onTool = { startTool = it; tab = Tab.LEARN }, onOpenProgress = { tab = Tab.PROGRESS }, onLifePage = { startLife = it; tab = Tab.LIFE })
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE }, onTool = { startTool = it; tab = Tab.LEARN }, onLifePage = { startLife = it; tab = Tab.LIFE })
                     Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool, startDeck = startDeck, onDeckOpened = { startDeck = null })
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false }, startPage = startLife, onPageStarted = { startLife = null })
-                    Tab.PROGRESS -> ProgressScreen(state, onOpenDeck = { startDeck = it; tab = Tab.LEARN })
                 }
             }
         }

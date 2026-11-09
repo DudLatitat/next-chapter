@@ -97,7 +97,17 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             Text("Settings", style = MaterialTheme.typography.headlineMedium, color = Night.ink)
         }
 
-        SectionLabel("Daily reminder")
+        SectionLabel("You & her")
+        GlassCard {
+            var herName by remember { mutableStateOf(state.herName) }
+            var herCity by remember { mutableStateOf(state.herCity) }
+            Text("Name and city on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+            Text("Saved only on this phone (and in your backups), never in the app's code.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            androidx.compose.material3.OutlinedTextField(herName, { herName = it.take(30); vm.setHer(herName, herCity) }, label = { Text("Her name") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+            androidx.compose.material3.OutlinedTextField(herCity, { herCity = it.take(40); vm.setHer(herName, herCity) }, label = { Text("Her city") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+
+        SectionLabel("Reminders")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -183,14 +193,13 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
-        SectionLabel("Her")
-        GlassCard {
-            var herName by remember { mutableStateOf(state.herName) }
-            var herCity by remember { mutableStateOf(state.herCity) }
-            Text("Name and city on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-            Text("Saved only on this phone (and in your backups), never in the app's code.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-            androidx.compose.material3.OutlinedTextField(herName, { herName = it.take(30); vm.setHer(herName, herCity) }, label = { Text("Her name") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-            androidx.compose.material3.OutlinedTextField(herCity, { herCity = it.take(40); vm.setHer(herName, herCity) }, label = { Text("Her city") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        SectionLabel("Voice")
+        VoiceCard(vm)
+
+        SectionLabel("Speaking check")
+        GlassCard(onClick = { micTest = true }) {
+            Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
+            Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
         SectionLabel("Trip mode")
@@ -202,15 +211,6 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     androidx.compose.material3.FilterChip(selected = state.tripMode == v, onClick = { vm.setTripMode(v) }, label = { Text(l) })
                 }
             }
-        }
-
-        SectionLabel("Voice")
-        VoiceCard(vm)
-
-        SectionLabel("Speaking check")
-        GlassCard(onClick = { micTest = true }) {
-            Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
-            Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
         SectionLabel("Backup")
