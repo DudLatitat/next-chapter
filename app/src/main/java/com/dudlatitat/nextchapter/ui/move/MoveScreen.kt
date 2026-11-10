@@ -1,6 +1,7 @@
 package com.dudlatitat.nextchapter.ui.move
 
 import com.dudlatitat.nextchapter.data.nextTripDate
+import com.dudlatitat.nextchapter.data.withNextTripDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
