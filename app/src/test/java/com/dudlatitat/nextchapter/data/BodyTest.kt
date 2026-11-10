@@ -42,3 +42,34 @@ class BodyTest {
         assertEquals("⚖️ 182.4 lb · 🍽 1,450 cal", Body.pill(s.copy(goalWeight = null, calorieTarget = 0), d))
     }
 }
+
+class BodyHistoryTest {
+    private val d = 20_400L
+
+    @Test fun everyDayIsThereNewestFirstGoodAndBad() {
+        val s = AppState(
+            weights = listOf(WeightEntry(d - 3, 181.0), WeightEntry(d - 1, 180.4), WeightEntry(d, 180.8)),
+            calorieAdds = listOf(CalorieAdd(d - 3, 1500), CalorieAdd(d, 1200), CalorieAdd(d, 800)),
+        )
+        val h = Body.history(s, d)
+        assertEquals("back to the first log, no gaps", listOf(d, d - 1, d - 2, d - 3), h.map { it.day })
+        assertEquals(0.4, h[0].change!!, 1e-9)         // up from yesterday
+        assertEquals(2000, h[0].calories)
+        assertEquals(-0.6, h[1].change!!, 1e-9)        // down vs 3 days before (nothing logged in between)
+        assertEquals(null, h[1].calories)
+        assertEquals(null, h[2].lb); assertEquals(null, h[2].calories) // a blank day still shows
+        assertEquals(null, h[3].change)                // first weigh-in: nothing to compare
+        assertEquals(1500, h[3].calories)
+    }
+
+    @Test fun historyIsCappedAndEmptyWithoutLogs() {
+        assertEquals(emptyList<Body.Day>(), Body.history(AppState(), d))
+        val s = AppState(weights = listOf(WeightEntry(d - 500, 190.0), WeightEntry(d, 180.0)))
+        assertEquals(60, Body.history(s, d).size)
+    }
+
+    @Test fun caloriesAreKeptForTwoYears() {
+        val c = Body.addCalories(listOf(CalorieAdd(d - 400, 1800)), d, 500)
+        assertEquals(1800, Body.caloriesOn(c, d - 400))
+    }
+}
