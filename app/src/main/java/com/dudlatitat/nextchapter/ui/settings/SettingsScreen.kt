@@ -65,9 +65,13 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
+    var pickingRoutine by remember { mutableStateOf<String?>(null) }
 
     val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         vm.setReminder(granted, state.reminderMinutes)
+        if (!granted) Toast.makeText(context, "Notifications are off for Next Chapter", Toast.LENGTH_SHORT).show()
+    }
+    val askEvening = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) Toast.makeText(context, "Notifications are off for Next Chapter", Toast.LENGTH_SHORT).show()
     }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -93,7 +97,19 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             Text("Settings", style = MaterialTheme.typography.headlineMedium, color = Night.ink)
         }
 
-        SectionLabel("Daily reminder")
+        SectionLabel("You & her")
+        GlassCard {
+            var herName by remember { mutableStateOf(state.herName) }
+            var herCity by remember { mutableStateOf(state.herCity) }
+            Text("Name and city on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+            Text("Saved only on this phone (and in your backups), never in the app's code.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            androidx.compose.material3.OutlinedTextField(herName, { herName = it.take(30); vm.setHer(herName, herCity) }, label = { Text("Her name") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+            androidx.compose.material3.OutlinedTextField(herCity, { herCity = it.take(40); vm.setHer(herName, herCity) }, label = { Text("Her city") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+
+        WorkHomeCard(state, vm)
+
+        SectionLabel("Reminders")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -116,6 +132,56 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Evening routine", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("\"You're home\" with tonight's job, and a wind-down note at bedtime. Quiet during her call.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Switch(
+                    checked = state.eveningCheck,
+                    onCheckedChange = { on ->
+                        if (on && Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) askEvening.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        vm.setEveningCheck(on)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            listOf(
+                Triple("wake", "Wake up", state.wakeMinutes),
+                Triple("home", "You're home", state.homeMinutes),
+                Triple("wind", "Wind down", state.windDownMinutes),
+            ).forEach { (key, label, m) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { pickingRoutine = key }) { Text(timeLabel(m), color = Night.sun) }
+                }
+            }
+            Text("Early starts count until 30 minutes after your wake time.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        }
+
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Job deadline reminders", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("At 12:15 pm, 3 days and 1 day before a saved posting closes (Life tab).", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Switch(
+                    checked = state.jobReminders,
+                    onCheckedChange = { on ->
+                        if (on && Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) askEvening.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        vm.setJobReminders(on)
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
+            }
+        }
+
         SectionLabel("Learning")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -129,6 +195,15 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        SectionLabel("Voice")
+        VoiceCard(vm)
+
+        SectionLabel("Speaking check")
+        GlassCard(onClick = { micTest = true }) {
+            Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
+            Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
+
         SectionLabel("Trip mode")
         GlassCard {
             Text("Survival screen on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
@@ -138,15 +213,6 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     androidx.compose.material3.FilterChip(selected = state.tripMode == v, onClick = { vm.setTripMode(v) }, label = { Text(l) })
                 }
             }
-        }
-
-        SectionLabel("Voice")
-        VoiceCard(vm)
-
-        SectionLabel("Speaking check")
-        GlassCard(onClick = { micTest = true }) {
-            Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
-            Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
         SectionLabel("Backup")
@@ -170,6 +236,27 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         Spacer(Modifier.width(1.dp).height(24.dp))
     }
 
+    pickingRoutine?.let { key ->
+        val current = when (key) { "wake" -> state.wakeMinutes; "home" -> state.homeMinutes; else -> state.windDownMinutes }
+        val picker = rememberTimePickerState(current / 60, current % 60, is24Hour = false)
+        AlertDialog(
+            onDismissRequest = { pickingRoutine = null },
+            title = { Text(when (key) { "wake" -> "Wake-up time"; "home" -> "\"You're home\" note"; else -> "Wind-down note" }) },
+            text = { TimePicker(picker) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val m = picker.hour * 60 + picker.minute
+                    vm.setRoutineTimes(
+                        wake = if (key == "wake") m else state.wakeMinutes,
+                        home = if (key == "home") m else state.homeMinutes,
+                        windDown = if (key == "wind") m else state.windDownMinutes,
+                    )
+                    pickingRoutine = null
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { pickingRoutine = null }) { Text("Cancel") } },
+        )
+    }
     if (pickingTime) {
         val picker = rememberTimePickerState(state.reminderMinutes / 60, state.reminderMinutes % 60, is24Hour = false)
         AlertDialog(

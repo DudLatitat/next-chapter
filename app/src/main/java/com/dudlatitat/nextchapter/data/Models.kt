@@ -37,6 +37,10 @@ data class Deck(val id: String, val title: String, val hanzi: String, val blurb:
 
 val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
+    Deck("idv", "Identity V", "第五人格", "Cryptic Notes callouts for playing with Yuling"),
+    Deck("games", "Gaming together", "一起玩", "Teaming up, cheering each other on, calling it a night"),
+    Deck("trip", "Trip prep", "出发", "Airport, taxi, hotel, dinner with her family · opens 60 days before a trip"),
+    Deck("sweet", "Sweet talk", "甜言蜜语", "Compliments and flirting, said like you mean it"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
     Deck("daily", "Everyday", "日常", "Getting by, asking for help"),
@@ -46,7 +50,7 @@ val Decks = listOf(
     Deck("home", "Home & renting", "住房", "Finding and running a place"),
     Deck("paperwork", "Paperwork", "手续", "Visa, bank, registration"),
     Deck("health", "Health", "看病", "When you're not feeling well"),
-    Deck("sichuan", "Sichuanese", "四川话", "Local words you'll hear in Neijiang"),
+    Deck("sichuan", "Sichuanese", "四川话", "Local words you'll hear around Sichuan"),
     Deck("mine", "My phrases", "我的", "Things you added yourself"),
 )
 
@@ -183,6 +187,32 @@ data class AppState(
     val reminderMinutes: Int = 7 * 60 + 30,
     /** Shown big in the phrasebook: your address there, and an allergy, both in Chinese. */
     val addressZh: String = "",
+    /** Her name and home city, as shown on Today and Move. Typed in Settings, so they live only on
+     *  this phone (and its backups), never in the code, which is public. */
+    val herName: String = "",
+    val herCity: String = "",
+    /** The weekly routine (one job per evening), its check-ins and Sunday answers. */
+    val routine: List<RoutineDay> = Routine.seed,
+    val routineChecks: List<RoutineCheck> = emptyList(),
+    val routineReviews: Map<String, RoutineReview> = emptyMap(),
+    /** Wake time (early starts count before it plus 30 min), "you're home" and wind-down notifications. */
+    val wakeMinutes: Int = 7 * 60 + 30,
+    val homeMinutes: Int = 17 * 60 + 45,
+    val windDownMinutes: Int = 23 * 60 + 30,
+    /** Work & home (Settings): on/off, the two saved spots (on this phone only) and the arrivals noticed. */
+    val placesOn: Boolean = false,
+    val workSpot: Spot? = null,
+    val homeSpot: Spot? = null,
+    val arrivals: List<Arrival> = emptyList(),
+    /** Days off (paid days off, holidays), planned like a weekend day. */
+    val daysOff: List<DayOff> = emptyList(),
+    /** Tonight's sentence: starred in 造句 Build, shown on Today 6–7 pm on [TonightLine.day]. */
+    val tonight: TonightLine? = null,
+    /** Weight and calories (Today's ⚖️ pill), with a goal weight and a daily calorie target (0 = none). */
+    val weights: List<WeightEntry> = emptyList(),
+    val calorieAdds: List<CalorieAdd> = emptyList(),
+    val goalWeight: Double? = null,
+    val calorieTarget: Int = 0,
     val allergyZh: String = "",
     val trips: List<Trip> = emptyList(),
     val prices: List<PriceSeen> = emptyList(),
@@ -205,4 +235,32 @@ data class AppState(
     val storiesRead: List<String> = emptyList(),
     val charsWritten: Int = 0,
     val driveMinutes: Int = 0,
+    /** Days the app was opened before 7 am (the early-start streak). */
+    val wakeDays: List<Long> = emptyList(),
+    /** Days the morning prayer was said ("Amen" tapped). */
+    val prayedDays: List<Long> = emptyList(),
+    /** One goal per evening (Life.withGoal keeps the last 120 days). */
+    val goals: List<DayGoal> = emptyList(),
+    /** The Sunday review's one line, by the week's Monday (ISO date). */
+    val weekNotes: Map<String, String> = emptyMap(),
+    /** The 8:30 pm "did you get to it?" notification. */
+    val eveningCheck: Boolean = true,
+    // ---- Life tab ----
+    /** A+ review progress (card text lives in APlus.kt), new cards per day, exam date (ISO). */
+    val aplus: List<Review> = emptyList(),
+    val aplusPerDay: Int = 10,
+    val aplusExam: String? = null,
+    val certs: List<CertStep> = emptyList(),
+    val classes: List<SchoolClass> = emptyList(),
+    val jobs: List<JobPosting> = emptyList(),
+    /** Job deadline reminders (3 days and 1 day before), at lunchtime. */
+    val jobReminders: Boolean = true,
+    val people: List<Person> = emptyList(),
+    val notes: List<PersonNote> = emptyList(),
+    // ---- Study timer and practice tests (1.40) ----
+    val study: List<StudySession> = emptyList(),
+    /** A running timer: when it started (epoch ms) and for what; null when stopped. */
+    val timerStart: Long? = null,
+    val timerSubject: String? = null,
+    val tests: List<TestResult> = emptyList(),
 )

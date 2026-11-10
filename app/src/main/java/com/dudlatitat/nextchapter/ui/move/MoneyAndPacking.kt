@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.BudgetItem
+import com.dudlatitat.nextchapter.data.Money
 import com.dudlatitat.nextchapter.data.PackItem
 import com.dudlatitat.nextchapter.data.money
 import com.dudlatitat.nextchapter.data.prettyDate
@@ -53,14 +54,14 @@ import java.util.Locale
 
 fun yuan(n: Number): String = "¥" + NumberFormat.getIntegerInstance(Locale.US).format(n.toLong())
 
-/** Dollars ⇄ yuan, and a monthly budget for life in Neijiang. */
+/** Dollars ⇄ yuan, and a monthly budget for life in Sichuan. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val scope = rememberCoroutineScope()
     var usd by remember { mutableStateOf("100") }
-    var rmb by remember { mutableStateOf(((100 * state.rate).toLong()).toString()) }
+    var rmb by remember { mutableStateOf(Money.toYuan(100.0, state.rate).toString()) }
     var updating by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<BudgetItem?>(null) }
@@ -75,12 +76,12 @@ fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(usd, { v ->
                     usd = v.filter { it.isDigit() || it == '.' }.take(10)
-                    usd.toDoubleOrNull()?.let { rmb = (it * state.rate).toLong().toString() }
+                    usd.toDoubleOrNull()?.let { rmb = Money.toYuan(it, state.rate).toString() }
                 }, label = { Text("US $") }, singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                 Text("⇄", color = Night.muted)
                 OutlinedTextField(rmb, { v ->
                     rmb = v.filter { it.isDigit() || it == '.' }.take(10)
-                    rmb.toDoubleOrNull()?.let { usd = "%.2f".format(Locale.US, it / state.rate) }
+                    rmb.toDoubleOrNull()?.let { usd = "%.2f".format(Locale.US, Money.toDollars(it, state.rate)) }
                 }, label = { Text("¥ yuan") }, singleLine = true, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
             Spacer(Modifier.height(8.dp))
@@ -111,7 +112,7 @@ fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(if (b.rmb > 0) yuan(b.rmb) else "tap to set", style = MaterialTheme.typography.bodyLarge, color = if (b.rmb > 0) Night.ink else Night.muted)
-                        if (b.rmb > 0) Text("≈ ${money((b.rmb / state.rate).toInt())}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                        if (b.rmb > 0) Text("≈ ${money(Money.toWholeDollars(b.rmb.toDouble(), state.rate))}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
                 }
             }
@@ -119,11 +120,11 @@ fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         }
         GlassCard(highlight = true) {
             Text("Each month", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-            Text("${yuan(total)}  ≈ ${money((total / state.rate).toInt())}", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
+            Text("${yuan(total)}  ≈ ${money(Money.toWholeDollars(total.toDouble(), state.rate))}", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
             if (total > 0 && state.saved > 0) {
-                val months = state.saved * state.rate / total
+                val months = Money.monthsCovered(state.saved, state.rate, total)
                 Text(
-                    "Your savings (${money(state.saved)} ≈ ${yuan((state.saved * state.rate).toLong())}) would cover about ${"%.1f".format(Locale.US, months)} months there",
+                    "Your savings (${money(state.saved)} ≈ ${yuan(Money.toYuan(state.saved.toDouble(), state.rate))}) would cover about ${"%.1f".format(Locale.US, months)} months there",
                     style = MaterialTheme.typography.bodyMedium, color = Night.jade,
                 )
             }
@@ -141,7 +142,7 @@ fun MoneyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(name, { name = it }, label = { Text("What") }, singleLine = true)
                     OutlinedTextField(amount, { amount = it.filter(Char::isDigit).take(7) }, label = { Text("Per month (¥)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    amount.toIntOrNull()?.let { Text("≈ ${money((it / state.rate).toInt())} a month", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
+                    amount.toIntOrNull()?.let { Text("≈ ${money(Money.toWholeDollars(it.toDouble(), state.rate))} a month", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
                     if (!isNew) TextButton(onClick = { vm.deleteBudget(b); editing = null }) { Text("Remove line", color = Night.coral) }
                 }
             },

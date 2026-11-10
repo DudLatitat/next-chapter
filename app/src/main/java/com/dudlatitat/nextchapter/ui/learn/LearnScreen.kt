@@ -1,5 +1,8 @@
 package com.dudlatitat.nextchapter.ui.learn
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -65,6 +68,7 @@ import com.dudlatitat.nextchapter.data.Srs
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
+import com.dudlatitat.nextchapter.ui.components.Collapsible
 import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ScreenTitle
@@ -72,7 +76,10 @@ import com.dudlatitat.nextchapter.ui.components.SectionLabel
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 @Composable
-fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null) {
+fun LearnScreen(
+    state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null,
+    startDeck: String? = null, onDeckOpened: () -> Unit = {},
+) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var redoing by rememberSaveable { mutableStateOf(false) }
     var drill by rememberSaveable { mutableStateOf<String?>(null) }
@@ -82,6 +89,8 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
     var adding by remember { mutableStateOf(false) }
 
     LaunchedEffect(startTool) { if (startTool != null) { tool = startTool; onReviewStarted() } }
+    // Opening a deck from elsewhere (Progress → By deck).
+    LaunchedEffect(startDeck) { if (startDeck != null) { openDeck = startDeck; onDeckOpened() } }
     LaunchedEffect(startReview, startRedo) {
         if (startReview) { reviewing = true; onReviewStarted() }
         if (startRedo) { redoing = true; onReviewStarted() }
@@ -97,6 +106,7 @@ fun LearnScreen(state: AppState, vm: MainViewModel, startReview: Boolean, onRevi
         tool == "drive" -> DriveScreen(vm, onBack = { tool = null })
         tool == "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
         tool == "stories" -> StoriesScreen(state, vm, onBack = { tool = null })
+        tool == "build" -> BuildScreen(state, vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "culture" -> CultureScreen(vm, onBack = { tool = null })
         tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
@@ -117,28 +127,27 @@ private fun Overview(
 ) {
     val doneToday = today().let { d -> state.cards.count { it.last == d } }
     val queue = Srs.queue(state)
-    val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("Learn", "学中文 · phrases for your life there") }
+        item { ScreenTitle("Chinese", "学中文 · for real life there") }
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (queue.isEmpty()) "You're caught up" else "${queue.size} to review", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                        Text(if (queue.isEmpty()) "You're all caught up ✓" else "${queue.size} waiting", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                         val fresh = queue.count { it.isNew }
                         Text(
-                            if (queue.isEmpty()) "New phrases unlock tomorrow" else "${queue.size - fresh} reviews · $fresh new",
+                            if (queue.isEmpty()) "New phrases arrive tomorrow" else "${queue.size - fresh} to remember · $fresh new today",
                             style = MaterialTheme.typography.bodyMedium, color = Night.muted,
                         )
                     }
                     Button(
                         onClick = onReview, enabled = queue.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-                    ) { Text("Review") }
+                    ) { Text("Practice") }
                 }
                 if (doneToday > 0) {
                     Spacer(Modifier.height(6.dp))
@@ -146,30 +155,41 @@ private fun Overview(
                 }
             }
         }
+        // Practice tools right under the review card (always open), grouped by what you're doing.
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("声调", "Tone trainer", "Hear it or say it", Night.violet, Modifier.weight(1f)) { onTool("tones") }
-                    ToolCard("对话", "Dialogues", "Real scenes, answer out loud", Night.jade, Modifier.weight(1f)) { onTool("dialogues") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("写字", "Writing", "Trace with stroke order", Night.sun, Modifier.weight(1f)) { onTool("writing") }
-                    ToolCard("救急", "Phrasebook", "Big text to show people", Night.rose, Modifier.weight(1f)) { onTool("phrasebook") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("语法", "Grammar", "Patterns that build sentences", Night.violet, Modifier.weight(1f)) { onTool("grammar") }
-                    ToolCard("故事", "Stories", "Read, tap any word", Night.rose, Modifier.weight(1f)) { onTool("stories") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolCard("开车", "Drive mode", "Hands-free on your commute", Night.jade, Modifier.weight(1f)) { onTool("drive") }
-                    ToolCard("礼节", "Etiquette", "Meeting her family, holidays", Night.sun, Modifier.weight(1f)) { onTool("culture") }
+            val groups = listOf(
+                "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
+                "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
+                "Write & go" to listOf(Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
+            )
+            GlassCard {
+                Text("Practice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Spacer(Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    groups.forEach { (label, row) ->
+                        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
                 }
             }
         }
-        item { WeakTones(state, onDrill) }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionLabel("Decks", Modifier.weight(1f))
+            val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
+            val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
+            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all", defaultOpen = true) {
+                // A grid of small tiles (2 across on the cover screen, 3 unfolded): far less scrolling.
+                val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 3 else 2
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    visible.chunked(cols).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { deck -> DeckTile(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
+                            repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
                 TextButton(onClick = onAdd) {
                     Icon(Icons.Rounded.Add, null, tint = Night.sun)
                     Spacer(Modifier.width(4.dp))
@@ -177,38 +197,48 @@ private fun Overview(
                 }
             }
         }
-        val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
-        items(visible.chunked(if (wide) 2 else 1), key = { row -> row.first().id }) { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { deck -> DeckCard(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
-                if (row.size == 1 && wide) Spacer(Modifier.weight(1f))
-            }
-        }
+        // Then your tones and how it's going.
+        item { WeakTones(state, onDrill) }
+        item { SectionLabel("How it's going") }
+        item { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) }
     }
 }
 
+/** One deck as a small tile: Chinese name, English name, progress. */
 @Composable
-private fun DeckCard(deck: Deck, state: AppState, modifier: Modifier, onClick: () -> Unit) {
+private fun DeckTile(deck: Deck, state: AppState, modifier: Modifier, onClick: () -> Unit) {
     val cards = state.cards.filter { it.deck == deck.id }
-    val known = cards.count { it.isKnown }
     val started = cards.count { !it.isNew }
-    GlassCard(modifier, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(deck.hanzi, fontSize = 22.sp, color = Night.sun, modifier = Modifier.width(76.dp))
-            Column(Modifier.weight(1f)) {
-                Text(deck.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                Text(deck.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                Spacer(Modifier.height(8.dp))
-                Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (started == 0) "Not started" else "${started - known} learning · $known known",
-                    style = MaterialTheme.typography.labelSmall, color = Night.muted,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Text("$started/${cards.size}", style = MaterialTheme.typography.labelLarge, color = Night.muted)
+    Column(
+        modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Night.ground2.copy(alpha = 0.5f))
+            .clickable(onClick = onClick).padding(10.dp),
+    ) {
+        Text(deck.hanzi, fontSize = 15.sp, color = Night.sun, maxLines = 1)
+        Text(deck.title, style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Spacer(Modifier.height(4.dp))
+        Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
+        val opensIn = if (deck.id == "trip") com.dudlatitat.nextchapter.data.TripPrep.opensIn(state, com.dudlatitat.nextchapter.data.today()) else null
+        Text(
+            if (opensIn != null) "🔒 opens in $opensIn ${if (opensIn == 1L) "day" else "days"}" else "$started/${cards.size}",
+            style = MaterialTheme.typography.labelSmall, color = if (opensIn != null) Night.rose else Night.muted,
+        )
+    }
+}
+
+/** One deck as a single compact line: name, progress bar, count. */
+@Composable
+private fun DeckRow(deck: Deck, state: AppState, onClick: () -> Unit) {
+    val cards = state.cards.filter { it.deck == deck.id }
+    val started = cards.count { !it.isNew }
+    val known = cards.count { it.isKnown }
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(deck.hanzi, fontSize = if (deck.hanzi.length > 3) 13.sp else 17.sp, maxLines = 1, color = Night.sun, modifier = Modifier.width(60.dp))
+        Column(Modifier.weight(1f)) {
+            Text(deck.title, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
+            Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
         }
+        Spacer(Modifier.width(10.dp))
+        Text(if (known > 0) "$known✓ $started/${cards.size}" else "$started/${cards.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
     }
 }
 
@@ -519,30 +549,42 @@ fun AddPhraseDialog(initialHanzi: String = "", onDismiss: () -> Unit, onAdd: (St
 }
 
 @Composable
-private fun ToolCard(zh: String, title: String, blurb: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    GlassCard(modifier, onClick = onClick) {
-        Text(zh, fontSize = 22.sp, color = color)
-        Spacer(Modifier.height(4.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Text(blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+private fun ToolTile(zh: String, title: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
+    // A smaller cousin of GlassCard: four fit across even the Fold's cover screen.
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
+    Column(
+        modifier.clip(shape).background(Night.card.copy(alpha = 0.85f)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(zh, fontSize = 18.sp, color = color, maxLines = 1)
+        Text(title, fontSize = 11.sp, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
+
 
 /** Accuracy for each tone lately, and a drill for the pair you mix up most. */
 @Composable
 private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
-    val acc = com.dudlatitat.nextchapter.data.Stats.toneAccuracy(state)
+    val S = com.dudlatitat.nextchapter.data.Stats
+    val acc = S.toneAccuracy(state)
     if (acc.values.all { it == null }) return
-    val pair = com.dudlatitat.nextchapter.data.Stats.weakestPair(state)
+    val d = today()
+    // This week vs the three weeks before, so you see the direction, not just a number.
+    val now = S.toneAccuracyBetween(state, d - 6, d, min = 3)
+    val before = S.toneAccuracyBetween(state, d - 30, d - 7, min = 3)
+    val pair = S.weakestPair(state)
     GlassCard {
         Text("Your tones · last 30 days", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            (1..4).forEach { t ->
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val a = acc[t]
-                    Text(if (a == null) "–" else "${(a * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = com.dudlatitat.nextchapter.ui.components.toneColor(t))
-                    Text("tone $t", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        (1..4).forEach { t ->
+            val a = acc[t]
+            val n = now[t]; val b = before[t]
+            val trend = if (n != null && b != null) when { n > b + 0.05f -> " · ↑ better this week"; n < b - 0.05f -> " · ↓ dipped this week"; else -> "" } else ""
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                Text("Tone $t", style = MaterialTheme.typography.labelMedium, color = com.dudlatitat.nextchapter.ui.components.toneColor(t), modifier = Modifier.width(56.dp))
+                Column(Modifier.weight(1f)) {
+                    Bar(a ?: 0f, com.dudlatitat.nextchapter.ui.components.toneColor(t).copy(alpha = 0.8f))
+                    Text(S.toneWord(a) + trend, style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 }
             }
         }
@@ -551,7 +593,7 @@ private fun WeakTones(state: AppState, onDrill: (Int, Int) -> Unit) {
             Button(
                 onClick = { onDrill(pair.first, pair.second) }, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Night.violet.copy(alpha = 0.2f), contentColor = Night.violet),
-            ) { Text("Drill tones ${pair.first} & ${pair.second}: you mix these up most") }
+            ) { Text("Practice tones ${pair.first} & ${pair.second} · 2 min") }
         }
     }
 }

@@ -2,7 +2,29 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 2
+    const val VERSION = 12
+
+    /**
+     * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
+     * They're removed from saved data only if never studied, so no progress is lost.
+     */
+    val retired = setOf(
+        "idv:我来救你", "idv:监管者来了", "idv:屠夫来了", "idv:我来溜鬼", "idv:我被追了", "idv:我在修机", "idv:压机",
+        "idv:开门", "idv:地窖", "idv:我倒地了", "idv:别救了，先修机", "idv:小心！", "idv:快走！", "idv:我们赢了！",
+        // Too corny for real life; swapped for plainer lines in v10.
+        "sweet:我被你迷住了", "sweet:你让我心跳加快", "sweet:你是我的唯一", "sweet:你在我心里最美", "sweet:你是我的小仙女",
+    )
+
+    /** Saved cards plus any new starter cards, minus retired ones you never studied. */
+    fun merge(saved: List<Card>): List<Card> {
+        val starters = cards + Vocab.cards
+        val starterIds = starters.map { it.id }.toSet()
+        // A starter card that's gone from the list (or retired) is dropped only if you never studied it;
+        // your own phrases (custom) and anything with progress always stay.
+        val kept = saved.filterNot { it.isNew && !it.custom && (it.id in retired || it.id !in starterIds) }
+        val have = kept.map { it.id }.toSet()
+        return kept + starters.filter { it.id !in have }
+    }
 
     private fun c(deck: String, hanzi: String, pinyin: String, english: String) =
         Card(id = "$deck:$hanzi", hanzi = hanzi, pinyin = pinyin, english = english, deck = deck)
@@ -20,11 +42,146 @@ object Seed {
         c("yuling", "我很快就来找你", "wǒ hěn kuài jiù lái zhǎo nǐ", "I'm coming to you soon"),
         c("yuling", "你是我的一切", "nǐ shì wǒ de yíqiè", "You are my everything"),
 
+        // Identity V (第五人格), for 加页手记 (Cryptic Notes), the PvE loot-and-extract mode Rudy and Yuling
+        // play. Mode terms (辞章 pages, 异象 anomalies, 撤离 extract, 搜刮 loot, 墨迹 ink, 智者/主角 classes,
+        // 金柜 gold cabinet, 急救针 first-aid shot) checked against Chinese player guides (Sina, 233乐园, 九游), Nov 2026.
+        c("idv", "我们玩加页手记吧", "wǒmen wán jiā yè shǒujì ba", "Let's play Cryptic Notes"),
+        c("idv", "你选智者，我选主角", "nǐ xuǎn zhìzhě, wǒ xuǎn zhǔjué", "You pick the Sage, I'll pick the Protagonist"),
+        c("idv", "先买装备", "xiān mǎi zhuāngbèi", "Buy gear first"),
+        c("idv", "墨迹够吗？", "mòjì gòu ma?", "Do we have enough ink (to buy gear)?"),
+        c("idv", "跟着我", "gēnzhe wǒ", "Follow me"),
+        c("idv", "等等我！", "děngděng wǒ!", "Wait for me!"),
+        c("idv", "我去搜刮", "wǒ qù sōuguā", "I'll go loot"),
+        c("idv", "这里有辞章", "zhèlǐ yǒu cízhāng", "There's a page (辞章) here"),
+        c("idv", "我开金柜", "wǒ kāi jīnguì", "I'll open the gold cabinet"),
+        c("idv", "小心异象！", "xiǎoxīn yìxiàng!", "Watch out for the anomaly!"),
+        c("idv", "异象来了！", "yìxiàng lái le!", "The anomaly is coming!"),
+        c("idv", "快跑！", "kuài pǎo!", "Run!"),
+        c("idv", "救我！", "jiù wǒ!", "Save me!"),
+        c("idv", "我没血了", "wǒ méi xiě le", "I'm out of health"),
+        c("idv", "给我急救针", "gěi wǒ jíjiùzhēn", "Give me a first-aid shot"),
+        c("idv", "快撤离！", "kuài chèlí!", "Extract now!"),
+        c("idv", "我们撤出来了！", "wǒmen chè chūlái le!", "We made it out!"),
+        c("idv", "打得好！", "dǎ de hǎo!", "Nice play!"),
+        c("idv", "你好厉害", "nǐ hǎo lìhai", "You're so good"),
+        c("idv", "再来一局？", "zài lái yì jú?", "One more run?"),
+
+        // Gaming together (一起玩): everyday talk for any game with Yuling. Common gaming words: 开黑
+        // (team up on voice), 拉我 (invite me), 卡了 (lagging), 掉线 (disconnected), 带飞 (carry), 菜 (bad at it).
+        c("games", "一起玩游戏吗？", "yìqǐ wán yóuxì ma?", "Want to play a game together?"),
+        c("games", "来开黑吗？", "lái kāihēi ma?", "Want to team up (on voice chat)?"),
+        c("games", "拉我一下", "lā wǒ yíxià", "Invite me in (to your team)"),
+        c("games", "我准备好了", "wǒ zhǔnbèi hǎo le", "I'm ready"),
+        c("games", "等我一下", "děng wǒ yíxià", "Give me a second"),
+        c("games", "你听得到我吗？", "nǐ tīng de dào wǒ ma?", "Can you hear me?"),
+        c("games", "我卡了", "wǒ kǎ le", "I'm lagging"),
+        c("games", "我掉线了", "wǒ diàoxiàn le", "I got disconnected"),
+        c("games", "过来这里", "guòlái zhèlǐ", "Come over here"),
+        c("games", "往左走", "wǎng zuǒ zǒu", "Go left"),
+        c("games", "往右走", "wǎng yòu zǒu", "Go right"),
+        c("games", "在你后面！", "zài nǐ hòumiàn!", "Behind you!"),
+        c("games", "我保护你", "wǒ bǎohù nǐ", "I'll protect you"),
+        c("games", "带我飞！", "dài wǒ fēi!", "Carry me!"),
+        c("games", "我太菜了", "wǒ tài cài le", "I'm so bad at this"),
+        c("games", "你太强了！", "nǐ tài qiáng le!", "You're amazing!"),
+        c("games", "差一点！", "chà yìdiǎn!", "So close!"),
+        c("games", "没关系，下次赢", "méi guānxi, xià cì yíng", "It's okay, we'll win next time"),
+        c("games", "跟你玩输了也开心", "gēn nǐ wán shū le yě kāixīn", "Even losing is fun with you"),
+        c("games", "你赢了，我请你吃饭", "nǐ yíng le, wǒ qǐng nǐ chīfàn", "You won, dinner's on me"),
+        c("games", "最后一局", "zuìhòu yì jú", "Last round"),
+        c("games", "我先下了", "wǒ xiān xià le", "I'm logging off now"),
+        c("games", "该睡觉了", "gāi shuìjiào le", "Time for bed"),
+        c("games", "明天再玩", "míngtiān zài wán", "Let's play again tomorrow"),
+        // More for playing with her while your Chinese catches up: asking her to slow down, being sweet,
+        // teamwork, checking in on her, and good night.
+        c("games", "我想跟你一起玩", "wǒ xiǎng gēn nǐ yìqǐ wán", "I want to play with you"),
+        c("games", "你教我好不好？", "nǐ jiāo wǒ hǎo bu hǎo?", "Will you teach me?"),
+        c("games", "我听不懂，再说一遍", "wǒ tīng bu dǒng, zài shuō yí biàn", "I didn't get that, say it again"),
+        c("games", "我的中文不好，别笑我", "wǒ de Zhōngwén bù hǎo, bié xiào wǒ", "My Chinese isn't good, don't laugh at me"),
+        c("games", "你笑什么？", "nǐ xiào shénme?", "What are you laughing at?"),
+        c("games", "我在学中文，为了你", "wǒ zài xué Zhōngwén, wèile nǐ", "I'm learning Chinese for you"),
+        c("games", "你好可爱", "nǐ hǎo kě'ài", "You're so cute"),
+        c("games", "你的声音很好听", "nǐ de shēngyīn hěn hǎotīng", "Your voice sounds so nice"),
+        c("games", "有你在，我不怕", "yǒu nǐ zài, wǒ bú pà", "With you here, I'm not scared"),
+        c("games", "别丢下我！", "bié diūxià wǒ!", "Don't leave me behind!"),
+        c("games", "我来了，等我！", "wǒ lái le, děng wǒ!", "I'm coming, wait for me!"),
+        c("games", "你先走，我掩护你", "nǐ xiān zǒu, wǒ yǎnhù nǐ", "You go first, I'll cover you"),
+        c("games", "谢谢你救我", "xièxie nǐ jiù wǒ", "Thanks for saving me"),
+        c("games", "我们是最好的队友", "wǒmen shì zuì hǎo de duìyǒu", "We're the best team"),
+        c("games", "你又赢了！", "nǐ yòu yíng le!", "You won again!"),
+        c("games", "对不起，是我的错", "duìbuqǐ, shì wǒ de cuò", "Sorry, that was my fault"),
+        c("games", "你生气了吗？", "nǐ shēngqì le ma?", "Are you mad at me?"),
+        c("games", "你累不累？", "nǐ lèi bu lèi?", "Are you tired?"),
+        c("games", "休息一下吧", "xiūxi yíxià ba", "Let's take a little break"),
+        c("games", "你那边几点了？", "nǐ nàbiān jǐ diǎn le?", "What time is it over there?"),
+        c("games", "真希望你在我身边", "zhēn xīwàng nǐ zài wǒ shēnbiān", "I wish you were right here next to me"),
+        c("games", "下次见面一起玩", "xià cì jiànmiàn yìqǐ wán", "Next time we see each other, let's play together"),
+        c("games", "再陪我玩一局嘛", "zài péi wǒ wán yì jú ma", "Play one more with me, pleeease"),
+        c("games", "晚安，做个好梦", "wǎn'ān, zuò ge hǎo mèng", "Good night, sweet dreams"),
+
+        // Sweet talk (甜言蜜语, "sweet words and honeyed talk"): compliments and flirting, kept to things people
+        // actually say, not cheesy lines. 吃醋 ("eat vinegar") means to be jealous.
+        c("sweet", "你好漂亮", "nǐ hǎo piàoliang", "You're so pretty"),
+        c("sweet", "你今天真美", "nǐ jīntiān zhēn měi", "You look beautiful today"),
+        c("sweet", "你笑起来真好看", "nǐ xiào qǐlái zhēn hǎokàn", "You're so pretty when you smile"),
+        c("sweet", "你越来越漂亮了", "nǐ yuè lái yuè piàoliang le", "You get prettier every time I see you"),
+        c("sweet", "你的眼睛很漂亮", "nǐ de yǎnjing hěn piàoliang", "Your eyes are beautiful"),
+        c("sweet", "你穿这个很好看", "nǐ chuān zhège hěn hǎokàn", "You look great in that"),
+        c("sweet", "你怎么这么可爱？", "nǐ zěnme zhème kě'ài?", "How are you this cute?"),
+        c("sweet", "你好聪明", "nǐ hǎo cōngming", "You're so smart"),
+        c("sweet", "你真厉害", "nǐ zhēn lìhai", "You're amazing"),
+        c("sweet", "这张照片好好看", "zhè zhāng zhàopiàn hǎo hǎokàn", "This photo of you is so nice"),
+        c("sweet", "你的发型很好看", "nǐ de fàxíng hěn hǎokàn", "Your hair looks great"),
+        c("sweet", "我喜欢你", "wǒ xǐhuan nǐ", "I like you"),
+        c("sweet", "我爱你", "wǒ ài nǐ", "I love you"),
+        c("sweet", "我越来越喜欢你了", "wǒ yuè lái yuè xǐhuan nǐ le", "I like you more and more"),
+        c("sweet", "我一直在想你", "wǒ yìzhí zài xiǎng nǐ", "I keep thinking about you"),
+        c("sweet", "看到你我就开心", "kàndào nǐ wǒ jiù kāixīn", "Seeing you makes me happy"),
+        c("sweet", "跟你聊天很开心", "gēn nǐ liáotiān hěn kāixīn", "I love talking with you"),
+        c("sweet", "你对我真好", "nǐ duì wǒ zhēn hǎo", "You're so good to me"),
+        c("sweet", "有你真好", "yǒu nǐ zhēn hǎo", "I'm so glad I have you"),
+        c("sweet", "我好幸运", "wǒ hǎo xìngyùn", "I'm so lucky"),
+        c("sweet", "遇见你真好", "yùjiàn nǐ zhēn hǎo", "I'm so glad I met you"),
+        c("sweet", "想抱抱你", "xiǎng bàobao nǐ", "I want to hug you"),
+        c("sweet", "亲一个", "qīn yí ge", "Kiss me / give me a kiss"),
+        c("sweet", "你是不是想我了？", "nǐ shì bu shì xiǎng wǒ le?", "You miss me, don't you?"),
+        c("sweet", "你吃醋了？", "nǐ chīcù le?", "Are you jealous?"),
+
+        // Trip prep (出发): airport, immigration, money, taxi, hotel, dinner with her family. Opens 60 days
+        // before a trip (TripPrep). 无线网 = Wi-Fi (people also just say "WiFi").
+        c("trip", "我的航班几点起飞？", "wǒ de hángbān jǐ diǎn qǐfēi?", "What time does my flight take off?"),
+        c("trip", "我要托运一个行李", "wǒ yào tuōyùn yí ge xíngli", "I'd like to check one bag"),
+        c("trip", "行李在哪里取？", "xíngli zài nǎlǐ qǔ?", "Where do I pick up my bags?"),
+        c("trip", "我是来旅游的", "wǒ shì lái lǚyóu de", "I'm here to travel (at immigration)"),
+        c("trip", "我来看女朋友", "wǒ lái kàn nǚpéngyou", "I'm here to see my girlfriend"),
+        c("trip", "我住在她家", "wǒ zhù zài tā jiā", "I'm staying at her family's home"),
+        c("trip", "我待两个星期", "wǒ dāi liǎng ge xīngqī", "I'm staying two weeks"),
+        c("trip", "出口在哪里？", "chūkǒu zài nǎlǐ?", "Where's the exit?"),
+        c("trip", "我想换点人民币", "wǒ xiǎng huàn diǎn rénmínbì", "I'd like to change some money into yuan"),
+        c("trip", "我的手机没电了", "wǒ de shǒujī méi diàn le", "My phone's battery is dead"),
+        c("trip", "师傅，去这个地址", "shīfu, qù zhège dìzhǐ", "Driver, to this address please"),
+        c("trip", "大概要多长时间？", "dàgài yào duō cháng shíjiān?", "About how long will it take?"),
+        c("trip", "可以开一下后备箱吗？", "kěyǐ kāi yíxià hòubèixiāng ma?", "Could you open the trunk?"),
+        c("trip", "我用微信付", "wǒ yòng Wēixìn fù", "I'll pay with WeChat"),
+        c("trip", "我订了一个房间", "wǒ dìng le yí ge fángjiān", "I booked a room"),
+        c("trip", "这是我的护照", "zhè shì wǒ de hùzhào", "Here's my passport"),
+        c("trip", "无线网密码是多少？", "wúxiànwǎng mìmǎ shì duōshao?", "What's the Wi-Fi password?"),
+        c("trip", "几点退房？", "jǐ diǎn tuìfáng?", "What time is checkout?"),
+        c("trip", "可以帮我叫辆车吗？", "kěyǐ bāng wǒ jiào liàng chē ma?", "Could you call me a car?"),
+        c("trip", "叔叔阿姨好", "shūshu āyí hǎo", "Hello, uncle and auntie (her parents together)"),
+        c("trip", "我给你们带了一点礼物", "wǒ gěi nǐmen dài le yìdiǎn lǐwù", "I brought you a little gift"),
+        c("trip", "我敬您一杯", "wǒ jìng nín yì bēi", "Here's a toast to you"),
+        c("trip", "别忙了，坐下一起吃吧", "bié máng le, zuòxià yìqǐ chī ba", "Don't fuss, come sit and eat with us"),
+        c("trip", "我来洗碗", "wǒ lái xǐ wǎn", "Let me do the dishes"),
+        c("trip", "我很想你们", "wǒ hěn xiǎng nǐmen", "I've missed you all so much"),
+        c("trip", "下次再来看你们", "xià cì zài lái kàn nǐmen", "I'll come see you again next time"),
+        c("trip", "今天真开心", "jīntiān zhēn kāixīn", "Today was really fun"),
+
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),
         c("family", "叔叔好", "shūshu hǎo", "Hello, uncle"),
         c("family", "很高兴认识您", "hěn gāoxìng rènshi nín", "Very nice to meet you (polite)"),
-        c("family", "我是玉玲的男朋友", "wǒ shì Yùlíng de nánpéngyou", "I'm Yuling's boyfriend"),
+        c("family", "我是她男朋友", "wǒ shì tā nánpéngyou", "I'm her boyfriend"),
         c("family", "太好吃了", "tài hǎochī le", "This is delicious"),
         c("family", "我吃饱了", "wǒ chī bǎo le", "I'm full"),
         c("family", "您辛苦了", "nín xīnkǔ le", "Thank you for all your hard work"),
@@ -45,6 +202,31 @@ object Seed {
         c("daily", "等一下", "děng yíxià", "Wait a moment"),
         c("daily", "我明白了", "wǒ míngbai le", "I get it now"),
         c("daily", "晚安", "wǎn'ān", "Good night"),
+        // Your day, out loud: what you'd tell her on a call or in a message, plus small getting-by lines.
+        c("daily", "你今天怎么样？", "nǐ jīntiān zěnmeyàng?", "How was your day?"),
+        c("daily", "你呢？", "nǐ ne?", "And you?"),
+        c("daily", "我也是", "wǒ yě shì", "Me too"),
+        c("daily", "我起床了", "wǒ qǐchuáng le", "I'm up"),
+        c("daily", "我去上班了", "wǒ qù shàngbān le", "I'm heading to work"),
+        c("daily", "我在开车", "wǒ zài kāichē", "I'm driving"),
+        c("daily", "我下班了", "wǒ xiàbān le", "I'm off work"),
+        c("daily", "我到家了", "wǒ dào jiā le", "I'm home"),
+        c("daily", "我有点忙", "wǒ yǒudiǎn máng", "I'm a little busy"),
+        c("daily", "今天好累", "jīntiān hǎo lèi", "Today was so tiring"),
+        c("daily", "我饿了", "wǒ è le", "I'm hungry"),
+        c("daily", "我渴了", "wǒ kě le", "I'm thirsty"),
+        c("daily", "我要洗澡了", "wǒ yào xǐzǎo le", "I'm going to shower"),
+        c("daily", "好热啊", "hǎo rè a", "It's so hot"),
+        c("daily", "好冷啊", "hǎo lěng a", "It's so cold"),
+        c("daily", "你在哪儿？", "nǐ zài nǎr?", "Where are you?"),
+        c("daily", "现在几点了？", "xiànzài jǐ diǎn le?", "What time is it now?"),
+        c("daily", "一会儿见", "yíhuìr jiàn", "See you in a bit"),
+        c("daily", "我知道了", "wǒ zhīdào le", "Got it"),
+        c("daily", "我忘了", "wǒ wàng le", "I forgot"),
+        c("daily", "慢慢来", "mànman lái", "Take your time"),
+        c("daily", "不好意思", "bù hǎoyìsi", "Excuse me / sorry"),
+        c("daily", "麻烦你了", "máfan nǐ le", "Sorry for the trouble (thanks for helping)"),
+        c("daily", "不用了，谢谢", "bú yòng le, xièxie", "No need, thanks"),
 
         // Eating out
         c("food", "服务员", "fúwùyuán", "Waiter / server"),

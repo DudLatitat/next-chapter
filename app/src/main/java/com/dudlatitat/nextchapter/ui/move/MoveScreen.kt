@@ -1,6 +1,7 @@
 package com.dudlatitat.nextchapter.ui.move
 
 import com.dudlatitat.nextchapter.data.nextTripDate
+import com.dudlatitat.nextchapter.data.withNextTripDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
+import com.dudlatitat.nextchapter.data.Money
 import com.dudlatitat.nextchapter.data.MoveTask
 import com.dudlatitat.nextchapter.data.TaskGroups
 import com.dudlatitat.nextchapter.data.daysUntil
@@ -86,7 +88,7 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("The move", "搬到中国 · Neijiang, Sichuan") }
+        item { ScreenTitle("The move", "搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity)) }
 
         // Dates
         item {
@@ -105,42 +107,32 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
             }
         }
 
-        // Savings
+        // Savings, compact: amount and goal on one line, the plan underneath, quick-add chips.
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProgressRing(state.savingsProgress(), 72.dp, Night.jade, stroke = 8.dp) {
-                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+                    ProgressRing(state.savingsProgress(), 52.dp, Night.jade, stroke = 6.dp) {
+                        Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = Night.ink)
                     }
-                    Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Savings · 存钱", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                        Text(money(state.saved), style = MaterialTheme.typography.headlineMedium, color = Night.ink, maxLines = 1)
+                        Text("Savings · 存钱", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                        Text(
+                            money(state.saved) + if (state.savingsGoal > 0) " of ${money(state.savingsGoal)}" else "",
+                            style = MaterialTheme.typography.titleMedium, color = Night.ink, maxLines = 1,
+                        )
+                        if (state.savingsGoal > 0) perMonth(state)?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = Night.jade) }
+                        else Text("Tap ✏️ to set a goal", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                     }
                     IconButton(onClick = { editingMoney = true }) { Icon(Icons.Rounded.Edit, "Edit", tint = Night.muted) }
                 }
-                Spacer(Modifier.height(10.dp))
-                if (state.savingsGoal > 0) {
-                    Row {
-                        Text("Goal ${money(state.savingsGoal)}", style = MaterialTheme.typography.bodyMedium, color = Night.muted, modifier = Modifier.weight(1f))
-                        Text("${money((state.savingsGoal - state.saved).coerceAtLeast(0))} to go", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
-                    }
-                    perMonth(state)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Night.jade) }
-                } else {
-                    Text("Tap ✏️ to set a goal", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     listOf(50, 100, 500).forEach { n ->
-                        OutlinedButton(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, modifier = Modifier.weight(1f)) {
-                            Text("+$$n", color = Night.jade)
-                        }
+                        androidx.compose.material3.AssistChip(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, label = { Text("+$$n", color = Night.jade) })
                     }
                 }
-                if (state.flightTarget > 0) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("✈  Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.bodyMedium, color = Night.rose)
-                }
+                if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose)
             }
         }
 
@@ -168,10 +160,10 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
 
     picking?.let { field ->
         PickDate(
-            initial = if (field == DateField.MOVE) state.moveDate else state.tripDate,
+            initial = if (field == DateField.MOVE) state.moveDate else state.nextTripDate(),
             onDismiss = { picking = null },
             onPick = { iso ->
-                vm.updatePlan { if (field == DateField.MOVE) it.copy(moveDate = iso) else it.copy(tripDate = iso) }
+                vm.updatePlan { if (field == DateField.MOVE) it.copy(moveDate = iso) else it.withNextTripDate(iso) }
                 picking = null
             },
         )
@@ -195,10 +187,8 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
 /** "Save $420/month to make it" when there's a goal and a move date. */
 private fun perMonth(state: AppState): String? {
     val days = daysUntil(state.moveDate) ?: return null
-    val left = state.savingsGoal - state.saved
-    if (state.savingsGoal <= 0 || left <= 0 || days <= 0) return null
-    val months = (days / 30.4).coerceAtLeast(1.0)
-    return "Save ${money((left / months).toInt())}/month to make it"
+    val each = Money.savePerMonth(state.savingsGoal, state.saved, days) ?: return null
+    return "Save ${money(each)}/month to make it"
 }
 
 @Composable
@@ -285,13 +275,14 @@ private fun AddTaskDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewModel, modifier: Modifier, onDelete: (MoveTask) -> Unit) {
-    GlassCard(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(group, style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-            Text("${tasks.count { it.done }}/${tasks.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-        }
-        Spacer(Modifier.height(6.dp))
-        Bar(tasks.count { it.done }.toFloat() / tasks.size, Night.sun)
+    val done = tasks.count { it.done }
+    val next = tasks.firstOrNull { !it.done }
+    // Closed: the group's count and its next step. Tap to see every step.
+    com.dudlatitat.nextchapter.ui.components.Collapsible(
+        "move.group.$group", "$group · $done/${tasks.size}", modifier,
+        summary = next?.let { "Next: ${it.title}" } ?: "All done ✓",
+    ) {
+        Bar(done.toFloat() / tasks.size, Night.sun)
         Spacer(Modifier.height(6.dp))
         tasks.forEach { task ->
             Row(
@@ -302,12 +293,17 @@ private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewMode
                     checked = task.done, onCheckedChange = { vm.toggleTask(task) },
                     colors = CheckboxDefaults.colors(checkedColor = Night.sun, uncheckedColor = Night.muted, checkmarkColor = MaterialTheme.colorScheme.onPrimary),
                 )
-                Text(
-                    task.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (task.done) Night.muted else Night.ink,
-                    textDecoration = if (task.done) TextDecoration.LineThrough else null,
-                )
+                Column {
+                    Text(
+                        task.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (task.done) Night.muted else Night.ink,
+                        textDecoration = if (task.done) TextDecoration.LineThrough else null,
+                    )
+                    if (task.id in com.dudlatitat.nextchapter.data.Career.linkedTasks) {
+                        Text("Linked to the Life tab", style = MaterialTheme.typography.labelSmall, color = Night.violet)
+                    }
+                }
             }
         }
     }

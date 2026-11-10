@@ -17,6 +17,16 @@ data class WeekStats(
 object Stats {
     fun weekStart(day: LocalDate = LocalDate.now()): LocalDate = day.with(DayOfWeek.MONDAY)
 
+    /** Days you practiced: finished a session, or answered at least one card. */
+    fun practiceDays(state: AppState): List<Long> =
+        (state.studyDays + state.days.filterValues { it.reviews > 0 }.keys).distinct().sorted()
+
+    /**
+     * Days in a row you practiced (ending today or yesterday). Any day you answered a card
+     * counts, the same as the 12-week grid, not only days you finished a whole session.
+     */
+    fun streak(state: AppState, day: Long = today()): Int = Srs.streak(practiceDays(state), day)
+
     fun week(state: AppState, start: LocalDate): WeekStats {
         val from = start.toEpochDay()
         val to = from + 6
@@ -40,6 +50,23 @@ object Stats {
             val mine = recent.filter { it.target == t }
             if (mine.size < 4) null else mine.count { it.got == t }.toFloat() / mine.size
         }
+    }
+
+    /** Accuracy per tone between two days (inclusive); null with fewer than [min] attempts. */
+    fun toneAccuracyBetween(state: AppState, from: Long, to: Long, min: Int = 4): Map<Int, Float?> {
+        val events = state.toneEvents.filter { it.day in from..to }
+        return (1..4).associateWith { t ->
+            val mine = events.filter { it.target == t }
+            if (mine.size < min) null else mine.count { it.got == t }.toFloat() / mine.size
+        }
+    }
+
+    /** A kind word for a tone's accuracy instead of a bare percentage. */
+    fun toneWord(a: Float?): String = when {
+        a == null -> "not enough yet"
+        a < 0.4f -> "needs practice"
+        a < 0.7f -> "getting there"
+        else -> "solid ✓"
     }
 
     /** The two tones you mix up most (either way round), or null if nothing stands out yet. */

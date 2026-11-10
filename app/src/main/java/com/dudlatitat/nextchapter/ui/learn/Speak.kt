@@ -140,7 +140,11 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
             } else if (a.recognizerError != null) {
                 Text("Word check: ${a.recognizerError}", style = MaterialTheme.typography.bodySmall, color = Night.coral, textAlign = TextAlign.Center)
             }
-            a.tone?.let { t ->
+            a.tone?.takeIf { it.confidence < com.dudlatitat.nextchapter.speech.Coach.SINGLE_SURE }?.let {
+                Spacer(Modifier.height(6.dp))
+                Text("Tone unclear. Try once more, holding the syllable a little longer.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
+            }
+            a.tone?.takeIf { it.confidence >= com.dudlatitat.nextchapter.speech.Coach.SINGLE_SURE }?.let { t ->
                 val aimed = com.dudlatitat.nextchapter.data.Pinyin.syllablesIn(pinyin).firstOrNull()?.second
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -169,7 +173,9 @@ fun SpeakPanel(hanzi: String, pinyin: String, vm: MainViewModel, onCalibrate: ()
 /** Feeds what a speaking check found into the tone history (weak-tone drills, weekly recap). */
 private fun logTones(vm: MainViewModel, a: Attempt, pinyin: String) {
     val P = com.dudlatitat.nextchapter.data.Pinyin
-    a.tone?.let { t -> P.syllablesIn(pinyin).firstOrNull()?.second?.let { aimed -> vm.logTone(aimed, t.tone, spoken = true) } }
+    // Only confident guesses count toward your tone stats, so a muddy recording can't drag them down.
+    a.tone?.takeIf { it.confidence >= com.dudlatitat.nextchapter.speech.Coach.SINGLE_SURE }
+        ?.let { t -> P.syllablesIn(pinyin).firstOrNull()?.second?.let { aimed -> vm.logTone(aimed, t.tone, spoken = true) } }
     if (a.tone == null) a.chars?.forEach { c ->
         val target = P.tone(c.target)
         when (c.mark) {

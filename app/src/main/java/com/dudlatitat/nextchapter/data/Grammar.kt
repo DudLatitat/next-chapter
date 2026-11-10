@@ -44,7 +44,7 @@ object Grammar {
             "Add 吗 to the end of any statement to make it a yes/no question. The word order doesn't change.",
             listOf(
                 ex("你饿吗？", "nǐ è ma?", "Are you hungry?"),
-                ex("你是玉玲的朋友吗？", "nǐ shì Yùlíng de péngyou ma?", "Are you Yuling's friend?"),
+                ex("你是她的朋友吗？", "nǐ shì tā de péngyou ma?", "Are you her friend?"),
                 ex("可以扫码吗？", "kěyǐ sǎo mǎ ma?", "Can I scan to pay?"),
             ),
             listOf(Blank("你累___？", listOf("吗", "呢", "的"), "Are you tired?"), Blank("你喜欢火锅___？", listOf("吗", "了", "的"), "Do you like hot pot?")),
@@ -121,9 +121,9 @@ object Grammar {
         ),
         GrammarPoint(
             "de", "的: 's and describing", "A 的 B · Adjective 的 noun",
-            "的 joins an owner to a thing (玉玲的妈妈 = Yuling's mom) or a description to a noun. With close family it's often dropped (我妈妈).",
+            "的 joins an owner to a thing (女朋友的妈妈 = girlfriend's mom) or a description to a noun. With close family it's often dropped (我妈妈).",
             listOf(
-                ex("这是玉玲的妈妈。", "zhè shì Yùlíng de māma.", "This is Yuling's mom."),
+                ex("这是我女朋友的妈妈。", "zhè shì wǒ nǚpéngyou de māma.", "This is my girlfriend's mom."),
                 ex("我喜欢辣的。", "wǒ xǐhuan là de.", "I like spicy ones."),
                 ex("这是我的钥匙。", "zhè shì wǒ de yàoshi.", "These are my keys."),
             ),

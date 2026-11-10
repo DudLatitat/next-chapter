@@ -17,6 +17,22 @@ fun AppState.nextTripDate(): String? {
         ?: tripDate
 }
 
+/**
+ * Changes the "Next trip" date. When the flight planner has an upcoming trip, that trip is the
+ * one shown, so it's the one that moves (its return keeps the same trip length); otherwise the
+ * hand-set date changes. (Before 1.53 only the hand-set date changed, so with a planned trip
+ * the card never seemed to update.)
+ */
+fun AppState.withNextTripDate(iso: String?): AppState {
+    val now = today()
+    val next = trips.filter { (parseDate(it.depart)?.toEpochDay() ?: -1) >= now }.minByOrNull { it.depart }
+    val newDepart = parseDate(iso)
+    if (next == null || newDepart == null) return copy(tripDate = iso)
+    val shift = newDepart.toEpochDay() - parseDate(next.depart)!!.toEpochDay()
+    val moved = next.copy(depart = newDepart.toString(), returnDate = parseDate(next.returnDate)?.plusDays(shift)?.toString() ?: next.returnDate)
+    return copy(trips = trips.map { if (it.id == next.id) moved else it })
+}
+
 fun prettyDate(iso: String?): String? = parseDate(iso)?.format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
 
 fun money(n: Int): String = NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(n)

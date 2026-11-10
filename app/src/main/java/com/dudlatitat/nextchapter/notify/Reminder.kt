@@ -49,7 +49,7 @@ object Reminder {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
         val due = Srs.queue(state).size
-        val streak = Srs.streak(state.studyDays)
+        val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
         if (due == 0 || today() in state.studyDays) return
 
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -60,6 +60,8 @@ object Reminder {
         )
         val title = if (streak > 0) "Keep your 🔥 $streak-day streak going" else "Time for a little Chinese"
         val note = NotificationCompat.Builder(context, CHANNEL)
+            // Nothing buzzes during the 7–8 pm call: it still shows, silently.
+            .setSilent(com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now()))
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title)
             .setContentText("$due phrases waiting · about ${maxOf(1, due / 3)} min")
@@ -79,6 +81,9 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             Reminder.schedule(context, Store.get(context).state.value)
+            Evening.schedule(context, Store.get(context).state.value)
+            Deadlines.schedule(context, Store.get(context).state.value)
+            PlaceWatch.register(context, Store.get(context).state.value)
         }
     }
 }

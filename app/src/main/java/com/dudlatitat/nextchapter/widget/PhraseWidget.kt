@@ -51,7 +51,7 @@ class PhraseWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.pinyin, card?.pinyin ?: "nǐ hǎo")
             v.setTextViewText(R.id.english, card?.english ?: "Hello")
             val due = Srs.queue(state).size
-            val streak = Srs.streak(state.studyDays)
+            val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
             v.setTextViewText(R.id.status, buildString {
                 append(if (due > 0) "$due to review" else "All caught up ✓")
                 if (streak > 0) append("  ·  🔥 $streak")
