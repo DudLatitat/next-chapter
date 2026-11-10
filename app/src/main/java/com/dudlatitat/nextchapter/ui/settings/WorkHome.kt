@@ -44,8 +44,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun WorkHomeCard(state: AppState, vm: MainViewModel) {
     val context = LocalContext.current
     var tick by remember { mutableIntStateOf(0) } // re-check permissions after a dialog
-    var finding by remember { mutableStateOf<String?>(null) }
-    var failed by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf<String?>(null) }
     var explainBackground by remember { mutableStateOf(false) }
     val fg = remember(tick) { PlaceWatch.hasForeground(context) }
     val bg = remember(tick) { PlaceWatch.hasBackground(context) }
@@ -56,14 +55,6 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
         if (granted[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             vm.setPlacesOn(true)
             if (!PlaceWatch.hasBackground(context)) explainBackground = true
-        }
-    }
-
-    fun save(kind: String) {
-        finding = kind; failed = false
-        PlaceWatch.currentSpot(context) { spot ->
-            finding = null
-            if (spot != null) vm.saveSpot(kind, spot) else failed = true
         }
     }
 
@@ -90,20 +81,21 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
             Spacer(Modifier.height(10.dp))
             listOf("work" to state.workSpot, "home" to state.homeSpot).forEach { (kind, spot) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                    Text(
-                        (if (kind == "work") "💼 Work: " else "🏠 Home: ") + if (spot != null) "saved ✓" else "not set yet",
-                        style = MaterialTheme.typography.bodyMedium, color = if (spot != null) Night.jade else Night.ink,
-                        modifier = Modifier.weight(1f),
-                    )
-                    OutlinedButton(onClick = { save(kind) }, enabled = finding == null) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (kind == "work") "💼 Work" else "🏠 Home", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
                         Text(
-                            if (finding == kind) "Finding you…" else if (kind == "work") "I'm at work now" else "I'm home now",
-                            color = Night.sun,
+                            when {
+                                spot == null -> "Not set yet"
+                                spot.label.isNotBlank() -> spot.label
+                                else -> "Pinned on the map ✓"
+                            },
+                            style = MaterialTheme.typography.bodySmall, color = if (spot != null) Night.jade else Night.muted, maxLines = 1,
                         )
                     }
+                    OutlinedButton(onClick = { picking = kind }) { Text(if (spot == null) "Set" else "Edit", color = Night.sun) }
+                    if (spot != null) TextButton(onClick = { vm.clearSpot(kind) }) { Text("Clear", color = Night.muted) }
                 }
             }
-            if (failed) Text("Couldn't get a location. Check that Location is on, then try again outside or by a window.", style = MaterialTheme.typography.bodySmall, color = Night.coral)
             val nowMin = java.time.LocalTime.now().let { it.hour * 60 + it.minute }
             Places.workStart(state.arrivals, today())?.let { start ->
                 Spacer(Modifier.height(6.dp))
@@ -127,6 +119,15 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
                 style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 6.dp),
             )
         }
+    }
+
+    picking?.let { kind ->
+        SpotPicker(
+            title = if (kind == "work") "Where's work?" else "Where's home?",
+            initial = if (kind == "work") state.workSpot ?: state.homeSpot?.copy(label = "") else state.homeSpot ?: state.workSpot?.copy(label = ""),
+            onSave = { vm.saveSpot(kind, it) },
+            onClose = { picking = null },
+        )
     }
 
     if (explainBackground) AlertDialog(

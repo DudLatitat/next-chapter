@@ -2,9 +2,9 @@ package com.dudlatitat.nextchapter.data
 
 import kotlinx.serialization.Serializable
 
-/** A saved spot (Work or Home), typed in on the phone by "I'm here", never written in the code. */
+/** A saved spot (Work or Home), set on the phone (address, map pin or "my location"), never written in the code. */
 @Serializable
-data class Spot(val lat: Double, val lon: Double)
+data class Spot(val lat: Double, val lon: Double, val label: String = "")
 
 /** One arrival in a day: [kind] is "work" or "home"; [minutes] after midnight (work = start of the workday). */
 @Serializable

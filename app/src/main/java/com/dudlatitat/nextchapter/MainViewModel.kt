@@ -242,6 +242,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         store.edit { if (kind == "work") it.copy(workSpot = spot) else it.copy(homeSpot = spot) }
         placesChanged()
     }
+    fun clearSpot(kind: String) {
+        store.edit { if (kind == "work") it.copy(workSpot = null) else it.copy(homeSpot = null) }
+        placesChanged()
+    }
     /** "I'm home" by hand, when the phone didn't notice. */
     fun arrivedHomeNow() {
         val t = java.time.LocalTime.now()

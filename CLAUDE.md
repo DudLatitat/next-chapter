@@ -21,6 +21,7 @@ This app exists to make my life better in every way, not only my Chinese. Learni
   - Flight cards open Google Flights / Skyscanner links in the browser (links only, nothing loaded in the app).
   - Voice recordings are made in CI with edge-tts.
   - The speaking check is fully offline (Vosk on the phone).
+  - Work & home (Settings) can search an address with OpenStreetMap's Nominatim and show OpenStreetMap map tiles, only while the spot picker is open. Noticing arrivals uses the phone's own location (no Google) and stays offline.
   - Ask me before adding any *new* online dependency.
 - Built on the Two Skies stack (Kotlin, Jetpack Compose, night-sea theme) and should feel just as polished. Reuse Two Skies patterns rather than inventing new ones, but never touch the two-skies repo from here.
 
