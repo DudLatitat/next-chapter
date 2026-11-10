@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -198,8 +199,8 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
 }
 
 /**
- * The one card for right now, picked by the time of day so there's never a list to choose from:
- * call time → tonight's job → morning prayer → phrases waiting → A+ cards → wind down → all caught up.
+ * The one card for right now, for what the rings can't say: call time → tonight's job (Start and
+ * check-in) → wind down → otherwise the phrase of the day. (Phrases, A+ and prayer are the rings.)
  */
 @Composable
 private fun NowCard(
@@ -211,8 +212,6 @@ private fun NowCard(
     val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
     val unanswered = R.checkFor(state.routineChecks, today()) == null
     val her = state.herName.trim()
-    val waiting = Srs.queue(state).size
-    val aplus = APlus.queue(state).size
     when {
         part == Life.Part.CALL -> GlassCard(highlight = true) {
             Text("Call time 💛", style = MaterialTheme.typography.headlineSmall, color = Night.rose)
@@ -223,16 +222,6 @@ private fun NowCard(
             if (unanswered) Text("After: ${R.text(job.task, her)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
         unanswered && nowMin >= minOf(state.homeMinutes, job.minutes) - 15 -> TonightJob(state, vm, startJob)
-        part == Life.Part.MORNING && today() !in state.prayedDays -> NowLine(
-            "Good morning ☀️", "Start with today's prayer: ${Prayers.forDay(today()).title}.", "Pray", Night.sun, onPray,
-        )
-        waiting > 0 -> NowLine(
-            "${waiting} ${if (waiting == 1) "phrase is" else "phrases are"} waiting",
-            "A few minutes of Chinese. Say them out loud.", "Practice", Night.jade, onChinese,
-        )
-        aplus > 0 -> NowLine(
-            "$aplus A+ ${if (aplus == 1) "card" else "cards"} for today", "Quick ones, one at a time.", "Study", Night.violet, onAPlus,
-        )
         part == Life.Part.LATE -> GlassCard {
             Text("Winding down 🌙", style = MaterialTheme.typography.titleLarge, color = Night.ink)
             Text(
@@ -241,11 +230,8 @@ private fun NowCard(
             )
             state.phraseOfTheDay()?.let { Spacer(Modifier.height(10.dp)); PhraseRow(it, vm) }
         }
-        else -> GlassCard {
-            Text("All caught up ✓", style = MaterialTheme.typography.titleLarge, color = Night.jade)
-            Text("Nothing waiting right now. Here's a line for today:", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-            state.phraseOfTheDay()?.let { Spacer(Modifier.height(10.dp)); PhraseRow(it, vm) }
-        }
+        // The rings already say what's left to do; the rest of the day, a line to carry with you.
+        else -> state.phraseOfTheDay()?.let { GlassCard { PhraseRow(it, vm) } }
     }
 }
 
@@ -280,17 +266,20 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
     val R = com.dudlatitat.nextchapter.data.Routine
     val job = R.jobFor(state.routine, java.time.LocalDate.now())
     val checked = R.checkFor(state.routineChecks, d)
+    val calm = part == Life.Part.CALL
+    val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
+    val jobTime = checked == null && nowMin >= minOf(state.homeMinutes, job.minutes) - 15
     GlassCard {
         Text("Today · 今天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Ring("Chinese", if (zhTotal == 0) 1f else zhDone / zhTotal.toFloat(), Night.jade, if (queue.isEmpty()) "✓" else "$zhDone/$zhTotal", onChinese)
-            Ring("A+", if (aTotal == 0) 1f else aDone / aTotal.toFloat(), Night.violet, if (aTotal == 0 || aDone == aTotal) "✓" else "$aDone/$aTotal", onAPlus)
-            Ring("Prayer", if (prayed) 1f else 0f, Night.sun, if (prayed) "✓" else "🙏", onPrayer)
+            Ring("Chinese", if (zhTotal == 0) 1f else zhDone / zhTotal.toFloat(), Night.jade, if (queue.isEmpty()) "✓" else "$zhDone/$zhTotal", onChinese, breathe = !calm && queue.isNotEmpty())
+            Ring("A+", if (aTotal == 0) 1f else aDone / aTotal.toFloat(), Night.violet, if (aTotal == 0 || aDone == aTotal) "✓" else "$aDone/$aTotal", onAPlus, breathe = !calm && aTotal > 0 && aDone < aTotal)
+            Ring("Prayer", if (prayed) 1f else 0f, Night.sun, if (prayed) "✓" else "🙏", onPrayer, breathe = !calm && !prayed)
             Ring(
                 "Tonight", when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> 1f; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> 0.6f; else -> 0f }, Night.rose,
                 when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> "✓"; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> "½"; com.dudlatitat.nextchapter.data.CheckIn.SKIPPED -> "🌙"; null -> "→" }, onJob,
-                sub = R.text(job.task, state.herName),
+                sub = R.text(job.task, state.herName), breathe = !calm && jobTime,
             )
         }
         // Your week of evenings, at a glance (tap for the whole routine).
@@ -308,9 +297,23 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
 }
 
 @Composable
-private fun Ring(label: String, progress: Float, color: Color, center: String, onClick: () -> Unit, sub: String? = null) {
+private fun Ring(label: String, progress: Float, color: Color, center: String, onClick: () -> Unit, sub: String? = null, breathe: Boolean = false) {
+    // Unfinished rings breathe: a slow, gentle swell, like a reminder that doesn't nag.
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe")
+    val swell by pulse.animateFloat(
+        1f, 1.07f,
+        androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "swell",
+    )
+    val scale = if (breathe) swell else 1f
     Column(Modifier.width(72.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        ProgressRing(progress, 56.dp, color, stroke = 5.dp) {
+        ProgressRing(
+            progress, 56.dp, color, stroke = 5.dp,
+            modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (breathe) 0.75f + (scale - 1f) * 3.5f else 1f },
+        ) {
             Text(center, style = MaterialTheme.typography.labelLarge, color = Night.ink)
         }
         Spacer(Modifier.height(4.dp))
