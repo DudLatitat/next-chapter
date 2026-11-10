@@ -364,11 +364,9 @@ private fun PhraseRow(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewMo
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Phrase of the day", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(card.hanzi, fontSize = 22.sp, color = Night.ink)
-                    Spacer(Modifier.width(10.dp))
-                    PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
-                }
+                // Pinyin under the characters, so long phrases don't squeeze it into a column.
+                Text(card.hanzi, fontSize = 22.sp, color = Night.ink)
+                PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
                 Text(card.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
             IconButton(onClick = { vm.speaker.say(card.hanzi) }) { Icon(Icons.Rounded.PlayArrow, "Listen", tint = Night.ink) }

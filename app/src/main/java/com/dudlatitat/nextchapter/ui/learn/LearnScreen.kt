@@ -136,7 +136,7 @@ private fun Overview(
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (queue.isEmpty()) "You're all caught up ✓" else "${queue.size} waiting for you", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+                        Text(if (queue.isEmpty()) "You're all caught up ✓" else "${queue.size} waiting", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                         val fresh = queue.count { it.isNew }
                         Text(
                             if (queue.isEmpty()) "New phrases arrive tomorrow" else "${queue.size - fresh} to remember · $fresh new today",
