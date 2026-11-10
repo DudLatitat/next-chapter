@@ -203,6 +203,11 @@ data class AppState(
     val workSpot: Spot? = null,
     val homeSpot: Spot? = null,
     val arrivals: List<Arrival> = emptyList(),
+    /** Weight and calories (Today's ⚖️ pill), with a goal weight and a daily calorie target (0 = none). */
+    val weights: List<WeightEntry> = emptyList(),
+    val calorieAdds: List<CalorieAdd> = emptyList(),
+    val goalWeight: Double? = null,
+    val calorieTarget: Int = 0,
     val allergyZh: String = "",
     val trips: List<Trip> = emptyList(),
     val prices: List<PriceSeen> = emptyList(),

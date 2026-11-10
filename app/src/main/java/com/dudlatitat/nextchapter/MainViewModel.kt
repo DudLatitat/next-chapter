@@ -232,6 +232,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         s.copy(aplus = aplus, routineChecks = checks, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), score, total, seconds, missed)).takeLast(100))
     }
 
+    // ---- Weight & calories ----
+    fun logWeight(lb: Double) = store.edit { it.copy(weights = com.dudlatitat.nextchapter.data.Body.withWeight(it.weights, today(), lb)) }
+    fun addCalories(cal: Int) = store.edit { it.copy(calorieAdds = com.dudlatitat.nextchapter.data.Body.addCalories(it.calorieAdds, today(), cal)) }
+    fun undoCalories() = store.edit { it.copy(calorieAdds = com.dudlatitat.nextchapter.data.Body.undoLast(it.calorieAdds, today())) }
+    fun setBodyGoals(goalLb: Double?, target: Int) = store.edit { it.copy(goalWeight = goalLb, calorieTarget = target.coerceIn(0, 10000)) }
+
     // ---- Work & home ----
     private fun placesChanged() {
         com.dudlatitat.nextchapter.notify.PlaceWatch.register(getApplication(), store.state.value)

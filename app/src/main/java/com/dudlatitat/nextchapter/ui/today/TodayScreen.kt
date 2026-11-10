@@ -84,6 +84,7 @@ fun TodayScreen(
     val part = Life.partOf(LocalTime.now())
     var prayerOpen by remember { mutableStateOf(false) }
     var jobOpen by remember { mutableStateOf(false) }
+    var bodyOpen by remember { mutableStateOf(false) }
     // Start opens the right place for tonight's job; anything else starts the study timer.
     val startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit = { job ->
         jobOpen = false
@@ -101,7 +102,7 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Hero(state, vm, part, onSettings, onOpenMove)
+        Hero(state, vm, part, onSettings, onOpenMove, onBody = { bodyOpen = true })
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
@@ -135,6 +136,13 @@ fun TodayScreen(
             }
         }
     }
+    if (bodyOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { bodyOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Night.ground1,
+        ) { BodySheet(state, vm) }
+    }
     if (jobOpen) {
         ModalBottomSheet(
             onDismissRequest = { jobOpen = false },
@@ -150,8 +158,9 @@ fun TodayScreen(
 }
 
 /** The warm header: greeting, both clocks, the trip, the streaks, and a call-time note. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit) {
+private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -190,12 +199,12 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings
             trip?.takeIf { it >= 0 }?.let { Pill("✈️ 成都 in ${friendlySpan(it)}", Night.rose) }
             move?.takeIf { it >= 0 }?.let { Pill("搬家 ${friendlySpan(it)}", Night.sun) }
         }
-        if (streak > 0 || early > 0) {
-            Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (streak > 0) Pill("🔥 $streak-day streak", Night.sun)
-                if (early > 0) Pill("☀️ $early early", Night.jade)
-            }
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (streak > 0) Pill("🔥 $streak-day streak", Night.sun)
+            if (early > 0) Pill("☀️ $early early", Night.jade)
+            // Weight and today's calories; tap to log.
+            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onBody))
         }
         // Seen at work today (Settings → Work & home): when the day should end, and "I'm home" if the phone misses it.
         val P = com.dudlatitat.nextchapter.data.Places
