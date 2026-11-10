@@ -39,8 +39,10 @@ object Evening {
     private const val WINDOW_MS = 10 * 60 * 1000L
 
     fun schedule(context: Context, state: AppState) {
-        book(context, HOME, state.homeMinutes, state.eveningCheck)
-        book(context, WIND, state.windDownMinutes, state.eveningCheck)
+        // With Work & home on, today's "You're home" waits for the real arrival, with a fallback
+        // after the expected end of the workday (Places.homeTime); other days use the usual time.
+        book(context, HOME, com.dudlatitat.nextchapter.data.Places.homeTime(state, today()), state.homeMinutes, state.eveningCheck)
+        book(context, WIND, state.windDownMinutes, state.windDownMinutes, state.eveningCheck)
     }
 
     private fun pending(context: Context, which: String) = PendingIntent.getBroadcast(
@@ -49,18 +51,19 @@ object Evening {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun book(context: Context, which: String, minutes: Int, on: Boolean) {
+    private fun book(context: Context, which: String, minutes: Int, tomorrowMinutes: Int, on: Boolean) {
         val alarms = context.getSystemService(AlarmManager::class.java) ?: return
         val p = pending(context, which)
         alarms.cancel(p)
         if (!on) return
         var next = LocalDate.now().atStartOfDay().plusMinutes(minutes.toLong())
-        if (!next.isAfter(LocalDateTime.now())) next = next.plusDays(1)
+        if (!next.isAfter(LocalDateTime.now())) next = LocalDate.now().plusDays(1).atStartOfDay().plusMinutes(tomorrowMinutes.toLong())
         val at = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         alarms.setWindow(AlarmManager.RTC_WAKEUP, at, WINDOW_MS, p)
     }
 
-    fun show(context: Context, which: String) {
+    /** [fromPlace]: the phone just saw you get home (otherwise it's the clock alarm). */
+    fun show(context: Context, which: String, fromPlace: Boolean = false) {
         val state = Store.get(context).state.value
         schedule(context, state) // book tomorrow's
         if (!state.eveningCheck) return
@@ -72,6 +75,8 @@ object Evening {
         val task = Routine.text(job.task, state.herName)
         val (title, text) = if (which == HOME) {
             if (checked != null) return
+            // Already told you when you walked in: the clock alarm stays quiet.
+            if (!fromPlace && com.dudlatitat.nextchapter.data.Places.homeArrival(state.arrivals, today()) != null) return
             "You're home 🏠 Today's job: $task" to
                 "First step: ${Routine.text(job.firstStep, state.herName)}. Bad day? ${Routine.text(job.minimum, state.herName)} still counts."
         } else {

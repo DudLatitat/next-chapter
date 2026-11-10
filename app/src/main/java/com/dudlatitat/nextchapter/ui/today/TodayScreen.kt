@@ -101,7 +101,7 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Hero(state, part, onSettings, onOpenMove)
+        Hero(state, vm, part, onSettings, onOpenMove)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
@@ -151,7 +151,7 @@ fun TodayScreen(
 
 /** The warm header: greeting, both clocks, the trip, the streaks, and a call-time note. */
 @Composable
-private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit) {
+private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -197,6 +197,18 @@ private fun Hero(state: AppState, part: Life.Part, onSettings: () -> Unit, onOpe
                 if (early > 0) Pill("☀️ $early early", Night.jade)
             }
         }
+        // Seen at work today (Settings → Work & home): when the day should end, and "I'm home" if the phone misses it.
+        val P = com.dudlatitat.nextchapter.data.Places
+        val nowMin = now.hour * 60 + now.minute
+        if (P.atWork(state, today(), nowMin)) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Pill("💼 Work till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
+                if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
+                    TextButton(onClick = { vm.arrivedHomeNow() }) { Text("I'm home 🏠", color = Night.sun) }
+                }
+            }
+        }
     }
 }
 
@@ -223,7 +235,7 @@ private fun NowCard(
             )
             if (unanswered) Text("After: ${R.text(job.task, her)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
-        unanswered && nowMin >= minOf(state.homeMinutes, job.minutes) - 15 -> TonightJob(state, vm, startJob)
+        unanswered && nowMin >= minOf(com.dudlatitat.nextchapter.data.Places.homeTime(state, today()), job.minutes) - 15 -> TonightJob(state, vm, startJob)
         part == Life.Part.LATE -> GlassCard {
             Text("Winding down 🌙", style = MaterialTheme.typography.titleLarge, color = Night.ink)
             Text(
@@ -270,7 +282,7 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
     val checked = R.checkFor(state.routineChecks, d)
     val calm = part == Life.Part.CALL
     val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
-    val jobTime = checked == null && nowMin >= minOf(state.homeMinutes, job.minutes) - 15
+    val jobTime = checked == null && nowMin >= minOf(com.dudlatitat.nextchapter.data.Places.homeTime(state, today()), job.minutes) - 15
     GlassCard {
         Text("Today · 今天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
         Spacer(Modifier.height(10.dp))

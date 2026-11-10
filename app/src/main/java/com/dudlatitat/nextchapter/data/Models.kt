@@ -198,6 +198,11 @@ data class AppState(
     val wakeMinutes: Int = 7 * 60 + 30,
     val homeMinutes: Int = 17 * 60 + 45,
     val windDownMinutes: Int = 23 * 60 + 30,
+    /** Work & home (Settings): on/off, the two saved spots (on this phone only) and the arrivals noticed. */
+    val placesOn: Boolean = false,
+    val workSpot: Spot? = null,
+    val homeSpot: Spot? = null,
+    val arrivals: List<Arrival> = emptyList(),
     val allergyZh: String = "",
     val trips: List<Trip> = emptyList(),
     val prices: List<PriceSeen> = emptyList(),

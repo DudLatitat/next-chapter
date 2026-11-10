@@ -107,6 +107,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             androidx.compose.material3.OutlinedTextField(herCity, { herCity = it.take(40); vm.setHer(herName, herCity) }, label = { Text("Her city") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         }
 
+        WorkHomeCard(state, vm)
+
         SectionLabel("Reminders")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {

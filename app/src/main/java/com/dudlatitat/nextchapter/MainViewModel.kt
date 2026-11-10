@@ -32,6 +32,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         Reminder.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Deadlines.schedule(app, store.state.value)
+        com.dudlatitat.nextchapter.notify.PlaceWatch.register(app, store.state.value)
         com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
@@ -229,6 +230,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             R.withCheck(s.routineChecks, com.dudlatitat.nextchapter.data.RoutineCheck(today(), com.dudlatitat.nextchapter.data.CheckIn.DONE))
         else s.routineChecks
         s.copy(aplus = aplus, routineChecks = checks, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), score, total, seconds, missed)).takeLast(100))
+    }
+
+    // ---- Work & home ----
+    private fun placesChanged() {
+        com.dudlatitat.nextchapter.notify.PlaceWatch.register(getApplication(), store.state.value)
+        com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)
+    }
+    fun setPlacesOn(on: Boolean) { store.edit { it.copy(placesOn = on) }; placesChanged() }
+    fun saveSpot(kind: String, spot: com.dudlatitat.nextchapter.data.Spot) {
+        store.edit { if (kind == "work") it.copy(workSpot = spot) else it.copy(homeSpot = spot) }
+        placesChanged()
+    }
+    /** "I'm home" by hand, when the phone didn't notice. */
+    fun arrivedHomeNow() {
+        val t = java.time.LocalTime.now()
+        store.edit { it.copy(arrivals = com.dudlatitat.nextchapter.data.Places.manualHome(it.arrivals, today(), t.hour * 60 + t.minute)) }
+        placesChanged()
     }
 
     // ---- Weekly routine ----
