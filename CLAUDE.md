@@ -12,7 +12,7 @@ This app exists to make my life better in every way, not only my Chinese. Learni
 
 ## The app
 
-- **Tabs:** Today (the homey hub: hero, daily rings, tiles), Learn (decks and spaced review, tones, dialogues, writing, Drive mode), Life (A+ study, career, classes, jobs), Move (dates, savings, checklist, flights, money) and Progress. Extras: widget, reminders, WeChat quick-add, backup.
+- **Tabs** (each answers one question): Today (what now: hero, breathing rings, this week's routine, one Now card), Chinese (practice: review, practice tools, decks, tones, how it's going), Life (getting better: weekly routine, A+ exam, career, wins) and Move (the plan: dates, flights, money, packing, savings, checklist). Extras: two widgets (phrase, weekly routine), reminders, Work & home, WeChat quick-add, backup.
 - Mainly for me. Yuling doesn't get access yet, so no sharing or sync features without asking.
 - **Hard constraint: everything works offline and in mainland China without a VPN.** No account, no server, no Google services, nothing loaded from Google, and no library that phones home to a blocked domain.
 - **Allowed exceptions** (already in the app, fine to keep and improve; each is optional and the rest of the app works without it):
