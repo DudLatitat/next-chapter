@@ -88,7 +88,7 @@ Tips from working with me so far, so you don't have to learn them the hard way:
 
 ## Branches and builds
 
-- `main` is the stable record. Work happens on the session branch I give you, and I say when it gets merged into `main`. Don't push to `main` or any other branch without my OK.
+- **Work happens on `main`** (my call, Nov 2026, after merging builds 1.32–1.67): commit and push there; each push builds the APK I install. Don't push to any other branch without my OK.
 - **Every push to any branch builds an APK and replaces the `latest` release** (`next-chapter-1.<run>.apk`), which I install. So only push what you want on my phone.
 - The version is `1.<GitHub run number>`; Settings shows it at the bottom.
 - CI runs the unit tests (`testReleaseUnitTest`) before building; a failing test stops the release.

@@ -1,8 +1,8 @@
-# Handoff · state of Next Chapter (Nov 9, 2026)
+# Handoff · state of Next Chapter (Nov 10, 2026)
 
 Read `CLAUDE.md` first: it has Rudy's rules. This file is the current state: what's built, how it fits together, what's broken or open, and what was being decided when the last session ended.
 
-Latest build: **1.48** (1.43–1.48: Identity V deck for Cryptic Notes, Gaming together 48 cards, Everyday +24, new Sweet talk deck; earlier: Life tab, homey Today, study timer, practice tests) (GitHub release `latest`). Builds 1.32+ are on the session branch, not yet merged to `main`. All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
+Latest build: **1.67** (all merged to `main` on Nov 10, 2026; work continues on `main`). All of it was compiled by CI only; Rudy tests every APK on his Galaxy Z Fold 8 Ultra (Android 17).
 
 ## Where things are
 
