@@ -46,6 +46,8 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
     var tick by remember { mutableIntStateOf(0) } // re-check permissions after a dialog
     var picking by remember { mutableStateOf<String?>(null) }
     var explainBackground by remember { mutableStateOf(false) }
+    // Coming back from Android's settings pages: check permissions and battery again.
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { tick++; onPauseOrDispose { } }
     val fg = remember(tick) { PlaceWatch.hasForeground(context) }
     val bg = remember(tick) { PlaceWatch.hasBackground(context) }
 
@@ -86,8 +88,8 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
                         Text(
                             when {
                                 spot == null -> "Not set yet"
-                                spot.label.isNotBlank() -> spot.label
-                                else -> "Pinned on the map ✓"
+                                spot.label.isNotBlank() -> "${spot.label} · ${spot.radius} m"
+                                else -> "Pinned on the map ✓ · ${spot.radius} m"
                             },
                             style = MaterialTheme.typography.bodySmall, color = if (spot != null) Night.jade else Night.muted, maxLines = 1,
                         )
@@ -100,11 +102,15 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
             Places.workStart(state.arrivals, today())?.let { start ->
                 Spacer(Modifier.height(6.dp))
                 val home = Places.homeArrival(state.arrivals, today())
-                Text(
-                    "Today: work from ${clockLabel(start)}, ends ~${clockLabel(Places.workEnd(state.arrivals, today()) ?: start)}" +
-                        (home?.let { " · home at ${clockLabel(it)}" } ?: if (Places.atWork(state, today(), nowMin)) " · at work now" else ""),
-                    style = MaterialTheme.typography.bodySmall, color = Night.ink,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Today: work from ${clockLabel(start)}, ends ~${clockLabel(Places.workEnd(state.arrivals, today()) ?: start)}" +
+                            (home?.let { " · home at ${clockLabel(it)}" } ?: if (Places.atWork(state, today(), nowMin)) " · at work now" else ""),
+                        style = MaterialTheme.typography.bodySmall, color = Night.ink, modifier = Modifier.weight(1f),
+                    )
+                    // Wrong day (a test, a false arrival)? Forget today's times; earlier days stay.
+                    TextButton(onClick = { vm.resetToday() }) { Text("Reset today", color = Night.coral) }
+                }
             }
             if (!bg) {
                 Spacer(Modifier.height(8.dp))
@@ -114,10 +120,22 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
                 )
                 TextButton(onClick = { explainBackground = true }) { Text("Allow all the time", color = Night.sun) }
             }
-            Text(
-                "Samsung tip: Settings → Apps → Next Chapter → Battery → Unrestricted, so arrivals aren't delayed. Your spots never leave this phone.",
-                style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 6.dp),
-            )
+            // Battery tip, only until the app is set to Unrestricted (Android: "ignoring battery optimizations").
+            val unrestricted = remember(tick) {
+                context.getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) == true
+            }
+            if (!unrestricted) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Text(
+                    "Set battery to Unrestricted so arrivals aren't delayed: App info → Battery → Unrestricted.",
+                    style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = {
+                    context.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + context.packageName)),
+                    )
+                    tick++
+                }) { Text("App info", color = Night.sun) }
+            }
         }
     }
 

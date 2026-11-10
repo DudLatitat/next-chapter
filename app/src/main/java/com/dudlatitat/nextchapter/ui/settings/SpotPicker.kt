@@ -89,6 +89,7 @@ fun SpotPicker(title: String, initial: Spot?, onSave: (Spot) -> Unit, onClose: (
     var lon by remember { mutableDoubleStateOf(initial?.lon ?: -118.2437) }
     var zoom by remember { mutableIntStateOf(if (initial != null) 17 else 11) }
     var label by remember { mutableStateOf(initial?.label ?: "") }
+    var radius by remember { mutableIntStateOf(initial?.radius ?: com.dudlatitat.nextchapter.data.Places.DEFAULT_RADIUS) }
     var query by remember { mutableStateOf("") }
     val results = remember { mutableStateListOf<MapMath.Place>() }
     var searching by remember { mutableStateOf(false) }
@@ -136,7 +137,7 @@ fun SpotPicker(title: String, initial: Spot?, onSave: (Spot) -> Unit, onClose: (
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(18.dp))) {
-                TileMap(lat, lon, zoom, onMove = { a, b -> lat = a; lon = b }, onZoom = { zoom = it.coerceIn(MapMath.MIN_ZOOM, MapMath.MAX_ZOOM) })
+                TileMap(lat, lon, zoom, radius, onMove = { a, b -> lat = a; lon = b }, onZoom = { zoom = it.coerceIn(MapMath.MIN_ZOOM, MapMath.MAX_ZOOM) })
                 // The pin stays in the middle; the map moves under it.
                 Text("📍", fontSize = 34.sp, modifier = Modifier.align(Alignment.Center).padding(bottom = 34.dp))
                 Column(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -160,9 +161,21 @@ fun SpotPicker(title: String, initial: Spot?, onSave: (Spot) -> Unit, onClose: (
                 style = MaterialTheme.typography.bodySmall, color = Night.muted, modifier = Modifier.padding(vertical = 6.dp),
             )
             Text("Drag the map so the pin is where you park. Pinch or use + / − to zoom.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            // How close counts as "arrived": the gold circle on the map.
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                Text("Arrived within", style = MaterialTheme.typography.bodySmall, color = Night.ink)
+                androidx.compose.material3.Slider(
+                    value = radius.toFloat(),
+                    onValueChange = { radius = (it / 10).toInt() * 10 },
+                    valueRange = com.dudlatitat.nextchapter.data.Places.MIN_RADIUS.toFloat()..com.dudlatitat.nextchapter.data.Places.MAX_RADIUS.toFloat(),
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    colors = androidx.compose.material3.SliderDefaults.colors(thumbColor = Night.sun, activeTrackColor = Night.sun),
+                )
+                Text(MapMath.radiusLabel(radius), style = MaterialTheme.typography.labelMedium, color = Night.sun)
+            }
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { onSave(Spot(lat, MapMath.wrapLon(lon), label)); onClose() },
+                onClick = { onSave(Spot(lat, MapMath.wrapLon(lon), label, radius)); onClose() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = Night.ground2),
             ) { Text("Save this spot") }
@@ -180,7 +193,7 @@ private fun MapButton(text: String, onClick: () -> Unit) {
 
 /** OpenStreetMap tiles around (lat, lon) at [zoom]; drag to pan, pinch to change zoom. */
 @Composable
-private fun TileMap(lat: Double, lon: Double, zoom: Int, onMove: (Double, Double) -> Unit, onZoom: (Int) -> Unit) {
+private fun TileMap(lat: Double, lon: Double, zoom: Int, radius: Int, onMove: (Double, Double) -> Unit, onZoom: (Int) -> Unit) {
     val context = LocalContext.current
     val tilePx = with(LocalDensity.current) { 128.dp.toPx() }
     val tiles = remember { mutableStateMapOf<String, ImageBitmap>() }
@@ -228,6 +241,10 @@ private fun TileMap(lat: Double, lon: Double, zoom: Int, onMove: (Double, Double
             val top = ((y - cy) * tilePx + this.size.height / 2).toInt()
             drawImage(img, dstOffset = IntOffset(left, top), dstSize = IntSize(tilePx.toInt() + 1, tilePx.toInt() + 1))
         }
+        // The arrival zone around the pin (the pin sits at the center).
+        val r = (MapMath.metersToTiles(radius.toDouble(), lat, zoom) * tilePx).toFloat()
+        drawCircle(Night.sun.copy(alpha = 0.18f), radius = r, center = this.center)
+        drawCircle(Night.sun, radius = r, center = this.center, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
     }
 }
 

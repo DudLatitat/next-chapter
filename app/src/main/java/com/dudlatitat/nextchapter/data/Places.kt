@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /** A saved spot (Work or Home), set on the phone (address, map pin or "my location"), never written in the code. */
 @Serializable
-data class Spot(val lat: Double, val lon: Double, val label: String = "")
+data class Spot(val lat: Double, val lon: Double, val label: String = "", val radius: Int = Places.DEFAULT_RADIUS)
 
 /** One arrival in a day: [kind] is "work" or "home"; [minutes] after midnight (work = start of the workday). */
 @Serializable
@@ -23,7 +23,12 @@ object Places {
     const val MIN_AT_WORK = 4 * 60
     /** If the phone never notices you getting home, the evening opens this long after the expected end. */
     const val FALLBACK = 45
-    const val RADIUS_METERS = 150f
+    const val DEFAULT_RADIUS = 150
+    const val MIN_RADIUS = 50
+    const val MAX_RADIUS = 500
+    /** A work arrival only starts the workday in the morning (so testing at home at 5 pm can't make "work" run to midnight). */
+    const val WORK_FROM = 5 * 60
+    const val WORK_UNTIL = 13 * 60
 
     fun workStart(arrivals: List<Arrival>, day: Long): Int? = arrivals.firstOrNull { it.day == day && it.kind == "work" }?.minutes
     fun homeArrival(arrivals: List<Arrival>, day: Long): Int? = arrivals.firstOrNull { it.day == day && it.kind == "home" }?.minutes
@@ -37,7 +42,8 @@ object Places {
         val unchanged = Entered(arrivals, false)
         return when (kind) {
             "work" -> {
-                if (workStart(arrivals, day) != null || homeArrival(arrivals, day) != null) unchanged
+                if (minutes !in WORK_FROM until WORK_UNTIL) unchanged
+                else if (workStart(arrivals, day) != null || homeArrival(arrivals, day) != null) unchanged
                 else Entered(add(arrivals, Arrival(day, "work", (minutes + GRACE).coerceAtMost(LAST))), false)
             }
             "home" -> {
@@ -48,6 +54,9 @@ object Places {
             else -> unchanged
         }
     }
+
+    /** Forget today's arrivals (Reset today, or after a spot changes), keeping earlier days. */
+    fun resetDay(arrivals: List<Arrival>, day: Long): List<Arrival> = arrivals.filterNot { it.day == day }
 
     /** "I'm home" by hand: always counts (once a day). */
     fun manualHome(arrivals: List<Arrival>, day: Long, minutes: Int): List<Arrival> =

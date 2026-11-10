@@ -25,6 +25,14 @@ class MapMathTest {
         assertEquals(179.0, MapMath.wrapLon(-181.0), 1e-9)
     }
 
+    @Test fun radiusInTilesShrinksAwayFromTheEquator() {
+        // At the equator, zoom 0: the whole world (one tile) is ~40,075 km wide.
+        assertEquals(0.5, MapMath.metersToTiles(20_037_508.343, 0.0, 0), 1e-9)
+        // 150 m in Los Angeles at zoom 17: one tile is ~253 m there, so ~0.59 tiles.
+        assertEquals(0.59, MapMath.metersToTiles(150.0, 34.0522, 17), 0.01)
+        assertEquals("150 m · 492 ft", MapMath.radiusLabel(150))
+    }
+
     @Test fun readsPastedCoordinates() {
         assertEquals(Spot(34.0522, -118.2437), MapMath.parseCoords("34.0522, -118.2437"))
         assertEquals(Spot(34.0522, -118.2437), MapMath.parseCoords(" 34.0522 -118.2437 "))

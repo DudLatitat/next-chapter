@@ -9,6 +9,7 @@ import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sinh
 import kotlin.math.tan
 
@@ -31,6 +32,13 @@ object MapMath {
     fun lon(tileX: Double, z: Int): Double = tileX / 2.0.pow(z) * 360.0 - 180.0
 
     fun lat(tileY: Double, z: Int): Double = Math.toDegrees(atan(sinh(PI * (1.0 - 2.0 * tileY / 2.0.pow(z)))))
+
+    /** How many screen tiles [meters] covers at [lat] and zoom [z] (for drawing the radius circle). */
+    fun metersToTiles(meters: Double, lat: Double, z: Int): Double =
+        meters / (40_075_016.686 * cos(Math.toRadians(lat)) / 2.0.pow(z))
+
+    /** "150 m · 490 ft" */
+    fun radiusLabel(meters: Int): String = "$meters m · ${(meters * 3.28084).roundToInt()} ft"
 
     /** Wraps a longitude back into -180…180 after panning past the date line. */
     fun wrapLon(lon: Double): Double = ((lon + 180.0) % 360.0 + 360.0) % 360.0 - 180.0

@@ -239,11 +239,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun setPlacesOn(on: Boolean) { store.edit { it.copy(placesOn = on) }; placesChanged() }
     fun saveSpot(kind: String, spot: com.dudlatitat.nextchapter.data.Spot) {
-        store.edit { if (kind == "work") it.copy(workSpot = spot) else it.copy(homeSpot = spot) }
+        // A new spot starts today fresh: arrivals noticed with the old one don't count.
+        store.edit { s -> (if (kind == "work") s.copy(workSpot = spot) else s.copy(homeSpot = spot)).copy(arrivals = com.dudlatitat.nextchapter.data.Places.resetDay(s.arrivals, today())) }
         placesChanged()
     }
     fun clearSpot(kind: String) {
-        store.edit { if (kind == "work") it.copy(workSpot = null) else it.copy(homeSpot = null) }
+        store.edit { s -> (if (kind == "work") s.copy(workSpot = null) else s.copy(homeSpot = null)).copy(arrivals = com.dudlatitat.nextchapter.data.Places.resetDay(s.arrivals, today())) }
+        placesChanged()
+    }
+    fun resetToday() {
+        store.edit { it.copy(arrivals = com.dudlatitat.nextchapter.data.Places.resetDay(it.arrivals, today())) }
         placesChanged()
     }
     /** "I'm home" by hand, when the phone didn't notice. */

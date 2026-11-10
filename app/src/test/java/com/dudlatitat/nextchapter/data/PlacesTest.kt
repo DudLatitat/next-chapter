@@ -59,8 +59,16 @@ class PlacesTest {
         assertFalse(Places.atWork(home, d, t(17, 1)))
     }
 
-    @Test fun lateStartsNeverRunPastMidnight() {
-        val a = Places.onEnter(emptyList(), "work", d, t(20)).arrivals
-        assertEquals(23 * 60 + 59, Places.workEnd(a, d))
+    @Test fun aWorkArrivalOnlyCountsInTheMorning() {
+        // The 1.58 bug: saving Work while at home at 5:05 pm "started" a workday ending at midnight,
+        // so tonight's job never opened.
+        assertTrue(Places.onEnter(emptyList(), "work", d, t(17, 5)).arrivals.isEmpty())
+        assertTrue(Places.onEnter(emptyList(), "work", d, t(4, 59)).arrivals.isEmpty())
+        assertEquals(t(12, 59) + 5, Places.workStart(Places.onEnter(emptyList(), "work", d, t(12, 59)).arrivals, d))
+    }
+
+    @Test fun resetForgetsOnlyToday() {
+        val a = listOf(Arrival(d - 1, "work", t(9)), Arrival(d, "work", t(9)), Arrival(d, "home", t(17)))
+        assertEquals(listOf(Arrival(d - 1, "work", t(9))), Places.resetDay(a, d))
     }
 }

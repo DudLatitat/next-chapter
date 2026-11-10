@@ -49,7 +49,7 @@ object PlaceWatch {
             val p = pending(context, kind)
             try { lm.removeProximityAlert(p) } catch (_: Exception) {}
             if (state.placesOn && spot != null && hasForeground(context)) {
-                try { lm.addProximityAlert(spot.lat, spot.lon, Places.RADIUS_METERS, -1, p) } catch (_: Exception) {}
+                try { lm.addProximityAlert(spot.lat, spot.lon, spot.radius.toFloat(), -1, p) } catch (_: Exception) {}
             }
         }
     }
