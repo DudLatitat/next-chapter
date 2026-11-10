@@ -13,11 +13,22 @@ object Judge {
      * - 一 becomes 2 before a 4th tone, 4 before tones 1–3 (一个 yí gè, 一起 yì qǐ)
      * Neutral tones (5) aren't judged: an empty set means "any".
      */
+    /**
+     * Words whose second syllable natives soften to a neutral tone in everyday speech, even where
+     * a dictionary (or a card) marks a full tone (知道 zhīdao, 意思 yìsi). That syllable isn't judged.
+     * Keep in step with SOFT in tools/tone_proto/phrase_collect.py.
+     */
+    val SOFT = setOf("知道", "意思", "时候", "告诉", "休息", "舒服", "地方", "清楚", "事情", "麻烦", "先生", "消息", "便宜", "关系", "名字", "学生", "早上", "晚上", "东西", "朋友", "喜欢", "认识", "客气", "漂亮", "衣服", "明白", "头发", "眼睛", "豆腐", "姑娘", "打算", "觉得", "怎么", "什么", "这么", "那么", "多么", "钥匙")
+
     fun acceptedTones(chars: String, tones: List<Int>): List<Set<Int>> = tones.indices.map { i ->
         val t = tones[i]
         val next = tones.getOrNull(i + 1)
+        val prev = chars.getOrNull(i - 1)
         when {
             t == 5 -> emptySet()
+            // Second half of a softened word (知道) or a doubled word (妈妈, 看看, 谢谢): said lightly.
+            i > 0 && chars.substring(i - 1, minOf(i + 1, chars.length)) in SOFT -> emptySet()
+            i > 0 && prev == chars.getOrNull(i) && prev != '一' && prev != '不' -> emptySet()
             chars.getOrNull(i) == '不' && next == 4 -> setOf(4, 2)
             chars.getOrNull(i) == '一' && next == 4 -> setOf(1, 2)
             chars.getOrNull(i) == '一' && next in setOf(1, 2, 3) -> setOf(1, 4)

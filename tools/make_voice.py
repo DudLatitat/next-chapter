@@ -10,6 +10,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "app/src/main/java/com/dudlatitat/nextchapter/data"
 OUT = ROOT / "app/src/main/assets/voice"
 VOICE = "zh-CN-XiaoxiaoNeural"
+# Extra voices for training the tone model only (never shipped):
+#   make_voice.py --voice zh-CN-YunxiNeural --out ~/tone-voices/zh-CN-YunxiNeural --short
+if "--voice" in sys.argv: VOICE = sys.argv[sys.argv.index("--voice") + 1]
+if "--out" in sys.argv: OUT = pathlib.Path(sys.argv[sys.argv.index("--out") + 1]).expanduser()
+SHORT = "--short"  # only phrases of 2–10 characters (what the tone model trains on)
 CJK = re.compile(r"[一-鿿]")
 
 def phrases():
@@ -24,6 +29,7 @@ def phrases():
 async def main():
     OUT.mkdir(parents=True, exist_ok=True)
     texts = phrases()
+    if SHORT in sys.argv: texts = [t for t in texts if 2 <= len(CJK.findall(t)) <= 10]
     if "--list" in sys.argv:
         print("\n".join(texts)); return
     import edge_tts

@@ -19,6 +19,16 @@ class JudgeTest {
         assertEquals(setOf(1), Judge.acceptedTones("十一", listOf(2, 1))[1])
     }
 
+    @Test fun softenedSyllablesAreNotJudged() {
+        // 知道 is said zhīdao: a full 4th tone on 道 shouldn't be expected (it was a false yellow mark).
+        val t = Judge.acceptedTones("我知道了", listOf(3, 1, 4, 5))
+        assertEquals(setOf(1), t[1]); assertTrue(t[2].isEmpty())
+        // Doubled words: the second is light (妈妈, 看看).
+        assertTrue(Judge.acceptedTones("看看", listOf(4, 4))[1].isEmpty())
+        // …but 一一 / 不不-style cases and ordinary words are untouched.
+        assertEquals(setOf(4), Judge.acceptedTones("电视", listOf(4, 4))[1])
+    }
+
     @Test fun neutralToneIsNotJudged() {
         assertTrue(Judge.acceptedTones("谢谢", listOf(4, 5))[1].isEmpty())
     }

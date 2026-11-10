@@ -5,6 +5,8 @@ package com.dudlatitat.nextchapter.speech
 internal object PhraseToneModel {
     /** How many phrases it was trained on (CI retrains when 50 or more have been added since). */
     const val PHRASES = 531
+    /** The voices it was trained on (CI retrains when the list changes). */
+    const val VOICES = "zh-CN-XiaoxiaoNeural"
     val MU = floatArrayOf(1.10749f, 0.81430f, 0.45160f, 0.18703f, -0.00484f, -1.15128f, -0.80161f, -0.34968f, -0.91171f, 1.85663f, 0.62512f, 0.71896f, 0.70386f, 0.69607f, 0.79558f, 0.19659f, 0.29055f)
     val SD = floatArrayOf(3.30373f, 3.55842f, 3.79735f, 3.91523f, 3.87221f, 3.02975f, 1.96471f, 1.96194f, 3.65739f, 3.24423f, 0.42073f, 3.88351f, 0.45655f, 3.91111f, 0.40328f, 0.39742f, 0.45402f)
     val W = arrayOf(

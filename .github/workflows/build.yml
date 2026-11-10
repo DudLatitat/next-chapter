@@ -77,23 +77,39 @@ jobs:
           fi
           words=$(find "$dest" -name 'words.txt' | head -1)
           echo "::notice title=Speech model::$(du -sh "$dest" | cut -f1) · $tonal · words: ${words:+$(wc -l < "$words")} · files: $files"
-      # Phrase tone model: retrained from the native recordings (assets/voice) whenever 50 or more
-      # phrases have been added since it was last trained. On main, the new model is committed back.
+      # Extra voices for training the tone model only (never shipped): kept between builds.
+      - uses: actions/cache@v4
+        with:
+          path: ~/tone-voices
+          key: tone-voices-${{ hashFiles('app/src/main/java/com/dudlatitat/nextchapter/data/*.kt', 'tools/make_voice.py') }}
+          restore-keys: tone-voices-
+      # Phrase tone model: retrained from native recordings (the app's voice plus 4 more, 3 of them
+      # male) whenever 50 or more phrases were added since it was trained, or the voice list changed.
+      # On main, the new model is committed back.
       - name: Tone model
         env:
           MODEL_KT: app/src/main/java/com/dudlatitat/nextchapter/speech/PhraseToneModel.kt
+          VOICES: zh-CN-XiaoxiaoNeural,zh-CN-YunxiNeural,zh-CN-YunjianNeural,zh-CN-YunyangNeural,zh-CN-XiaoyiNeural
         run: |
           set -e
           pip install --quiet pypinyin
           T=tools/tone_proto; DATA=app/src/main/java/com/dudlatitat/nextchapter/data
           have=$(grep -oP 'const val PHRASES = \K[0-9]+' "$MODEL_KT")
+          had_voices=$(grep -oP 'const val VOICES = "\K[^"]+' "$MODEL_KT" || echo zh-CN-XiaoxiaoNeural)
           now=$(python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn app/src/main/assets/voice $DATA /tmp/tones.pkl --count)
-          echo "::notice title=Tone model::trained on $have phrases; $now have recordings now"
-          if [ $((now - have)) -lt 50 ]; then exit 0; fi
+          echo "::notice title=Tone model::trained on $have phrases ($had_voices); $now have recordings now"
+          if [ $((now - have)) -lt 50 ] && [ "$had_voices" = "$VOICES" ]; then exit 0; fi
+          # Record the extra voices (only phrases the model trains on; cached, so only new ones).
+          pip install --quiet edge-tts
+          dirs=app/src/main/assets/voice
+          for v in $(echo "$VOICES" | tr ',' ' ' | cut -d' ' -f2-); do
+            python3 tools/make_voice.py --voice "$v" --out "$HOME/tone-voices/$v" --short | tail -1
+            dirs="$dirs,$HOME/tone-voices/$v"
+          done
           command -v ffmpeg >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
           pip install --quiet vosk numpy scikit-learn
-          python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn app/src/main/assets/voice $DATA /tmp/tones.pkl
-          (cd $T && python3 phrase_tones.py /tmp/tones.pkl "$GITHUB_WORKSPACE/$MODEL_KT") | tee /tmp/tones.log
+          python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn "$dirs" $DATA /tmp/tones.pkl
+          (cd $T && python3 phrase_tones.py /tmp/tones.pkl "$GITHUB_WORKSPACE/$MODEL_KT" "$VOICES") | tee /tmp/tones.log
           echo "::notice title=Tone model retrained ($now phrases)::$(grep -E 'fold|golden' /tmp/tones.log | tr '\n' ' ' | sed 's/%/%25/g')"
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             git config user.name "github-actions[bot]"
