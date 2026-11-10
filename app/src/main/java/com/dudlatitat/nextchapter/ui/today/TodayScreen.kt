@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -299,23 +300,35 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
 
 @Composable
 private fun Ring(label: String, progress: Float, color: Color, center: String, onClick: () -> Unit, sub: String? = null, breathe: Boolean = false) {
-    // Unfinished rings breathe: a slow, gentle swell, like a reminder that doesn't nag.
+    // Unfinished rings breathe in their own color: a soft glow swells behind the ring and fades,
+    // slow enough to feel calm, bright enough to notice. Done rings sit still.
     val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe")
-    val swell by pulse.animateFloat(
-        1f, 1.07f,
+    val breath by pulse.animateFloat(
+        0f, 1f,
         androidx.compose.animation.core.infiniteRepeatable(
-            androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
             androidx.compose.animation.core.RepeatMode.Reverse,
         ),
-        label = "swell",
+        label = "breath",
     )
-    val scale = if (breathe) swell else 1f
+    val b = if (breathe) breath else 0f
     Column(Modifier.width(72.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        ProgressRing(
-            progress, 56.dp, color, stroke = 5.dp,
-            modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (breathe) 0.75f + (scale - 1f) * 3.5f else 1f },
-        ) {
+        androidx.compose.foundation.layout.Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+            if (breathe) androidx.compose.foundation.Canvas(Modifier.size(64.dp)) {
+                drawCircle(
+                    androidx.compose.ui.graphics.Brush.radialGradient(
+                        listOf(color.copy(alpha = 0.15f + 0.40f * b), color.copy(alpha = 0f)),
+                        center = this.center, radius = this.size.minDimension / 2,
+                    ),
+                    radius = this.size.minDimension / 2 * (0.8f + 0.2f * b),
+                )
+            }
+            ProgressRing(
+                progress, 56.dp, color, stroke = 5.dp,
+                modifier = Modifier.graphicsLayer { val sc = 1f + 0.08f * b; scaleX = sc; scaleY = sc },
+            ) {
             Text(center, style = MaterialTheme.typography.labelLarge, color = Night.ink)
+            }
         }
         Spacer(Modifier.height(4.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = Night.ink)
