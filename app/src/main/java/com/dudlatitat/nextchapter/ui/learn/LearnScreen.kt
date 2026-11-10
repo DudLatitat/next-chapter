@@ -106,6 +106,7 @@ fun LearnScreen(
         tool == "drive" -> DriveScreen(vm, onBack = { tool = null })
         tool == "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
         tool == "stories" -> StoriesScreen(state, vm, onBack = { tool = null })
+        tool == "build" -> BuildScreen(state, vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "culture" -> CultureScreen(vm, onBack = { tool = null })
         tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
@@ -158,8 +159,8 @@ private fun Overview(
         item {
             val groups = listOf(
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
-                "Read & write" to listOf(Triple("故事", "Stories", "stories") to Night.rose, Triple("写字", "Writing", "writing") to Night.sun, Triple("语法", "Grammar", "grammar") to Night.violet),
-                "Out in China" to listOf(Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
+                "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
+                "Write & go" to listOf(Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
             )
             GlassCard {
                 Text("Practice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
