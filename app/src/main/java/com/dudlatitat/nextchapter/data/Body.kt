@@ -58,6 +58,17 @@ object Body {
         }
     }
 
+    /** Exactly [days] days ending today, oldest first, for the graph (blank days included). */
+    fun series(state: AppState, today: Long, days: Int): List<Day> {
+        val byDay = state.weights.associateBy { it.day }
+        return ((today - days + 1)..today).map { d ->
+            val w = byDay[d]?.lb
+            val before = state.weights.filter { it.day < d }.maxByOrNull { it.day }?.lb
+            val logged = state.calorieAdds.any { it.day == d }
+            Day(d, w, if (w != null && before != null) w - before else null, if (logged) caloriesOn(state.calorieAdds, d) else null)
+        }
+    }
+
     /** Weigh-ins in the last [days] days, oldest first (for the little chart). */
     fun recentWeights(weights: List<WeightEntry>, today: Long, days: Int = 30): List<WeightEntry> =
         weights.filter { it.day > today - days }.sortedBy { it.day }

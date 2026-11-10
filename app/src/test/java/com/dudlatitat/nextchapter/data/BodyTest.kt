@@ -68,6 +68,16 @@ class BodyHistoryTest {
         assertEquals(60, Body.history(s, d).size)
     }
 
+    @Test fun seriesIsExactlyTheRangeOldestFirst() {
+        val s = AppState(weights = listOf(WeightEntry(d - 2, 181.0), WeightEntry(d, 180.0)), calorieAdds = listOf(CalorieAdd(d, 900)))
+        val g = Body.series(s, d, 7)
+        assertEquals(7, g.size)
+        assertEquals(d - 6, g.first().day); assertEquals(d, g.last().day)
+        assertEquals(-1.0, g.last().change!!, 1e-9)
+        assertEquals(900, g.last().calories)
+        assertEquals(null, g[0].lb)
+    }
+
     @Test fun caloriesAreKeptForTwoYears() {
         val c = Body.addCalories(listOf(CalorieAdd(d - 400, 1800)), d, 500)
         assertEquals(1800, Body.caloriesOn(c, d - 400))

@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
@@ -139,13 +141,12 @@ fun BodySheet(state: AppState, vm: MainViewModel) {
         if (history.isNotEmpty()) {
             Spacer(Modifier.height(18.dp))
             Text("Every day · 每天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-            val recent = Body.recentWeights(state.weights, day)
-            if (recent.size >= 2) {
-                Spacer(Modifier.height(8.dp))
-                WeightChart(recent, state.goalWeight, day)
-            }
-            Spacer(Modifier.height(6.dp))
-            history.forEach { h -> HistoryRow(h, state.calorieTarget, day) }
+            Spacer(Modifier.height(8.dp))
+            BodyGraph(state, day)
+            // The same days as a list, for exact numbers.
+            var list by remember { mutableStateOf(false) }
+            TextButton(onClick = { list = !list }) { Text(if (list) "Hide each day" else "Each day ›", color = Night.muted) }
+            if (list) history.forEach { h -> HistoryRow(h, state.calorieTarget, day) }
         }
         Text("Kept on this phone only.", style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 8.dp))
     }
@@ -188,31 +189,84 @@ private fun HistoryRow(h: Body.Day, target: Int, today: Long) {
     }
 }
 
-/** The last 30 days of weigh-ins as a soft line, with the goal as a dashed line when it's in view. */
+/**
+ * The graph: calories as a bar for each day (green under target, coral over, dashed gold target
+ * line) and weight as a violet line on top (dashed goal line). 7 / 30 / 90 days; tap a day for its numbers.
+ */
 @Composable
-private fun WeightChart(points: List<com.dudlatitat.nextchapter.data.WeightEntry>, goal: Double?, today: Long) {
-    val lo0 = points.minOf { it.lb }; val hi0 = points.maxOf { it.lb }
-    val pad = maxOf(1.0, (hi0 - lo0) * 0.15)
-    val lo = lo0 - pad; val hi = hi0 + pad
-    val first = today - 29
-    Column {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(90.dp)) {
-            fun x(d: Long) = ((d - first).toFloat() / 29f) * size.width
-            fun y(v: Double) = (size.height * (1 - (v - lo) / (hi - lo))).toFloat()
-            goal?.takeIf { it in lo..hi }?.let { g ->
-                drawLine(
-                    Night.violet.copy(alpha = 0.5f), androidx.compose.ui.geometry.Offset(0f, y(g)), androidx.compose.ui.geometry.Offset(size.width, y(g)),
-                    strokeWidth = 1.5.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f)),
-                )
-            }
+private fun BodyGraph(state: AppState, today: Long) {
+    var days by remember { mutableStateOf(30) }
+    var picked by remember(days) { mutableStateOf<Int?>(null) }
+    val series = remember(state.weights, state.calorieAdds, today, days) { Body.series(state, today, days) }
+    val target = state.calorieTarget
+    val maxCal = maxOf((target * 1.3).toInt(), series.maxOf { it.calories ?: 0 }, 500)
+    val weights = series.mapNotNull { it.lb } + listOfNotNull(Body.latest(state.weights)?.lb.takeIf { series.none { s -> s.lb != null } })
+    val lo0 = (weights + listOfNotNull(state.goalWeight)).minOrNull()
+    val hi0 = (weights + listOfNotNull(state.goalWeight)).maxOrNull()
+    val pad = if (lo0 != null && hi0 != null) maxOf(1.0, (hi0 - lo0) * 0.15) else 1.0
+    val lo = (lo0 ?: 0.0) - pad; val hi = (hi0 ?: 1.0) + pad
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(7, 30, 90).forEach { n ->
+            androidx.compose.material3.FilterChip(selected = days == n, onClick = { days = n }, label = { Text("$n days") })
+        }
+    }
+    // The picked day's numbers (or a hint).
+    val sel = picked?.let { series.getOrNull(it) }
+    Text(
+        sel?.let { d ->
+            val date = java.time.LocalDate.ofEpochDay(d.day).format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d", java.util.Locale.US))
+            val w = d.lb?.let { "${Body.lbs(it)} lb" + (d.change?.let { c -> if (c < -0.05) " ↓${Body.lbs(-c)}" else if (c > 0.05) " ↑${Body.lbs(c)}" else "" } ?: "") } ?: "no weigh-in"
+            val c = d.calories?.let { "${Body.cal(it)} cal" + if (target > 0 && it > target) " +${Body.cal(it - target)}" else "" } ?: "no calories logged"
+            "$date · $w · $c"
+        } ?: "Tap a day to see its numbers.",
+        style = MaterialTheme.typography.bodySmall, color = if (sel != null) Night.ink else Night.muted,
+        modifier = Modifier.padding(vertical = 6.dp),
+    )
+    androidx.compose.foundation.Canvas(
+        Modifier.fillMaxWidth().height(180.dp).pointerInput(days) {
+            detectTapGestures { o -> picked = (o.x / (size.width / series.size.toFloat())).toInt().coerceIn(0, series.size - 1) }
+        },
+    ) {
+        val slot = size.width / series.size
+        val barW = (slot * 0.62f).coerceAtLeast(1.5f)
+        val bottom = size.height
+        fun yCal(c: Int) = bottom - (c / maxCal.toFloat()) * size.height * 0.95f
+        fun yLb(v: Double) = (size.height * 0.05f + (size.height * 0.85f) * (1 - (v - lo) / (hi - lo))).toFloat()
+        fun xMid(i: Int) = slot * i + slot / 2
+        val dash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+        // Calories
+        series.forEachIndexed { i, d ->
+            val c = d.calories ?: return@forEachIndexed
+            val color = when { target <= 0 -> Night.sun; c > target -> Night.coral; else -> Night.jade }
+            drawRoundRect(
+                color.copy(alpha = if (picked == null || picked == i) 0.85f else 0.35f),
+                topLeft = androidx.compose.ui.geometry.Offset(xMid(i) - barW / 2, yCal(c)),
+                size = androidx.compose.ui.geometry.Size(barW, bottom - yCal(c)),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barW / 3, barW / 3),
+            )
+        }
+        if (target > 0) drawLine(Night.sun.copy(alpha = 0.7f), androidx.compose.ui.geometry.Offset(0f, yCal(target)), androidx.compose.ui.geometry.Offset(size.width, yCal(target)), strokeWidth = 1.5.dp.toPx(), pathEffect = dash)
+        // Weight
+        state.goalWeight?.let { g -> drawLine(Night.violet.copy(alpha = 0.55f), androidx.compose.ui.geometry.Offset(0f, yLb(g)), androidx.compose.ui.geometry.Offset(size.width, yLb(g)), strokeWidth = 1.5.dp.toPx(), pathEffect = dash) }
+        val pts = series.mapIndexedNotNull { i, d -> d.lb?.let { androidx.compose.ui.geometry.Offset(xMid(i), yLb(it)) } }
+        if (pts.size >= 2) {
             val path = androidx.compose.ui.graphics.Path()
-            points.forEachIndexed { i, p -> if (i == 0) path.moveTo(x(p.day), y(p.lb)) else path.lineTo(x(p.day), y(p.lb)) }
-            drawPath(path, Night.violet, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-            points.forEach { p -> drawCircle(Night.violet, radius = 3.5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(x(p.day), y(p.lb))) }
+            pts.forEachIndexed { i, p -> if (i == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y) }
+            drawPath(path, Night.violet, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
         }
-        Row(Modifier.fillMaxWidth()) {
-            Text("30 days ago", style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.weight(1f))
-            Text("${Body.lbs(lo0)}–${Body.lbs(hi0)} lb", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-        }
+        pts.forEach { p -> drawCircle(Night.violet, radius = (if (days > 30) 2.5 else 4.0).dp.toPx(), center = p) }
+        picked?.let { i -> drawLine(Night.ink.copy(alpha = 0.35f), androidx.compose.ui.geometry.Offset(xMid(i), 0f), androidx.compose.ui.geometry.Offset(xMid(i), bottom), strokeWidth = 1.dp.toPx()) }
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Text(java.time.LocalDate.ofEpochDay(series.first().day).format(fmt), style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.weight(1f))
+        Text("Today", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(top = 4.dp)) {
+        Text("▮ calories", style = MaterialTheme.typography.labelSmall, color = Night.jade)
+        Text("— weight", style = MaterialTheme.typography.labelSmall, color = Night.violet)
+        if (lo0 != null && hi0 != null) Text("${Body.lbs(lo0)}–${Body.lbs(hi0)} lb", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        if (target > 0) Text("- - target", style = MaterialTheme.typography.labelSmall, color = Night.sun)
     }
 }
