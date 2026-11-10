@@ -65,7 +65,7 @@ fun WorkHomeCard(state: AppState, vm: MainViewModel) {
             Column(Modifier.weight(1f)) {
                 Text("Know when I'm at work and home", style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Text(
-                    "Arriving at work starts your day (5 min to get out of the car) and expects it to end 8 hours later. Getting home opens the evening: \"You're home\" and tonight's job.",
+                    "Arriving at work starts your day and expects it to end 8 hours later. Getting home opens the evening: \"You're home\" and tonight's job.",
                     style = MaterialTheme.typography.bodySmall, color = Night.muted,
                 )
             }

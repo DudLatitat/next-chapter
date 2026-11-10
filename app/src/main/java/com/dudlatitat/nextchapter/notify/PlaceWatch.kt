@@ -84,6 +84,8 @@ class PlaceReceiver : BroadcastReceiver() {
         val kind = intent.getStringExtra("kind") ?: return
         val store = Store.get(context)
         if (!store.state.value.placesOn) return
+        // A day off: being near work doesn't start a workday.
+        if (kind == "work" && com.dudlatitat.nextchapter.data.Routine.dayOff(store.state.value.daysOff, today()) != null) return
         val now = LocalTime.now()
         var cameHome = false
         store.edit { s ->

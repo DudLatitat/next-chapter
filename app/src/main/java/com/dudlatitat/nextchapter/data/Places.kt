@@ -17,7 +17,8 @@ data class Arrival(val day: Long, val kind: String, val minutes: Int)
  * and tonight's job. A quick trip home at lunch doesn't count.
  */
 object Places {
-    const val GRACE = 5
+    /** Minutes between arriving and the workday starting (was 5; arrivals proved accurate, so 0). */
+    const val GRACE = 0
     const val WORKDAY = 8 * 60
     /** A home arrival only counts this long after the workday started (so lunch at home doesn't end the day). */
     const val MIN_AT_WORK = 4 * 60
@@ -55,6 +56,15 @@ object Places {
         }
     }
 
+    /**
+     * "Heading home?": from 15 minutes before the expected end of the workday until you get home
+     * (or the evening opens), the time to suggest Drive mode for the ride.
+     */
+    fun headingHome(state: AppState, day: Long, nowMinutes: Int): Boolean {
+        val end = workEnd(state.arrivals, day) ?: return false
+        return atWork(state, day, nowMinutes) && nowMinutes >= end - 15
+    }
+
     /** Forget today's arrivals (Reset today, or after a spot changes), keeping earlier days. */
     fun resetDay(arrivals: List<Arrival>, day: Long): List<Arrival> = arrivals.filterNot { it.day == day }
 
@@ -68,7 +78,7 @@ object Places {
      * home time from Settings.
      */
     fun homeTime(state: AppState, day: Long): Int {
-        if (!state.placesOn) return state.homeMinutes
+        if (!state.placesOn || Routine.dayOff(state.daysOff, day) != null) return state.homeMinutes
         homeArrival(state.arrivals, day)?.let { return it }
         workEnd(state.arrivals, day)?.let { return (it + FALLBACK).coerceAtMost(LAST) }
         return state.homeMinutes
@@ -77,6 +87,7 @@ object Places {
     /** At work right now: the workday started today, you're not home yet, and the evening hasn't opened. */
     fun atWork(state: AppState, day: Long, nowMinutes: Int): Boolean {
         val start = workStart(state.arrivals, day) ?: return false
+        if (Routine.dayOff(state.daysOff, day) != null) return false
         return state.placesOn && homeArrival(state.arrivals, day) == null && nowMinutes >= start - GRACE && nowMinutes < homeTime(state, day)
     }
 

@@ -27,6 +27,10 @@ enum class CheckIn { DONE, MINIMUM, SKIPPED }
 @Serializable
 data class RoutineCheck(val day: Long, val status: CheckIn)
 
+/** A day off (a holiday, a paid day off): planned like Saturday ([like] = 6) or Sunday (7). */
+@Serializable
+data class DayOff(val day: Long, val like: Int = 6)
+
 /** The Sunday review's two questions for the week starting on that Monday. */
 @Serializable
 data class RoutineReview(val worked: String = "", val change: String = "")
@@ -63,6 +67,20 @@ object Routine {
         val dow = date.dayOfWeek.value
         return schedule.firstOrNull { it.dow == dow } ?: seed.first { it.dow == dow }
     }
+
+    fun dayOff(daysOff: List<DayOff>, day: Long): DayOff? = daysOff.lastOrNull { it.day == day }
+
+    /** Tonight's job for [date], honoring days off (a day off follows the Saturday or Sunday plan). */
+    fun jobOn(state: AppState, date: LocalDate): RoutineDay {
+        val off = dayOff(state.daysOff, date.toEpochDay()) ?: return jobFor(state.routine, date)
+        return state.routine.firstOrNull { it.dow == off.like } ?: seed.first { it.dow == off.like }
+    }
+
+    /** Adds or changes a day off; keeps upcoming ones and the last couple of months. */
+    fun withDayOff(daysOff: List<DayOff>, off: DayOff, today: Long): List<DayOff> =
+        (daysOff.filterNot { it.day == off.day } + off).filter { it.day > today - 60 }.sortedBy { it.day }
+
+    fun withoutDayOff(daysOff: List<DayOff>, day: Long): List<DayOff> = daysOff.filterNot { it.day == day }
 
     /** Fills {her} with her name, or "her" when it isn't set. */
     fun text(s: String, herName: String): String = s.replace("{her}", herName.trim().ifEmpty { "her" })

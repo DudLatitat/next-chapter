@@ -70,7 +70,7 @@ object Evening {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
-        val job = Routine.jobFor(state.routine, LocalDate.now())
+        val job = Routine.jobOn(state, LocalDate.now())
         val checked = Routine.checkFor(state.routineChecks, today())
         val task = Routine.text(job.task, state.herName)
         val (title, text) = if (which == HOME) {

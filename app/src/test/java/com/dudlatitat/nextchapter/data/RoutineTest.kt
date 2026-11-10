@@ -29,6 +29,27 @@ class RoutineTest {
         assertEquals(3, Routine.jobFor(Routine.seed.filterNot { it.dow == 3 }, monday.plusDays(2)).dow)
     }
 
+    @Test fun aDayOffFollowsTheWeekendPlanYouPicked() {
+        val tue = monday.plusDays(1)
+        val likeSat = AppState(daysOff = listOf(DayOff(tue.toEpochDay(), like = 6)))
+        assertEquals(6, Routine.jobOn(likeSat, tue).dow)
+        val likeSun = AppState(daysOff = listOf(DayOff(tue.toEpochDay(), like = 7)))
+        assertEquals(7, Routine.jobOn(likeSun, tue).dow)
+        assertEquals("other days unchanged", 3, Routine.jobOn(likeSat, tue.plusDays(1)).dow)
+        // An edited Saturday plan is what the day off uses.
+        val edited = likeSat.copy(routine = Routine.withDay(Routine.seed, Routine.seed[5].copy(task = "Beach")))
+        assertEquals("Beach", Routine.jobOn(edited, tue).task)
+    }
+
+    @Test fun daysOffAddChangeAndRemove() {
+        var off = Routine.withDayOff(emptyList(), DayOff(d + 1, 6), d)
+        off = Routine.withDayOff(off, DayOff(d + 1, 7), d)
+        assertEquals(listOf(DayOff(d + 1, 7)), off)
+        off = Routine.withDayOff(off, DayOff(d - 90, 6), d) // too old: dropped
+        assertEquals(1, off.size)
+        assertTrue(Routine.withoutDayOff(off, d + 1).isEmpty())
+    }
+
     @Test fun herNameFillsIn() {
         assertEquals("Chinese with Mei", Routine.text("Chinese with {her}", " Mei "))
         assertEquals("Chinese with her", Routine.text("Chinese with {her}", ""))

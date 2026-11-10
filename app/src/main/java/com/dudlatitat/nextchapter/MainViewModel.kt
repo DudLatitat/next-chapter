@@ -225,7 +225,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             aplus = com.dudlatitat.nextchapter.data.APlus.withReview(aplus, com.dudlatitat.nextchapter.data.APlus.grade(com.dudlatitat.nextchapter.data.APlus.review(s.copy(aplus = aplus), id), Grade.AGAIN))
         }
         val R = com.dudlatitat.nextchapter.data.Routine
-        val job = R.jobFor(s.routine, java.time.LocalDate.now())
+        val job = R.jobOn(s, java.time.LocalDate.now())
         val checks = if (job.kind == "aplus" && R.checkFor(s.routineChecks, today()) == null)
             R.withCheck(s.routineChecks, com.dudlatitat.nextchapter.data.RoutineCheck(today(), com.dudlatitat.nextchapter.data.CheckIn.DONE))
         else s.routineChecks
@@ -237,6 +237,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun addCalories(cal: Int) = store.edit { it.copy(calorieAdds = com.dudlatitat.nextchapter.data.Body.addCalories(it.calorieAdds, today(), cal)) }
     fun undoCalories() = store.edit { it.copy(calorieAdds = com.dudlatitat.nextchapter.data.Body.undoLast(it.calorieAdds, today())) }
     fun setBodyGoals(goalLb: Double?, target: Int) = store.edit { it.copy(goalWeight = goalLb, calorieTarget = target.coerceIn(0, 10000)) }
+
+    // ---- Days off ----
+    fun setDayOff(day: Long, like: Int) {
+        store.edit { it.copy(daysOff = com.dudlatitat.nextchapter.data.Routine.withDayOff(it.daysOff, com.dudlatitat.nextchapter.data.DayOff(day, like), today())) }
+        com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)
+    }
+    fun removeDayOff(day: Long) {
+        store.edit { it.copy(daysOff = com.dudlatitat.nextchapter.data.Routine.withoutDayOff(it.daysOff, day)) }
+        com.dudlatitat.nextchapter.notify.Evening.schedule(getApplication(), store.state.value)
+    }
 
     // ---- Work & home ----
     private fun placesChanged() {

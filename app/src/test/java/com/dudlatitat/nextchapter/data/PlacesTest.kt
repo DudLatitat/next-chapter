@@ -10,17 +10,17 @@ class PlacesTest {
     private val d = 20_400L
     private fun t(h: Int, m: Int = 0) = h * 60 + m
 
-    @Test fun arrivingAtWorkStartsTheDayFiveMinutesLaterAndItEndsEightHoursAfter() {
+    @Test fun arrivingAtWorkStartsTheDayAndItEndsEightHoursAfter() {
         val r = Places.onEnter(emptyList(), "work", d, t(8, 52))
-        assertEquals(t(8, 57), Places.workStart(r.arrivals, d))
-        assertEquals(t(16, 57), Places.workEnd(r.arrivals, d))
+        assertEquals(t(8, 52), Places.workStart(r.arrivals, d))
+        assertEquals(t(16, 52), Places.workEnd(r.arrivals, d))
         assertFalse(r.home)
     }
 
     @Test fun onlyTheFirstWorkArrivalCounts() {
         var a = Places.onEnter(emptyList(), "work", d, t(8, 50)).arrivals
         a = Places.onEnter(a, "work", d, t(13, 10)).arrivals // back from lunch
-        assertEquals(t(8, 55), Places.workStart(a, d))
+        assertEquals(t(8, 50), Places.workStart(a, d))
     }
 
     @Test fun homeAfterWorkOpensTheEveningButLunchAtHomeDoesNot() {
@@ -44,7 +44,7 @@ class PlacesTest {
         val base = AppState(placesOn = true, homeMinutes = t(17, 45))
         assertEquals("nothing noticed: usual time", t(17, 45), Places.homeTime(base, d))
         val atWork = base.copy(arrivals = Places.onEnter(emptyList(), "work", d, t(9, 30)).arrivals)
-        assertEquals("seen at work 9:35 → ends 5:35, evening opens by 6:20", t(18, 20), Places.homeTime(atWork, d))
+        assertEquals("seen at work 9:30 → ends 5:30, evening opens by 6:15", t(18, 15), Places.homeTime(atWork, d))
         val home = atWork.copy(arrivals = Places.onEnter(atWork.arrivals, "home", d, t(17, 58)).arrivals)
         assertEquals(t(17, 58), Places.homeTime(home, d))
         assertEquals("feature off: usual time", t(17, 45), Places.homeTime(home.copy(placesOn = false), d))
@@ -64,7 +64,23 @@ class PlacesTest {
         // so tonight's job never opened.
         assertTrue(Places.onEnter(emptyList(), "work", d, t(17, 5)).arrivals.isEmpty())
         assertTrue(Places.onEnter(emptyList(), "work", d, t(4, 59)).arrivals.isEmpty())
-        assertEquals(t(12, 59) + 5, Places.workStart(Places.onEnter(emptyList(), "work", d, t(12, 59)).arrivals, d))
+        assertEquals(t(12, 59), Places.workStart(Places.onEnter(emptyList(), "work", d, t(12, 59)).arrivals, d))
+    }
+
+    @Test fun headingHomeFromFifteenMinutesBeforeTheEndUntilHome() {
+        val s = AppState(placesOn = true, arrivals = Places.onEnter(emptyList(), "work", d, t(9)).arrivals)
+        assertFalse(Places.headingHome(s, d, t(16, 44)))
+        assertTrue(Places.headingHome(s, d, t(16, 45)))
+        assertTrue(Places.headingHome(s, d, t(17, 30)))
+        val home = s.copy(arrivals = Places.manualHome(s.arrivals, d, t(17, 20)))
+        assertFalse(Places.headingHome(home, d, t(17, 30)))
+    }
+
+    @Test fun aDayOffHasNoWorkday() {
+        val s = AppState(placesOn = true, homeMinutes = t(17, 45), arrivals = Places.onEnter(emptyList(), "work", d, t(9)).arrivals,
+            daysOff = listOf(DayOff(d)))
+        assertFalse(Places.atWork(s, d, t(10)))
+        assertEquals(t(17, 45), Places.homeTime(s, d))
     }
 
     @Test fun resetForgetsOnlyToday() {

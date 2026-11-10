@@ -82,6 +82,7 @@ fun WeekDots(state: AppState, big: Boolean = false) {
         week.forEachIndexed { i, c ->
             val day = DayOfWeek.of(i + 1)
             val isToday = now.dayOfWeek == day
+            val off = Routine.dayOff(state.daysOff, now.with(DayOfWeek.MONDAY).toEpochDay() + i) != null
             val fill by animateColorAsState(checkColor(c), label = "dot")
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
@@ -93,8 +94,8 @@ fun WeekDots(state: AppState, big: Boolean = false) {
                     if (big && c == CheckIn.MINIMUM) Text("½", color = Night.ground2)
                 }
                 Text(
-                    day.getDisplayName(if (big) TextStyle.SHORT else TextStyle.NARROW, Locale.US),
-                    style = MaterialTheme.typography.labelSmall, color = if (isToday) Night.ink else Night.muted,
+                    day.getDisplayName(if (big) TextStyle.SHORT else TextStyle.NARROW, Locale.US) + if (off) "🏖" else "",
+                    style = MaterialTheme.typography.labelSmall, color = if (isToday) Night.ink else if (off) Night.jade else Night.muted,
                 )
             }
         }
@@ -105,7 +106,7 @@ fun WeekDots(state: AppState, big: Boolean = false) {
 @Composable
 fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
     val streak = Routine.streak(state.routineChecks, today())
-    val job = Routine.jobFor(state.routine, LocalDate.now())
+    val job = Routine.jobOn(state, LocalDate.now())
     GlassCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Weekly routine · 每周", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
@@ -176,6 +177,8 @@ fun RoutineScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 Text("Bad day: ${Routine.text(d.minimum, state.herName)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
         }
+
+        DaysOff(state, vm)
 
         SectionLabel("Every day")
         GlassCard {
@@ -252,4 +255,34 @@ private fun EditDay(d: RoutineDay, vm: MainViewModel, onClose: () -> Unit) {
             dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
         )
     }
+}
+
+/** Days off (a paid day off, a holiday): each one is planned like Saturday or Sunday. */
+@Composable
+private fun DaysOff(state: AppState, vm: MainViewModel) {
+    var adding by remember { mutableStateOf(false) }
+    val upcoming = state.daysOff.filter { it.day >= today() }.sortedBy { it.day }
+    val fmt = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
+    SectionLabel("Days off 🏖")
+    GlassCard {
+        if (upcoming.isEmpty()) Text(
+            "A paid day off or a holiday? Add it and that day follows your weekend plan, with no workday.",
+            style = MaterialTheme.typography.bodySmall, color = Night.muted,
+        )
+        upcoming.forEach { off ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(LocalDate.ofEpochDay(off.day).format(fmt), style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.weight(1f))
+                listOf(6 to "like Sat", 7 to "like Sun").forEach { (dow, label) ->
+                    FilterChip(selected = off.like == dow, onClick = { vm.setDayOff(off.day, dow) }, label = { Text(label) }, modifier = Modifier.padding(start = 4.dp))
+                }
+                TextButton(onClick = { vm.removeDayOff(off.day) }) { Text("✕", color = Night.muted) }
+            }
+        }
+        TextButton(onClick = { adding = true }) { Text("+ Add a day off", color = Night.sun) }
+    }
+    if (adding) com.dudlatitat.nextchapter.ui.move.PickDate(
+        initial = LocalDate.now().plusDays(1).toString(),
+        onDismiss = { adding = false },
+        onPick = { iso -> iso?.let { LocalDate.parse(it).toEpochDay() }?.let { vm.setDayOff(it, 6) }; adding = false },
+    )
 }

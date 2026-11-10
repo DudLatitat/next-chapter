@@ -203,6 +203,8 @@ data class AppState(
     val workSpot: Spot? = null,
     val homeSpot: Spot? = null,
     val arrivals: List<Arrival> = emptyList(),
+    /** Days off (paid days off, holidays), planned like a weekend day. */
+    val daysOff: List<DayOff> = emptyList(),
     /** Weight and calories (Today's ⚖️ pill), with a goal weight and a daily calorie target (0 = none). */
     val weights: List<WeightEntry> = emptyList(),
     val calorieAdds: List<CalorieAdd> = emptyList(),

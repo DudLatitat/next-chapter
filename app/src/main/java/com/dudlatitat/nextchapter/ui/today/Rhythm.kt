@@ -52,7 +52,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
  */
 @Composable
 fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit, bare: Boolean = false) {
-    val job = Routine.jobFor(state.routine, java.time.LocalDate.now())
+    val job = Routine.jobOn(state, java.time.LocalDate.now())
     val checked = Routine.checkFor(state.routineChecks, today())
     val streak = Routine.streak(state.routineChecks, today())
     val her = state.herName

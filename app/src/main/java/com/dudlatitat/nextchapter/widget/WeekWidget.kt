@@ -56,7 +56,7 @@ class WeekWidget : AppWidgetProvider() {
             }
             val streak = Routine.streak(state.routineChecks, today())
             v.setTextViewText(R.id.streak, if (streak > 0) "🔥 $streak" else "")
-            val job = Routine.jobFor(state.routine, now)
+            val job = Routine.jobOn(state, now)
             v.setTextViewText(R.id.tonight, "Tonight: " + Routine.text(job.task, state.herName))
             v.setTextViewText(
                 R.id.status,
