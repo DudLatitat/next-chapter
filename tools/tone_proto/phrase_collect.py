@@ -4,20 +4,17 @@ built-in phrase, each character timed by Vosk (forced to the phrase's own charac
 pitch track and the tone the app expects (from the card's pinyin; tone sandhi allowed).
 
   pip install vosk numpy pypinyin   (vosk needs a stub "srt" module on some setups)
-  python3 phrase_collect.py . <stub dir> <vosk-cn model dir> <voice mp3 dir> app/.../data out.pkl
+  python3 phrase_collect.py . <stub dir> <vosk-cn model dir> <voice mp3 dir> app/.../data out.pkl [--count]
 
-The model and voice folders are the APK's assets/vosk-cn and assets/voice (unzip the APK).
+The model and voice folders are the APK's assets/vosk-cn and assets/voice (unzip the APK), or the
+build's own assets in CI. With --count it only prints how many phrases it would use (CI compares
+that with PhraseToneModel.PHRASES and retrains when 50+ were added).
 """
 import sys, re, glob, json, hashlib, subprocess, os, pickle, unicodedata
 sys.path.insert(0, sys.argv[1]); sys.path.insert(0, sys.argv[2])
-import numpy as np
-from pitch import track
-from vosk import Model, KaldiRecognizer, SetLogLevel
-from pypinyin import pinyin, Style
 from pypinyin.constants import PINYIN_DICT
-SetLogLevel(-1)
-MODEL, VOICE, SRC, OUT = sys.argv[3:7]
-model = Model(MODEL)
+COUNT = "--count" in sys.argv
+MODEL, VOICE, SRC, OUT = [a for a in sys.argv[3:] if a != "--count"][:4]
 han = re.compile(r'[一-鿿]')
 MARK = {}
 for base, toned in {"a":"āáǎà","e":"ēéěè","i":"īíǐì","o":"ōóǒò","u":"ūúǔù","ü":"ǖǘǚǜ"}.items():
@@ -61,7 +58,14 @@ for f in glob.glob(SRC + "/*.kt"):
         sy = syllables(p)
         if 2 <= len(chars) <= 10 and sy and len(sy) == len(chars) and os.path.exists(f"{VOICE}/{hashlib.md5(h.strip().encode()).hexdigest()}.mp3"):
             pairs[h] = (chars, [tone(s) for s in sy])
+if COUNT:
+    print(len(pairs)); sys.exit(0)
 print("phrases", len(pairs), flush=True)
+import numpy as np
+from pitch import track
+from vosk import Model, KaldiRecognizer, SetLogLevel
+SetLogLevel(-1)
+model = Model(MODEL)
 def audio(text, shift=0):
     f = f"{VOICE}/{hashlib.md5(text.strip().encode()).hexdigest()}.mp3"
     af = f"asetrate=24000*{2**(shift/12)},aresample=16000" if shift else "aresample=16000"

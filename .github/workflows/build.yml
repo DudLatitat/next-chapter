@@ -77,6 +77,30 @@ jobs:
           fi
           words=$(find "$dest" -name 'words.txt' | head -1)
           echo "::notice title=Speech model::$(du -sh "$dest" | cut -f1) · $tonal · words: ${words:+$(wc -l < "$words")} · files: $files"
+      # Phrase tone model: retrained from the native recordings (assets/voice) whenever 50 or more
+      # phrases have been added since it was last trained. On main, the new model is committed back.
+      - name: Tone model
+        env:
+          MODEL_KT: app/src/main/java/com/dudlatitat/nextchapter/speech/PhraseToneModel.kt
+        run: |
+          set -e
+          pip install --quiet pypinyin
+          T=tools/tone_proto; DATA=app/src/main/java/com/dudlatitat/nextchapter/data
+          have=$(grep -oP 'const val PHRASES = \K[0-9]+' "$MODEL_KT")
+          now=$(python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn app/src/main/assets/voice $DATA /tmp/tones.pkl --count)
+          echo "::notice title=Tone model::trained on $have phrases; $now have recordings now"
+          if [ $((now - have)) -lt 50 ]; then exit 0; fi
+          command -v ffmpeg >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
+          pip install --quiet vosk numpy scikit-learn
+          python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn app/src/main/assets/voice $DATA /tmp/tones.pkl
+          (cd $T && python3 phrase_tones.py /tmp/tones.pkl "$GITHUB_WORKSPACE/$MODEL_KT") | tee /tmp/tones.log
+          echo "::notice title=Tone model retrained ($now phrases)::$(grep -E 'fold|golden' /tmp/tones.log | tr '\n' ' ' | sed 's/%/%25/g')"
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$MODEL_KT"
+            git commit -m "Retrain the phrase tone model on $now phrases [skip ci]" && git pull --rebase -q && git push || echo "::warning::Couldn't commit the new tone model"
+          fi
       - name: Unlock signing key
         env:
           NC_KEY_PASSWORD: ${{ secrets.NC_KEY_PASSWORD }}

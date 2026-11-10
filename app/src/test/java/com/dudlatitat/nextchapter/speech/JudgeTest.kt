@@ -68,7 +68,8 @@ class JudgeTest {
         // Same inputs as the "golden" line printed by tools/tone_proto/phrase_tones.py.
         fun line(a: Float, b: Float) = FloatArray(20) { a + (b - a) * it / 19f }
         val got = Judge.phraseTones(listOf(line(3f, 4f), line(4f, -2f), line(-2f, -3.5f)))
-        val want = listOf(1 to 0.8102f, 4 to 0.6933f, 4 to 0.7173f)
+        // Written into the model by the trainer, so this still holds after CI retrains it.
+        val want = PhraseToneModel.GOLDEN
         got.zip(want).forEach { (g, w) -> assertEquals(w.first, g!!.first); assertEquals(w.second, g.second, 2e-3f) }
     }
 
