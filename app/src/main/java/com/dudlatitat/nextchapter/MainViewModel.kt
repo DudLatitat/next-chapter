@@ -238,6 +238,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun undoCalories() = store.edit { it.copy(calorieAdds = com.dudlatitat.nextchapter.data.Body.undoLast(it.calorieAdds, today())) }
     fun setBodyGoals(goalLb: Double?, target: Int) = store.edit { it.copy(goalWeight = goalLb, calorieTarget = target.coerceIn(0, 10000)) }
 
+    // ---- Tonight's sentence ----
+    fun starTonight(card: com.dudlatitat.nextchapter.data.Card) {
+        val t = java.time.LocalTime.now()
+        val day = com.dudlatitat.nextchapter.data.TonightLine.dayFor(today(), t.hour * 60 + t.minute)
+        store.edit { it.copy(tonight = com.dudlatitat.nextchapter.data.TonightLine(day, card.hanzi, card.pinyin, card.english)) }
+    }
+    fun clearTonight() = store.edit { it.copy(tonight = null) }
+
     // ---- Days off ----
     fun setDayOff(day: Long, like: Int) {
         store.edit { it.copy(daysOff = com.dudlatitat.nextchapter.data.Routine.withDayOff(it.daysOff, com.dudlatitat.nextchapter.data.DayOff(day, like), today())) }

@@ -106,7 +106,7 @@ fun BuildScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onCalibr
                 val item = round[index]
                 // Keyed to the item, so each exercise starts fresh.
                 androidx.compose.runtime.key(seed, index) {
-                    Exercise(item, vm, onCalibrate, onDone = { right -> if (right) score++; index++ })
+                    Exercise(item, state, vm, onCalibrate, onDone = { right -> if (right) score++; index++ })
                 }
             }
         }
@@ -115,7 +115,7 @@ fun BuildScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onCalibr
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Exercise(item: Builder.Item, vm: MainViewModel, onCalibrate: () -> Unit, onDone: (Boolean) -> Unit) {
+private fun Exercise(item: Builder.Item, state: AppState, vm: MainViewModel, onCalibrate: () -> Unit, onDone: (Boolean) -> Unit) {
     val scope = rememberCoroutineScope()
     val placed = remember { mutableStateListOf<Int>() } // indexes into item.tiles
     var tries by remember { mutableIntStateOf(0) }
@@ -136,13 +136,24 @@ private fun Exercise(item: Builder.Item, vm: MainViewModel, onCalibrate: () -> U
 
     GlassCard(highlight = true, modifier = Modifier.animateContentSize()) {
         Text(
-            when (item.kind) { Builder.Kind.BUILD -> "Build it"; Builder.Kind.FILL -> "Fill the missing word"; Builder.Kind.LISTEN -> "Listen, then build it" },
+            when (item.kind) { Builder.Kind.BUILD -> "Build it"; Builder.Kind.FILL -> "Fill the missing word"; Builder.Kind.LISTEN -> "Listen, then build it"; Builder.Kind.SWAP -> "Swap one word" },
             style = MaterialTheme.typography.labelMedium, color = Night.muted,
         )
         Spacer(Modifier.height(6.dp))
         if (item.kind == Builder.Kind.LISTEN) Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { vm.speaker.say(item.card.hanzi) }) { Text("🔊 Play again", color = Night.sun) }
             if (!showEnglish) TextButton(onClick = { showEnglish = true }) { Text("English hint", color = Night.muted) }
+        }
+        // Swap: the sentence you know, then the new one to make from it.
+        item.from?.let { f ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { vm.speaker.say(f.hanzi) }) {
+                Text("You know: ", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                Text(f.hanzi, fontSize = 20.sp, color = Night.jade)
+                Text("  🔊", color = Night.muted)
+            }
+            Text(f.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            Spacer(Modifier.height(8.dp))
+            Text("Now say:", style = MaterialTheme.typography.labelMedium, color = Night.sun)
         }
         if (showEnglish) Text(item.card.english, style = MaterialTheme.typography.titleLarge, color = Night.ink)
         Spacer(Modifier.height(12.dp))
@@ -219,6 +230,11 @@ private fun Exercise(item: Builder.Item, vm: MainViewModel, onCalibrate: () -> U
                 if (!showEnglish) Text(item.card.english, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                 Spacer(Modifier.height(10.dp))
                 if (speaking) SpeakPanel(item.card.hanzi, item.card.pinyin, vm, onCalibrate)
+                // ☆ Tonight's sentence: shows on Today 6–7 pm, to say to her on the call.
+                val starred = state.tonight?.hanzi == item.card.hanzi
+                TextButton(onClick = { if (starred) vm.clearTonight() else vm.starTonight(item.card) }) {
+                    Text(if (starred) "★ Tonight's sentence 💛" else "☆ Say this to her tonight", color = Night.rose)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (!speaking) OutlinedButton(onClick = { speaking = true }) { Text("🎤 Say it", color = Night.sun) }
                     Button(onClick = { onDone(result == true) }, colors = ButtonDefaults.buttonColors(containerColor = Night.jade, contentColor = Night.ground2)) { Text("Next →") }

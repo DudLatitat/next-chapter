@@ -41,8 +41,10 @@ class BuilderTest {
             .mapIndexed { i, c -> c.copy(firstSeen = if (i < 5) 1 else null) }
         val r = Builder.round(cards, Random(1))
         assertEquals(8, r.size)
-        assertEquals(listOf(Builder.Kind.BUILD, Builder.Kind.FILL, Builder.Kind.LISTEN), r.take(3).map { it.kind })
-        assertTrue("the 5 started phrases come first", r.take(5).all { !it.card.isNew })
+        assertEquals(listOf(Builder.Kind.BUILD, Builder.Kind.FILL, Builder.Kind.LISTEN, Builder.Kind.SWAP), r.take(4).map { it.kind })
+        assertEquals("two of each kind", 2, r.count { it.kind == Builder.Kind.SWAP })
+        val fromDecks = r.filter { it.kind != Builder.Kind.SWAP }
+        assertTrue("the 5 started phrases come first", fromDecks.take(5).all { !it.card.isNew })
     }
 
     @Test fun buildTilesHoldEveryWordPlusDecoysAndFillHasTheAnswer() {
@@ -55,6 +57,7 @@ class BuilderTest {
         r.forEach { item ->
             when (item.kind) {
                 Builder.Kind.FILL -> { assertTrue(item.answer[item.blank] in item.tiles); assertTrue(item.tiles.size in 2..4) }
+                Builder.Kind.SWAP -> { assertTrue(item.tiles.containsAll(item.answer)); assertTrue(item.from != null && item.from!!.hanzi != item.card.hanzi) }
                 else -> { assertTrue(item.tiles.containsAll(item.answer)); assertTrue(item.tiles.size > item.answer.size) }
             }
         }

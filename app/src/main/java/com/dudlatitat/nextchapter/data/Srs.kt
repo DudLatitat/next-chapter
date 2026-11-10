@@ -46,10 +46,12 @@ object Srs {
         val due = state.cards.filter { !it.isNew && it.due <= day }.sortedBy { it.due }
         val introducedToday = state.cards.count { it.firstSeen == day }
         val room = max(0, state.newPerDay - introducedToday)
-        val newCards = state.cards.filter { it.isNew }
-        val mine = newCards.filter { it.custom }
+        // Trip prep phrases only arrive in the 60 days before a trip, and then they come first.
+        val tripOpen = TripPrep.open(state, day)
+        val newCards = state.cards.filter { it.isNew && (it.deck != "trip" || tripOpen) }
+        val mine = newCards.filter { it.custom } + newCards.filter { it.deck == "trip" }
         val words = newCards.filter { !it.custom && it.deck == "core" }
-        val phrases = newCards.filter { !it.custom && it.deck != "core" }.sortedBy { deckOrder(it.deck) }
+        val phrases = newCards.filter { !it.custom && it.deck != "core" && it.deck != "trip" }.sortedBy { deckOrder(it.deck) }
         // Your own phrases first, then phrases and core words taking turns.
         val mixed = buildList {
             addAll(mine)

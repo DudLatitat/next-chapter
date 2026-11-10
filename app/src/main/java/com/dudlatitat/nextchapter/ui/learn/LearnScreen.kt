@@ -217,7 +217,11 @@ private fun DeckTile(deck: Deck, state: AppState, modifier: Modifier, onClick: (
         Text(deck.title, style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Spacer(Modifier.height(4.dp))
         Bar(if (cards.isEmpty()) 0f else started.toFloat() / cards.size, Night.jade)
-        Text("$started/${cards.size}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        val opensIn = if (deck.id == "trip") com.dudlatitat.nextchapter.data.TripPrep.opensIn(state, com.dudlatitat.nextchapter.data.today()) else null
+        Text(
+            if (opensIn != null) "🔒 opens in $opensIn ${if (opensIn == 1L) "day" else "days"}" else "$started/${cards.size}",
+            style = MaterialTheme.typography.labelSmall, color = if (opensIn != null) Night.rose else Night.muted,
+        )
     }
 }
 

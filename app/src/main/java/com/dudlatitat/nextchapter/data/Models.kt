@@ -39,6 +39,7 @@ val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
     Deck("idv", "Identity V", "第五人格", "Cryptic Notes callouts for playing with Yuling"),
     Deck("games", "Gaming together", "一起玩", "Teaming up, cheering each other on, calling it a night"),
+    Deck("trip", "Trip prep", "出发", "Airport, taxi, hotel, dinner with her family · opens 60 days before a trip"),
     Deck("sweet", "Sweet talk", "甜言蜜语", "Compliments and flirting, said like you mean it"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
@@ -205,6 +206,8 @@ data class AppState(
     val arrivals: List<Arrival> = emptyList(),
     /** Days off (paid days off, holidays), planned like a weekend day. */
     val daysOff: List<DayOff> = emptyList(),
+    /** Tonight's sentence: starred in 造句 Build, shown on Today 6–7 pm on [TonightLine.day]. */
+    val tonight: TonightLine? = null,
     /** Weight and calories (Today's ⚖️ pill), with a goal weight and a daily calorie target (0 = none). */
     val weights: List<WeightEntry> = emptyList(),
     val calorieAdds: List<CalorieAdd> = emptyList(),

@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 11
+    const val VERSION = 12
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -146,6 +146,36 @@ object Seed {
         c("sweet", "亲一个", "qīn yí ge", "Kiss me / give me a kiss"),
         c("sweet", "你是不是想我了？", "nǐ shì bu shì xiǎng wǒ le?", "You miss me, don't you?"),
         c("sweet", "你吃醋了？", "nǐ chīcù le?", "Are you jealous?"),
+
+        // Trip prep (出发): airport, immigration, money, taxi, hotel, dinner with her family. Opens 60 days
+        // before a trip (TripPrep). 无线网 = Wi-Fi (people also just say "WiFi").
+        c("trip", "我的航班几点起飞？", "wǒ de hángbān jǐ diǎn qǐfēi?", "What time does my flight take off?"),
+        c("trip", "我要托运一个行李", "wǒ yào tuōyùn yí ge xíngli", "I'd like to check one bag"),
+        c("trip", "行李在哪里取？", "xíngli zài nǎlǐ qǔ?", "Where do I pick up my bags?"),
+        c("trip", "我是来旅游的", "wǒ shì lái lǚyóu de", "I'm here to travel (at immigration)"),
+        c("trip", "我来看女朋友", "wǒ lái kàn nǚpéngyou", "I'm here to see my girlfriend"),
+        c("trip", "我住在她家", "wǒ zhù zài tā jiā", "I'm staying at her family's home"),
+        c("trip", "我待两个星期", "wǒ dāi liǎng ge xīngqī", "I'm staying two weeks"),
+        c("trip", "出口在哪里？", "chūkǒu zài nǎlǐ?", "Where's the exit?"),
+        c("trip", "我想换点人民币", "wǒ xiǎng huàn diǎn rénmínbì", "I'd like to change some money into yuan"),
+        c("trip", "我的手机没电了", "wǒ de shǒujī méi diàn le", "My phone's battery is dead"),
+        c("trip", "师傅，去这个地址", "shīfu, qù zhège dìzhǐ", "Driver, to this address please"),
+        c("trip", "大概要多长时间？", "dàgài yào duō cháng shíjiān?", "About how long will it take?"),
+        c("trip", "可以开一下后备箱吗？", "kěyǐ kāi yíxià hòubèixiāng ma?", "Could you open the trunk?"),
+        c("trip", "我用微信付", "wǒ yòng Wēixìn fù", "I'll pay with WeChat"),
+        c("trip", "我订了一个房间", "wǒ dìng le yí ge fángjiān", "I booked a room"),
+        c("trip", "这是我的护照", "zhè shì wǒ de hùzhào", "Here's my passport"),
+        c("trip", "无线网密码是多少？", "wúxiànwǎng mìmǎ shì duōshao?", "What's the Wi-Fi password?"),
+        c("trip", "几点退房？", "jǐ diǎn tuìfáng?", "What time is checkout?"),
+        c("trip", "可以帮我叫辆车吗？", "kěyǐ bāng wǒ jiào liàng chē ma?", "Could you call me a car?"),
+        c("trip", "叔叔阿姨好", "shūshu āyí hǎo", "Hello, uncle and auntie (her parents together)"),
+        c("trip", "我给你们带了一点礼物", "wǒ gěi nǐmen dài le yìdiǎn lǐwù", "I brought you a little gift"),
+        c("trip", "我敬您一杯", "wǒ jìng nín yì bēi", "Here's a toast to you"),
+        c("trip", "别忙了，坐下一起吃吧", "bié máng le, zuòxià yìqǐ chī ba", "Don't fuss, come sit and eat with us"),
+        c("trip", "我来洗碗", "wǒ lái xǐ wǎn", "Let me do the dishes"),
+        c("trip", "我很想你们", "wǒ hěn xiǎng nǐmen", "I've missed you all so much"),
+        c("trip", "下次再来看你们", "xià cì zài lái kàn nǐmen", "I'll come see you again next time"),
+        c("trip", "今天真开心", "jīntiān zhēn kāixīn", "Today was really fun"),
 
         // Her family
         c("family", "阿姨，您好", "āyí, nín hǎo", "Hello, auntie (to her mom)"),

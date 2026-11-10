@@ -102,11 +102,22 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Hero(state, vm, part, onSettings, onOpenMove, onBody = { bodyOpen = true })
+        Hero(state, vm, part, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
         NowCard(state, vm, part, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
+        // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
+        val nm = LocalTime.now().let { it.hour * 60 + it.minute }
+        if (com.dudlatitat.nextchapter.data.TonightLine.showing(state.tonight, today(), nm)) state.tonight?.let { t ->
+            GlassCard(highlight = true, onClick = { vm.speaker.say(t.hanzi) }) {
+                Text("Say this to ${state.herName.trim().ifEmpty { "her" }} tonight 💛", style = MaterialTheme.typography.labelMedium, color = Night.rose)
+                Spacer(Modifier.height(6.dp))
+                Text(t.hanzi + "  🔊", fontSize = 24.sp, color = Night.ink)
+                PinyinText(t.pinyin, style = MaterialTheme.typography.bodyMedium)
+                Text(t.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            }
+        }
         val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
         if (sundayAfternoon) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
         if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
@@ -169,7 +180,7 @@ fun TodayScreen(
 /** The warm header: greeting, both clocks, the trip, the streaks, and a call-time note. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit) {
+private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit, onTrip: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -214,6 +225,15 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings
             if (early > 0) Pill("☀️ $early early", Night.jade)
             // Weight and today's calories; tap to log.
             Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onBody))
+            // In the 60 days before a trip: say 3 trip phrases a day (they come first in practice).
+            val T = com.dudlatitat.nextchapter.data.TripPrep
+            if (T.open(state, today())) {
+                val said = T.saidToday(state, today())
+                Pill(
+                    if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
+                    Night.rose, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
+                )
+            }
         }
         // Seen at work today (Settings → Work & home): when the day should end, and "I'm home" if the phone misses it.
         val P = com.dudlatitat.nextchapter.data.Places
