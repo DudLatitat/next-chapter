@@ -83,6 +83,11 @@ jobs:
           path: ~/tone-voices
           key: tone-voices-${{ hashFiles('app/src/main/java/com/dudlatitat/nextchapter/data/*.kt', 'tools/make_voice.py') }}
           restore-keys: tone-voices-
+      # The pitch data collected from those recordings (the slow part): reused while nothing it depends on changed.
+      - uses: actions/cache@v4
+        with:
+          path: ~/tone-data
+          key: tone-data-5v-${{ hashFiles('app/src/main/java/com/dudlatitat/nextchapter/data/*.kt', 'tools/make_voice.py', 'tools/tone_proto/phrase_collect.py', 'tools/tone_proto/pitch.py') }}
       # Phrase tone model: retrained from native recordings (the app's voice plus 4 more, 3 of them
       # male) whenever 50 or more phrases were added since it was trained, or the voice list changed.
       # On main, the new model is committed back.
@@ -99,23 +104,30 @@ jobs:
           now=$(python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn app/src/main/assets/voice $DATA /tmp/tones.pkl --count)
           echo "::notice title=Tone model::trained on $have phrases ($had_voices); $now have recordings now"
           if [ $((now - have)) -lt 50 ] && [ "$had_voices" = "$VOICES" ]; then exit 0; fi
-          # Record the extra voices (only phrases the model trains on; cached, so only new ones).
-          pip install --quiet edge-tts
-          dirs=app/src/main/assets/voice
-          for v in $(echo "$VOICES" | tr ',' ' ' | cut -d' ' -f2-); do
-            python3 tools/make_voice.py --voice "$v" --out "$HOME/tone-voices/$v" --short | tail -1
-            dirs="$dirs,$HOME/tone-voices/$v"
-          done
-          command -v ffmpeg >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
-          pip install --quiet vosk numpy scikit-learn
-          python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn "$dirs" $DATA /tmp/tones.pkl
-          (cd $T && python3 phrase_tones.py /tmp/tones.pkl "$GITHUB_WORKSPACE/$MODEL_KT" "$VOICES") | tee /tmp/tones.log
-          echo "::notice title=Tone model retrained ($now phrases)::$(grep -E 'fold|golden' /tmp/tones.log | tr '\n' ' ' | sed 's/%/%25/g')"
+          pip install --quiet numpy scikit-learn
+          PKL="$HOME/tone-data/tones.pkl"
+          if [ ! -f "$PKL" ]; then
+            # Record the extra voices (only phrases the model trains on; cached, so only new ones).
+            pip install --quiet edge-tts vosk
+            dirs=app/src/main/assets/voice
+            for v in $(echo "$VOICES" | tr ',' ' ' | cut -d' ' -f2-); do
+              python3 tools/make_voice.py --voice "$v" --out "$HOME/tone-voices/$v" --short | tail -1
+              dirs="$dirs,$HOME/tone-voices/$v"
+            done
+            command -v ffmpeg >/dev/null || (sudo apt-get update -q && sudo apt-get install -y -q ffmpeg)
+            mkdir -p "$HOME/tone-data"
+            python3 $T/phrase_collect.py $T $T app/src/main/assets/vosk-cn "$dirs" $DATA "$PKL"
+          fi
+          # Writes the model only if it does at least as well on the app's voice as the current one.
+          (cd $T && python3 phrase_tones.py "$PKL" "$GITHUB_WORKSPACE/$MODEL_KT" "$VOICES") | tee /tmp/tones.log
+          echo "::notice title=Tone model retrained ($now phrases)::$(grep -E 'bases|fold|golden|kept|wrote' /tmp/tones.log | tr '\n' ' ' | sed 's/%/%25/g')"
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "$MODEL_KT"
-            git commit -m "Retrain the phrase tone model on $now phrases [skip ci]" && git pull --rebase -q && git push || echo "::warning::Couldn't commit the new tone model"
+            if ! git diff --quiet "$MODEL_KT"; then
+              git add "$MODEL_KT"
+              git commit -m "Retrain the phrase tone model on $now phrases [skip ci]" && git pull --rebase -q && git push || echo "::warning::Couldn't commit the new tone model"
+            fi
           fi
       - name: Unlock signing key
         env:
