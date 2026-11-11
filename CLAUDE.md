@@ -102,6 +102,7 @@ Tips from working with me so far, so you don't have to learn them the hard way:
 
 - **One saved state:** everything I enter or earn lives in `AppState` (`data/Models.kt`), saved as one JSON file by `Store`. All changes go through `MainViewModel` → `Store.edit`.
 - **Settings outside AppState** (SharedPreferences): `voice`, `voice_profile`, `fares` (SerpApi key), `ui_sections` (which collapsible sections are open). These are per-phone settings, not progress, and are not in backups.
+- **Voice log** (`speech/VoiceLog.kt`, file `voice_log.json`, switch in Settings → Speaking check): the last 100 Say-it attempts as numbers only (pitch shapes, expected tones, the model's guesses; no audio). Not in AppState or backups. Rudy exports it to measure tone models on his voice with `tools/tone_proto/eval_voicelog.py`.
 - **Pure logic in `data/`** (`Srs`, `Life`, `Stats`, `Study`, `Career`, `Plan`, `Pinyin`, `Seed`): no Android imports, so it can be unit-tested. Put new calculations there, not in Compose screens.
 - **UI text** is written directly in the Compose screens in English (no `strings.xml` resources); Chinese appears as content with pinyin. Don't start a translation layer unless I ask.
 - **Layout:** test both Fold screens: the narrow cover screen and the wide inner screen. Use the wide screen for side-by-side reading (prayers, dialogues) and grids, not just stretched cards.

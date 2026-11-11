@@ -74,6 +74,13 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     val askEvening = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) Toast.makeText(context, "Notifications are off for Next Chapter", Toast.LENGTH_SHORT).show()
     }
+    // Voice log: numbers from your Say-it attempts (no audio), exported to measure tone models on your voice.
+    var logTick by remember { mutableStateOf(0) }
+    var logOn by remember { mutableStateOf(com.dudlatitat.nextchapter.speech.VoiceLog.enabled(context)) }
+    val logCount = remember(logTick) { com.dudlatitat.nextchapter.speech.VoiceLog.read(context).size }
+    val exportLog = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(com.dudlatitat.nextchapter.speech.VoiceLog.export(context).toByteArray()) }
+    }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val ok = try {
@@ -202,6 +209,27 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         GlassCard(onClick = { micTest = true }) {
             Text("Microphone check →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
             Text("If the check isn't hearing you: room noise, hear your own recording, and what the recognizer hears", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Voice log", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text(
+                        "Keeps the numbers from your last ${com.dudlatitat.nextchapter.speech.VoiceLog.MAX} Say-it checks (pitch shapes and tones, no audio) so the tone check can be measured on your voice. On this phone only.",
+                        style = MaterialTheme.typography.bodySmall, color = Night.muted,
+                    )
+                }
+                Switch(
+                    checked = logOn,
+                    onCheckedChange = { logOn = it; com.dudlatitat.nextchapter.speech.VoiceLog.setEnabled(context, it) },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary),
+                )
+            }
+            Text("$logCount ${if (logCount == 1) "attempt" else "attempts"} saved", style = MaterialTheme.typography.labelMedium, color = Night.ink, modifier = Modifier.padding(top = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
+                OutlinedButton(onClick = { exportLog.launch("voice-log-${LocalDate.now()}.json"); logTick++ }, enabled = logCount > 0) { Text("Export", color = Night.jade) }
+                TextButton(onClick = { com.dudlatitat.nextchapter.speech.VoiceLog.clear(context); logTick++ }, enabled = logCount > 0) { Text("Clear", color = Night.coral) }
+            }
         }
 
         SectionLabel("Trip mode")

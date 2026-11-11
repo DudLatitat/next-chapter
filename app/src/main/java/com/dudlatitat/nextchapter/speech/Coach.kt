@@ -116,8 +116,25 @@ class Coach(private val context: Context) {
         if (!heard.ok) return null
         val times = Judge.matchTimes(chars, Judge.charsOf(heard.words))
 
+        // Each character's pitch shape as the tone model sees it (also what the voice log keeps).
+        val contours: List<FloatArray?> = if (chars.length == 1) listOf(Pitch.syllable(hz)?.let(p::normalize))
+            else times.map { t -> t?.let { (s, e) -> Pitch.syllable(Judge.slice(hz, s, e))?.let(p::normalize) } }
         val guesses: List<Pair<Int, Float>?> = if (chars.length == 1) listOf(single?.let { it.tone to it.confidence }) else withContext(Dispatchers.Default) {
-            Judge.phraseTones(times.map { t -> t?.let { (s, e) -> Pitch.syllable(Judge.slice(hz, s, e))?.let(p::normalize) } })
+            Judge.phraseTones(contours)
+        }
+        // Voice log (Settings → Speaking check): numbers only, to measure tone models on your voice.
+        withContext(Dispatchers.IO) {
+            VoiceLog.add(
+                context,
+                LoggedAttempt(
+                    time = System.currentTimeMillis(), hanzi = chars, pinyin = pinyin,
+                    expected = targets.map { Pinyin.tone(it) }, accepted = accepted.map { it.sorted() },
+                    contours = contours.mapIndexed { i, c -> if (times[i] == null) null else c?.toList() },
+                    guessTone = guesses.map { it?.first }, guessConfidence = guesses.map { it?.second },
+                    baseHz = p.baseHz, calibrated = p.calibrated,
+                    model = "${PhraseToneModel.PHRASES} phrases · ${PhraseToneModel.VOICES.split(",").size} voices",
+                ),
+            )
         }
         val results = chars.indices.map { i ->
             val t = targets[i]
