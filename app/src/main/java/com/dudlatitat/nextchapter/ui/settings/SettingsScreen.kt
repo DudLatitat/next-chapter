@@ -62,6 +62,8 @@ import java.util.Locale
 fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     var micTest by remember { mutableStateOf(false) }
     if (micTest) { MicTestScreen(vm, onBack = { micTest = false }); return }
+    var onComputer by remember { mutableStateOf(false) }
+    if (onComputer) { OnComputerScreen(vm, onBack = { onComputer = false }); return }
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
@@ -241,6 +243,12 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     androidx.compose.material3.FilterChip(selected = state.tripMode == v, onClick = { vm.setTripMode(v) }, label = { Text(l) })
                 }
             }
+        }
+
+        SectionLabel("On my computer")
+        GlassCard(onClick = { onComputer = true }) {
+            Text("Use on my computer →", style = MaterialTheme.typography.titleMedium, color = Night.sun)
+            Text("Review and edit phrases on a big screen with a keyboard, over your home Wi-Fi. Your phone stays the only copy.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
         SectionLabel("Backup")

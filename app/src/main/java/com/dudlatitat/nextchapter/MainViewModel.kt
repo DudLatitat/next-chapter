@@ -135,6 +135,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteCard(card: Card) = store.edit { s -> s.copy(cards = s.cards.filterNot { it.id == card.id }) }
+    /** Edits a card's text (from the desktop page). Starter cards keep their characters (their id and voice depend on them). */
+    fun updateCard(id: String, hanzi: String, pinyin: String, english: String) = store.edit { s ->
+        s.copy(cards = s.cards.map { c ->
+            if (c.id != id) c else c.copy(hanzi = if (c.custom && hanzi.isNotBlank()) hanzi.trim() else c.hanzi, pinyin = pinyin.trim(), english = english.trim())
+        })
+    }
 
     fun toggleTask(task: MoveTask) = store.edit { s ->
         // Steps linked to the Life tab (certs, the degree) are updated there and mirrored here.

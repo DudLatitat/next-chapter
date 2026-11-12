@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next Chapter · 新篇章</title>
+<style>
+  /* Served by the phone over your home Wi-Fi. Nothing here loads from the internet. */
+  :root {
+    --ground: #0b1129; --ground2: #17214a; --card: #1d2856; --ink: #eef1ff; --muted: #a9b1d6;
+    --sun: #ffcf7a; --rose: #ff8fb1; --jade: #4fb3a9; --violet: #8e94f2; --coral: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(1200px 700px at 70% -10%, #2a3e78 0%, var(--ground2) 45%, var(--ground) 100%) fixed;
+  }
+  header { display: flex; align-items: center; gap: 18px; padding: 20px 32px; }
+  header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+  header h1 span { color: var(--sun); }
+  nav { display: flex; gap: 6px; margin-left: 24px; }
+  nav button { background: none; border: 0; color: var(--muted); font: inherit; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+  nav button.on { background: rgba(255, 207, 122, .16); color: var(--sun); }
+  .stats { margin-left: auto; display: flex; gap: 10px; }
+  .pill { padding: 4px 12px; border-radius: 999px; background: rgba(142, 148, 242, .18); color: var(--violet); font-size: 14px; }
+  main { max-width: 980px; margin: 0 auto; padding: 8px 32px 64px; }
+  .card { background: rgba(29, 40, 86, .85); border: 1px solid rgba(255, 255, 255, .06); border-radius: 24px; padding: 28px; }
+  .muted { color: var(--muted); }
+  .hanzi { font-size: 64px; letter-spacing: 4px; margin: 8px 0; }
+  .pinyin { color: var(--rose); font-size: 22px; }
+  .english { font-size: 22px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.btn { font: inherit; border: 0; border-radius: 14px; padding: 10px 18px; cursor: pointer; color: #0e1532; background: var(--sun); }
+  button.ghost { background: none; color: var(--ink); border: 1px solid rgba(255, 255, 255, .2); }
+  button.g1 { background: var(--coral); } button.g2 { background: var(--sun); } button.g3 { background: var(--jade); } button.g4 { background: var(--violet); }
+  kbd { font: 12px ui-monospace, monospace; padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,.25); color: var(--muted); }
+  input, select { font: inherit; color: var(--ink); background: rgba(14, 21, 50, .7); border: 1px solid rgba(255, 255, 255, .15); border-radius: 12px; padding: 9px 12px; }
+  input:focus, select:focus { outline: 2px solid var(--sun); outline-offset: 1px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 10px 8px; border-top: 1px solid rgba(255, 255, 255, .06); vertical-align: top; }
+  td.h { font-size: 22px; white-space: nowrap; }
+  td.p { color: var(--rose); }
+  .tag { font-size: 12px; color: var(--muted); }
+  .done { text-align: center; padding: 48px 28px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid rgba(255,255,255,.12); padding: 10px 18px; border-radius: 14px; opacity: 0; transition: opacity .3s; }
+  .toast.show { opacity: 1; }
+  .pair { max-width: 420px; margin: 12vh auto; text-align: center; }
+  .pair input { font-size: 32px; letter-spacing: 10px; width: 260px; text-align: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .deck { background: rgba(14, 21, 50, .5); border-radius: 16px; padding: 12px; cursor: pointer; }
+  .deck b { color: var(--sun); display: block; }
+  .bar { height: 6px; border-radius: 4px; background: rgba(255,255,255,.08); margin-top: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--jade); }
+  @media (max-width: 640px) { header { flex-wrap: wrap; padding: 16px; } nav { margin-left: 0; } main { padding: 8px 16px 48px; } .hanzi { font-size: 44px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+// ---- Talking to the phone ----
+let token = localStorage.getItem("nc-token") || "";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type": "application/json", "X-Token": token },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401 && !path.startsWith("/api/pair")) { token = ""; localStorage.removeItem("nc-token"); showPair(); throw new Error("not paired"); }
+  return r.json();
+}
+function toast(text) { const t = $("#toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800); }
+function play(card) { new Audio(`/voice/${card.voice}.mp3?t=${encodeURIComponent(token)}`).play().catch(() => {}); }
+
+// ---- Pairing ----
+function showPair(message) {
+  $("#app").innerHTML = `
+    <div class="pair card">
+      <h2>新篇章 · Next Chapter</h2>
+      <p class="muted">Type the 6-digit code shown on your phone<br>(Settings → Use on my computer).</p>
+      <input id="code" inputmode="numeric" maxlength="6" autofocus autocomplete="off">
+      <p style="color:var(--coral)">${esc(message || "")}</p>
+      <button class="btn" id="go">Connect</button>
+    </div>`;
+  const go = async () => {
+    const r = await api("/api/pair", { code: $("#code").value });
+    if (r.token) { token = r.token; localStorage.setItem("nc-token", token); start(); } else showPair(r.message);
+  };
+  $("#go").onclick = go;
+  $("#code").onkeydown = (e) => { if (e.key === "Enter") go(); };
+}
+
+// ---- The page ----
+let view = "review", summary = null;
+async function start() {
+  try { summary = await api("/api/summary"); } catch { return; }
+  $("#app").innerHTML = `
+    <header>
+      <h1>新篇章 <span>Next Chapter</span></h1>
+      <nav><button data-v="review">Review</button><button data-v="phrases">Phrases</button></nav>
+      <div class="stats" id="stats"></div>
+    </header>
+    <main id="main"></main>`;
+  document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { view = b.dataset.v; render(); });
+  render();
+}
+function renderStats() {
+  $("#stats").innerHTML = `<span class="pill">🔥 ${summary.streak}-day streak</span><span class="pill">${summary.known} known</span>`;
+  document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.v === view));
+}
+function render() { renderStats(); (view === "review" ? renderReview : renderPhrases)(); }
+
+// ---- Review, by keyboard: Space shows the answer, 1–4 grade it, P plays it ----
+let queue = [], shown = false;
+async function renderReview() {
+  queue = await api("/api/queue"); shown = false; drawCard();
+}
+function drawCard() {
+  const c = queue[0];
+  if (!c) {
+    $("#main").innerHTML = `<div class="card done"><div class="hanzi">✓</div><h2>All caught up · 都复习完了</h2><p class="muted">New phrases arrive tomorrow. Add your own under Phrases.</p></div>`;
+    return;
+  }
+  const left = queue.length;
+  $("#main").innerHTML = `
+    <div class="card">
+      <div class="row muted"><span>${left} to go</span><span class="tag">${c.isNew ? "new" : "review"} · ${esc(c.deck)}</span></div>
+      <div class="english" style="margin-top:18px">${esc(c.english)}</div>
+      <p class="muted">Say it out loud, then show the answer.</p>
+      <div id="answer" style="display:${shown ? "block" : "none"}">
+        <div class="hanzi">${esc(c.hanzi)}</div>
+        <div class="pinyin">${esc(c.pinyin)}</div>
+      </div>
+      <div class="row" style="margin-top:22px" id="buttons">
+        ${shown
+          ? `<button class="btn g1" data-g="1">Again <kbd>1</kbd></button><button class="btn g2" data-g="2">Hard <kbd>2</kbd></button>
+             <button class="btn g3" data-g="3">Good <kbd>3</kbd></button><button class="btn g4" data-g="4">Easy <kbd>4</kbd></button>
+             <button class="btn ghost" id="play">🔊 Play <kbd>P</kbd></button>`
+          : `<button class="btn" id="show">Show answer <kbd>Space</kbd></button>`}
+      </div>
+    </div>`;
+  if (!shown) $("#show").onclick = reveal;
+  else { document.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => grade(+b.dataset.g)); $("#play").onclick = () => play(c); }
+}
+function reveal() { shown = true; drawCard(); play(queue[0]); }
+async function grade(g) {
+  const c = queue.shift(); shown = false;
+  await api("/api/grade", { id: c.id, grade: g });
+  if (g === 1) queue.push(c); // missed: once more before you're done
+  summary = await api("/api/summary"); renderStats(); drawCard();
+}
+document.addEventListener("keydown", (e) => {
+  if (view !== "review" || !queue.length || e.target.tagName === "INPUT") return;
+  if (e.code === "Space") { e.preventDefault(); if (!shown) reveal(); }
+  else if (shown && "1234".includes(e.key)) grade(+e.key);
+  else if (shown && e.key.toLowerCase() === "p") play(queue[0]);
+});
+
+// ---- Phrases: browse, search, add, edit ----
+let deck = "", search = "";
+async function renderPhrases() {
+  const decks = summary.decks;
+  $("#main").innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="margin-top:0">Add a phrase · 加一句</h3>
+      <div class="row">
+        <input id="nh" placeholder="中文" style="flex:1;min-width:160px">
+        <input id="np" placeholder="pinyin (filled in for you)" style="flex:1;min-width:180px">
+        <input id="ne" placeholder="What it means" style="flex:1.4;min-width:200px">
+        <button class="btn" id="add">Add</button>
+      </div>
+      <p class="tag">It goes into My phrases, first in line for review.</p>
+    </div>
+    <div class="grid" style="margin-bottom:16px">
+      <div class="deck" data-d=""><b>All</b><span class="tag">every phrase</span></div>
+      ${decks.map((d) => `<div class="deck" data-d="${esc(d.id)}"><b>${esc(d.hanzi)}</b>${esc(d.title)}<div class="bar"><i style="width:${Math.round(100 * d.started / d.count)}%"></i></div><span class="tag">${d.started}/${d.count}</span></div>`).join("")}
+    </div>
+    <div class="card">
+      <div class="row"><input id="q" placeholder="Search Chinese, pinyin or English" style="flex:1" value="${esc(search)}"><span class="tag" id="count"></span></div>
+      <table id="list"></table>
+    </div>`;
+  document.querySelectorAll(".deck").forEach((el) => {
+    el.style.outline = el.dataset.d === deck ? "2px solid var(--sun)" : "none";
+    el.onclick = () => { deck = el.dataset.d; renderPhrases(); };
+  });
+  $("#nh").onblur = async () => { if ($("#nh").value && !$("#np").value) $("#np").value = (await api(`/api/pinyin?h=${encodeURIComponent($("#nh").value)}`)).pinyin; };
+  $("#add").onclick = async () => {
+    if (!$("#nh").value.trim()) return toast("Type the Chinese first");
+    await api("/api/card", { hanzi: $("#nh").value, pinyin: $("#np").value, english: $("#ne").value });
+    toast("Added 💛"); summary = await api("/api/summary"); renderPhrases();
+  };
+  let timer; $("#q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => { search = $("#q").value; loadList(); }, 200); };
+  loadList();
+}
+async function loadList() {
+  const cards = await api(`/api/cards?deck=${encodeURIComponent(deck)}&q=${encodeURIComponent(search)}`);
+  $("#count").textContent = `${cards.length} phrase${cards.length === 1 ? "" : "s"}`;
+  $("#list").innerHTML = cards.map((c, i) => `
+    <tr data-i="${i}">
+      <td class="h">${esc(c.hanzi)}</td><td class="p">${esc(c.pinyin)}</td><td>${esc(c.english)}<br><span class="tag">${esc(c.deck)}${c.known ? " · known ✓" : c.isNew ? " · new" : ""}</span></td>
+      <td style="white-space:nowrap"><button class="btn ghost" data-play="${i}">🔊</button> <button class="btn ghost" data-edit="${i}">Edit</button></td>
+    </tr>`).join("");
+  document.querySelectorAll("[data-play]").forEach((b) => b.onclick = () => play(cards[+b.dataset.play]));
+  document.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => edit(cards[+b.dataset.edit], b.closest("tr")));
+}
+function edit(c, row) {
+  row.innerHTML = `<td colspan="4"><div class="row">
+      <input id="eh" value="${esc(c.hanzi)}" ${c.custom ? "" : "disabled title='Starter phrases keep their characters'"} style="width:180px">
+      <input id="ep" value="${esc(c.pinyin)}" style="flex:1">
+      <input id="ee" value="${esc(c.english)}" style="flex:1.4">
+      <button class="btn" id="save">Save</button>
+      ${c.custom ? `<button class="btn ghost" id="del" style="color:var(--coral)">Delete</button>` : ""}
+      <button class="btn ghost" id="cancel">Cancel</button></div></td>`;
+  $("#save").onclick = async () => { await api("/api/card", { id: c.id, hanzi: $("#eh").value, pinyin: $("#ep").value, english: $("#ee").value }); toast("Saved"); loadList(); };
+  $("#cancel").onclick = loadList;
+  if (c.custom) $("#del").onclick = async () => { if (confirm(`Delete ${c.hanzi}?`)) { await api("/api/delete", { id: c.id }); toast("Deleted"); summary = await api("/api/summary"); renderPhrases(); } };
+}
+
+if (token) start(); else showPair();
+</script>
+</body>
+</html>
