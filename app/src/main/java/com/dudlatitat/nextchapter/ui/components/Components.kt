@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -127,3 +129,10 @@ fun ScreenTitle(title: String, subtitle: String? = null) {
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Night.muted, fontWeight = FontWeight.SemiBold)
     }
 }
+
+/**
+ * Keeps reading-width content centred on the wide inner screen instead of stretched edge to edge
+ * (no effect on the narrow cover screen).
+ */
+fun Modifier.readable(max: Dp = 640.dp): Modifier =
+    this.wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = max)

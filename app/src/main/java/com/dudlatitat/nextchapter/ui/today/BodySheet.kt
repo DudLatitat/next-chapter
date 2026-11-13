@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import kotlin.math.roundToInt
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -46,7 +47,10 @@ fun BodySheet(state: AppState, vm: MainViewModel) {
     val day = today()
     val latest = Body.latest(state.weights)
     val eaten = Body.caloriesOn(state.calorieAdds, day)
-    var weight by remember { mutableStateOf("") }
+    // Starts at your last weigh-in, so most days it's a nudge with − / + and Save.
+    var weight by remember { mutableStateOf(latest?.let { Body.lbs(it.lb) } ?: "") }
+    fun saveWeight() { weight.toDoubleOrNull()?.takeIf { it in 50.0..700.0 }?.let { vm.logWeight(it) } }
+    fun nudge(by: Double) { weight.toDoubleOrNull()?.let { weight = Body.lbs(((it + by) * 10).roundToInt() / 10.0) } }
     var custom by remember { mutableStateOf("") }
     var goals by remember { mutableStateOf(false) }
     var goalText by remember { mutableStateOf(state.goalWeight?.let { Body.lbs(it) } ?: "") }
@@ -74,14 +78,18 @@ fun BodySheet(state: AppState, vm: MainViewModel) {
         latest?.let { l -> state.goalWeight?.let { g -> if (l.lb > g) Text("${Body.lbs(l.lb - g)} lb to go", style = MaterialTheme.typography.bodySmall, color = Night.muted) } }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.IconButton(onClick = { nudge(-0.2) }) { Text("−", color = Night.ink, style = MaterialTheme.typography.titleLarge) }
             OutlinedTextField(
                 weight, { weight = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, singleLine = true,
                 label = { Text(if (latest?.day == day) "Update today's weight" else "Today's weight (lb)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { saveWeight() }),
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.IconButton(onClick = { nudge(0.2) }) { Text("+", color = Night.ink, style = MaterialTheme.typography.titleLarge) }
+            Spacer(Modifier.width(4.dp))
             Button(
-                onClick = { weight.toDoubleOrNull()?.takeIf { it in 50.0..700.0 }?.let { vm.logWeight(it); weight = "" } },
+                onClick = { saveWeight() },
                 enabled = weight.toDoubleOrNull()?.let { it in 50.0..700.0 } == true,
                 colors = ButtonDefaults.buttonColors(containerColor = Night.violet, contentColor = Night.ground2),
             ) { Text("Save") }

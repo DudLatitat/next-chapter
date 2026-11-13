@@ -3,6 +3,7 @@ package com.dudlatitat.nextchapter.ui.life
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
+import com.dudlatitat.nextchapter.ui.components.readable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -673,7 +674,6 @@ private fun StudyTimer(state: AppState, vm: MainViewModel) {
 /** 20 mixed questions, about a minute each like the real exam; misses come back in your reviews. */
 @Composable
 private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
-    BackHandler(onBack = onBack)
     val questions = remember { com.dudlatitat.nextchapter.data.PracticeTest.build(20) }
     var index by remember { mutableIntStateOf(0) }
     var picked by remember { mutableStateOf<Int?>(null) }
@@ -684,10 +684,21 @@ private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
     androidx.compose.runtime.LaunchedEffect(finished) { while (!finished) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) } }
     val elapsed = ((now - startedAt) / 1000).toInt()
     val limit = questions.size * 60
+    // Halfway through, leaving asks first (a stray back swipe shouldn't throw the test away).
+    var confirmLeave by remember { mutableStateOf(false) }
+    val leave: () -> Unit = { if (index > 0 && !finished) { confirmLeave = true } else { onBack() } }
+    BackHandler(onBack = leave)
+    if (confirmLeave) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirmLeave = false },
+        title = { Text("Leave the test?") },
+        text = { Text("You're on question ${index + 1} of ${questions.size}. Your answers so far won't count.") },
+        confirmButton = { TextButton(onClick = { confirmLeave = false }) { Text("Keep going", color = Night.sun) } },
+        dismissButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text("Leave", color = Night.coral) } },
+    )
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = leave) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("A+ practice test", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 Text(if (finished) "Finished" else "Question ${index + 1} of ${questions.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)

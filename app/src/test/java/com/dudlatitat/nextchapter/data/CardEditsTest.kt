@@ -17,6 +17,17 @@ class CardEditsTest {
         assertEquals(d, s.cards[0].last)
     }
 
+    @Test fun undoPutsTheCardAndTheCountBack() {
+        val start = AppState(cards = listOf(starter))
+        val once = CardEdits.grade(start, "games:玩", Grade.GOOD, d)
+        val mistap = CardEdits.grade(once, "games:玩", Grade.AGAIN, d)
+        val undone = CardEdits.ungrade(mistap, once.cards[0], d)
+        assertEquals("the card is exactly as before the mis-tap", once.cards, undone.cards)
+        assertEquals(1, undone.days[d]!!.reviews)
+        // Never below zero, even if the log was trimmed.
+        assertEquals(0, CardEdits.ungrade(start, starter, d).days[d]!!.reviews)
+    }
+
     @Test fun addEditAndDelete() {
         var s = CardEdits.add(AppState(), " 我想你 ", "wǒ xiǎng nǐ", "I miss you", now = 5)
         assertEquals("mine:5", s.cards.single().id); assertEquals("我想你", s.cards.single().hanzi)

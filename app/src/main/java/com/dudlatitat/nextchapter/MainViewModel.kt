@@ -63,6 +63,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
+    fun ungrade(before: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.ungrade(s, before) }
 
     /** Adds practice time to today (called when a session ends or closes). */
     fun logSeconds(seconds: Int) {

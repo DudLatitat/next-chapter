@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -68,6 +69,7 @@ import com.dudlatitat.nextchapter.data.Srs
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
+import com.dudlatitat.nextchapter.ui.components.readable
 import com.dudlatitat.nextchapter.ui.components.Collapsible
 import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
@@ -315,7 +317,8 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     BackHandler(onBack = onClose)
     // The queue as it was when the session started; misses go back to the end. Practice mode
     // replays today's cards without touching their schedule.
-    val queue = remember {
+    // Saveable, so glancing at another tab (or folding the phone) keeps your place in the session.
+    val queue = rememberSaveable(saver = idListSaver) {
         mutableStateListOf<String>().apply {
             addAll(if (practice) today().let { d -> state.cards.filter { it.last == d }.shuffled().map { it.id } } else Srs.queue(state).map { it.id })
         }
@@ -325,15 +328,36 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
         onDispose { vm.logSeconds(((System.currentTimeMillis() - startedAt) / 1000).toInt()) }
     }
     fun gradeCard(card: Card, g: Grade) { if (!practice) vm.grade(card, g) }
-    val total = remember { queue.size.coerceAtLeast(1) }
-    var done by remember { mutableIntStateOf(0) }
-    var shown by remember { mutableStateOf(false) }
+    val total = rememberSaveable { queue.size.coerceAtLeast(1) }
+    var done by rememberSaveable { mutableIntStateOf(0) }
+    var shown by rememberSaveable { mutableStateOf(false) }
     var direction by rememberSaveable { mutableStateOf(Direction.READ) }
     var speaking by remember { mutableStateOf(false) }
     // Phrases missed at least once this session, for the summary at the end.
-    val missed = remember { mutableStateListOf<String>() }
+    val missed = rememberSaveable(saver = idListSaver) { mutableStateListOf<String>() }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    // The grade just made, for a few seconds: Undo puts the card back exactly as it was.
+    var undo by remember { mutableStateOf<Pair<Card, Grade>?>(null) }
+    LaunchedEffect(undo) { if (undo != null) { kotlinx.coroutines.delay(4000); undo = null } }
 
     val card = queue.firstOrNull()?.let { id -> state.cards.firstOrNull { it.id == id } }
+
+    fun advance(c: Card, g: Grade) {
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+        undo = c to g
+        gradeCard(c, g)
+        queue.removeAt(0)
+        if (g == Grade.AGAIN) { queue.add(c.id); if (c.id !in missed) missed.add(c.id) } else done++
+        shown = false
+    }
+    fun takeBack() {
+        val (before, g) = undo ?: return
+        if (!practice) vm.ungrade(before)
+        if (g == Grade.AGAIN) { val i = queue.lastIndexOf(before.id); if (i >= 0) queue.removeAt(i) } else done = (done - 1).coerceAtLeast(0)
+        queue.add(0, before.id)
+        shown = true
+        undo = null
+    }
 
     LaunchedEffect(card?.id) {
         if (card == null) { if (!practice) vm.finishedSession() }
@@ -342,7 +366,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
 
     if (speaking && card != null) SpeakSheet(card, vm, onCalibrate, onDismiss = { speaking = false })
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().readable().padding(horizontal = 18.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close", tint = Night.ink) }
             Bar(done.toFloat() / total, Night.jade, Modifier.weight(1f))
@@ -392,6 +416,8 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                 (state.cards.filter { it.id != card.id && it.english != card.english }.shuffled().take(3).map { it.english } + card.english).shuffled()
             }
             var picked by remember(card.id) { mutableStateOf<String?>(null) }
+            // Right answers move on by themselves; a wrong one waits so you can look at it.
+            LaunchedEffect(picked) { if (picked != null && picked == card.english) { kotlinx.coroutines.delay(900); advance(card, Grade.GOOD) } }
             Spacer(Modifier.height(16.dp))
             GlassCard(Modifier.weight(1f), highlight = true) {
                 Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -422,19 +448,14 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     Button(
                         onClick = {
                             if (picked == null) picked = option
-                            else {
-                                val g = if (picked == card.english) Grade.GOOD else Grade.AGAIN
-                                gradeCard(card, g)
-                                queue.removeAt(0)
-                                if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
-                            }
+                            else advance(card, if (picked == card.english) Grade.GOOD else Grade.AGAIN)
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = color.copy(alpha = 0.14f), contentColor = color),
                     ) { Text(option, style = MaterialTheme.typography.titleSmall) }
                 }
                 if (picked != null) Text(
-                    if (picked == card.english) "Right! Tap any answer to continue." else "Not quite. Tap any answer to continue.",
+                    if (picked == card.english) "Right! 对了" else "Not quite. Tap any answer to continue.",
                     style = MaterialTheme.typography.bodySmall, color = Night.muted, modifier = Modifier.align(Alignment.CenterHorizontally),
                 )
             }
@@ -478,10 +499,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     Button(
                         onClick = {
                             if (direction == Direction.SAY && g != Grade.AGAIN) vm.speaker.say(card.hanzi)
-                            gradeCard(card, g)
-                            queue.removeAt(0)
-                            if (g == Grade.AGAIN) { queue.add(card.id); if (card.id !in missed) missed.add(card.id) } else done++
-                            shown = false
+                            advance(card, g)
                         },
                         modifier = Modifier.weight(1f).height(64.dp),
                         contentPadding = PaddingValues(4.dp),
@@ -496,8 +514,24 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
             }
         }
         if (!shown) Spacer(Modifier.height(64.dp))
+        UndoChip(undo, onUndo = ::takeBack)
     }
 }
+
+/** "↶ Undo" for a few seconds after each grade, in case of a mis-tap. */
+@Composable
+private fun UndoChip(undo: Pair<Card, Grade>?, onUndo: () -> Unit) {
+    AnimatedVisibility(undo != null, enter = fadeIn(), exit = androidx.compose.animation.fadeOut()) {
+        val (c, g) = undo ?: return@AnimatedVisibility
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
+            TextButton(onClick = onUndo) { Text("↶  Undo ${g.label} · ${c.hanzi}", color = Night.sun) }
+        }
+    }
+}
+
+private val idListSaver = androidx.compose.runtime.saveable.listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<String>, String>(
+    save = { it.toList() }, restore = { it.toMutableStateList() },
+)
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -563,7 +597,7 @@ private fun ToolTile(zh: String, title: String, color: Color, modifier: Modifier
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(zh, fontSize = 18.sp, color = color, maxLines = 1)
-        Text(title, fontSize = 11.sp, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(title, fontSize = 12.sp, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 

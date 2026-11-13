@@ -25,5 +25,12 @@ object CardEdits {
             if (c.id != id) c else c.copy(hanzi = if (c.custom && hanzi.isNotBlank()) hanzi.trim() else c.hanzi, pinyin = pinyin.trim(), english = english.trim())
         })
 
+    /**
+     * Takes back a grade: the card goes back to exactly how it was ([before]) and today's review
+     * count drops by one. Only for the grade just made (Undo right after a mis-tap).
+     */
+    fun ungrade(s: AppState, before: Card, day: Long = today()): AppState =
+        s.copy(cards = s.cards.map { if (it.id == before.id) before else it }).logged(day) { it.copy(reviews = (it.reviews - 1).coerceAtLeast(0)) }
+
     fun delete(s: AppState, id: String): AppState = s.copy(cards = s.cards.filterNot { it.id == id })
 }

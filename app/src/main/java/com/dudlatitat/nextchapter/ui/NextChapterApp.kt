@@ -58,8 +58,10 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     var startLife by rememberSaveable { mutableStateOf<String?>(null) }
     var startDeck by rememberSaveable { mutableStateOf<String?>(null) }
     // New milestones get a little celebration, once.
+    // ...but never mid-practice (the Chinese tab) or during her call.
     val fresh = com.dudlatitat.nextchapter.data.Milestones.fresh(state)
-    if (fresh.isNotEmpty()) androidx.compose.material3.AlertDialog(
+    val quiet = tab == Tab.LEARN || com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now())
+    if (fresh.isNotEmpty() && !quiet) androidx.compose.material3.AlertDialog(
         onDismissRequest = { vm.seeMilestones(fresh.map { it.id }) },
         title = { Text(if (fresh.size == 1) "${fresh[0].emoji} ${fresh[0].title}!" else "🏅 ${fresh.size} new milestones!") },
         text = {
@@ -97,6 +99,13 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         return
     }
 
+    // Each tab keeps its place (an open review, a deck, a test) while you look at another tab.
+    val tabStates = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+    // Tapping the tab you're already on goes back to its top page.
+    val resets = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateMapOf<Tab, Int>() }
+    // Back on a tab's top page goes to Today first, rather than closing the app.
+    androidx.activity.compose.BackHandler(enabled = tab != Tab.TODAY) { tab = Tab.TODAY }
+
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
         Scaffold(
@@ -106,7 +115,9 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
                             selected = tab == t,
-                            onClick = { tab = t },
+                            onClick = {
+                                if (tab == t) { tabStates.removeState("${t.name}-${resets[t] ?: 0}"); resets[t] = (resets[t] ?: 0) + 1 } else tab = t
+                            },
                             icon = { Icon(t.icon, contentDescription = null) },
                             label = { Text(t.label) },
                             colors = NavigationBarItemDefaults.colors(
@@ -122,11 +133,13 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
             },
         ) { padding ->
             AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
+                tabStates.SaveableStateProvider("${t.name}-${resets[t] ?: 0}") {
                 when (t) {
                     Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE }, onTool = { startTool = it; tab = Tab.LEARN }, onLifePage = { startLife = it; tab = Tab.LIFE })
                     Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool, startDeck = startDeck, onDeckOpened = { startDeck = null })
                     Tab.MOVE -> MoveScreen(state, vm)
                     Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false }, startPage = startLife, onPageStarted = { startLife = null })
+                }
                 }
             }
         }

@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ import com.dudlatitat.nextchapter.data.nextTripDate
 import com.dudlatitat.nextchapter.data.phraseOfTheDay
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.GlassCard
+import com.dudlatitat.nextchapter.ui.components.readable
 import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.components.ProgressRing
@@ -102,7 +104,7 @@ fun TodayScreen(
     }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(720.dp).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Hero(state, vm, part, minute, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
@@ -227,14 +229,14 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, @Suppress(
             if (streak > 0) Pill("🔥 $streak-day streak", Night.sun)
             if (early > 0) Pill("☀️ $early early", Night.jade)
             // Weight and today's calories; tap to log.
-            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onBody))
+            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onBody))
             // In the 60 days before a trip: say 3 trip phrases a day (they come first in practice).
             val T = com.dudlatitat.nextchapter.data.TripPrep
             if (T.open(state, today())) {
                 val said = T.saidToday(state, today())
                 Pill(
                     if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
-                    Night.rose, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
+                    Night.rose, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
                 )
             }
         }
