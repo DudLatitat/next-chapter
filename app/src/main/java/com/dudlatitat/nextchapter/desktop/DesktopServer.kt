@@ -176,7 +176,7 @@ class DesktopServer(private val context: Context, private val store: Store, val 
             "GET /api/cards" -> {
                 val deck = query["deck"].orEmpty(); val q = query["q"].orEmpty().trim().lowercase()
                 val list = s.cards.filter { (deck.isEmpty() || it.deck == deck) && (q.isEmpty() || q in it.hanzi || q in it.pinyin.lowercase() || q in it.english.lowercase()) }
-                ok(json.encodeToString(list.take(500).map { DCardOf(it) }))
+                ok(json.encodeToString(list.take(3000).map { DCardOf(it) }))
             }
             "POST /api/grade" -> {
                 val g = try { json.decodeFromString<GradeIn>(body) } catch (_: Exception) { return bad(400, "Bad grade") }

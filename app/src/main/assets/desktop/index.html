@@ -129,7 +129,7 @@ function drawCard() {
   const left = queue.length;
   $("#main").innerHTML = `
     <div class="card">
-      <div class="row muted"><span>${left} to go</span><span class="tag">${c.isNew ? "new" : "review"} · ${esc(c.deck)}</span></div>
+      <div class="row muted"><span>${left} to go</span><span class="tag">${c.isNew ? "new" : "review"} · ${esc(deckName(c.deck))}</span></div>
       <div class="english" style="margin-top:18px">${esc(c.english)}</div>
       <p class="muted">Say it out loud, then show the answer.</p>
       <div id="answer" style="display:${shown ? "block" : "none"}">
@@ -160,6 +160,9 @@ document.addEventListener("keydown", (e) => {
   else if (shown && "1234".includes(e.key)) grade(+e.key);
   else if (shown && e.key.toLowerCase() === "p") play(queue[0]);
 });
+
+// Deck ids → their names ("yuling" → "With Yuling").
+const deckName = (id) => (summary?.decks.find((d) => d.id === id) || {}).title || id;
 
 // ---- Phrases: browse, search, add, edit ----
 let deck = "", search = "";
@@ -202,7 +205,7 @@ async function loadList() {
   $("#count").textContent = `${cards.length} phrase${cards.length === 1 ? "" : "s"}`;
   $("#list").innerHTML = cards.map((c, i) => `
     <tr data-i="${i}">
-      <td class="h">${esc(c.hanzi)}</td><td class="p">${esc(c.pinyin)}</td><td>${esc(c.english)}<br><span class="tag">${esc(c.deck)}${c.known ? " · known ✓" : c.isNew ? " · new" : ""}</span></td>
+      <td class="h">${esc(c.hanzi)}</td><td class="p">${esc(c.pinyin)}</td><td>${esc(c.english)}<br><span class="tag">${esc(deckName(c.deck))}${c.known ? " · known ✓" : c.isNew ? " · new" : ""}</span></td>
       <td style="white-space:nowrap"><button class="btn ghost" data-play="${i}">🔊</button> <button class="btn ghost" data-edit="${i}">Edit</button></td>
     </tr>`).join("");
   document.querySelectorAll("[data-play]").forEach((b) => b.onclick = () => play(cards[+b.dataset.play]));
