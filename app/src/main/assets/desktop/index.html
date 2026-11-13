@@ -154,6 +154,8 @@
   .sky .tip { position: fixed; pointer-events: none; padding: 8px 12px; border-radius: 12px; background: rgba(15, 22, 52, .95); border: 1px solid var(--line); display: none; z-index: 10; }
   .sky .tip .h { font: 24px var(--zh); }
   .sky .legend { display: flex; gap: 18px; align-items: center; margin: 12px 4px 0; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  /* The browser's own blue clear button doesn't fit the night theme. */
+  input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   /* ---- Dialog, toast ---- */
   .veil { position: fixed; inset: 0; background: rgba(5, 8, 20, .6); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 20; animation: fade .15s; }
   @keyframes fade { from { opacity: 0; } }
@@ -342,8 +344,10 @@ function go(v) {
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
   renderStats(); clearInterval(skyTimer);
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
-  Promise.resolve(({ review: renderReview, aplus: renderAPlus, sky: renderSky }[view] || renderPhrases)())
-    .then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
+  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky }[view] || renderPhrases)());
+}
+function watch(p) {
+  return Promise.resolve(p).then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
 }
 function renderStats() {
   const due = summary.due + summary.fresh;
@@ -429,8 +433,8 @@ function renderPhrases() {
         <div class="cards" id="list"></div>
       </section>
     </div>`;
-  document.querySelectorAll(".deck").forEach((el) => el.onclick = () => { deck = el.dataset.d; ls.set("nc-deck", deck); renderPhrases(); });
-  let timer; $("#q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => { search = $("#q").value; loadList(); }, 200); };
+  document.querySelectorAll(".deck").forEach((el) => el.onclick = () => { deck = el.dataset.d; ls.set("nc-deck", deck); watch(renderPhrases()); });
+  let timer; $("#q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => { search = $("#q").value; watch(loadList()); }, 200); };
   $("#add").onclick = () => editor(null);
   report(null, false, 0);
   return loadList();
@@ -460,7 +464,7 @@ async function loadList(keep) {
   document.querySelectorAll("[data-play]").forEach((b) => b.onclick = () => play(cards[+b.dataset.play]));
   document.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => editor(cards[+b.dataset.edit]));
   $("#eadd")?.addEventListener("click", () => editor(null));
-  $("#eclear")?.addEventListener("click", () => { search = ""; $("#q").value = ""; loadList(); $("#q").focus(); });
+  $("#eclear")?.addEventListener("click", () => { search = ""; $("#q").value = ""; watch(loadList()); $("#q").focus(); });
   if (keep) window.scrollTo(0, y);
 }
 function emptyState(q) {
