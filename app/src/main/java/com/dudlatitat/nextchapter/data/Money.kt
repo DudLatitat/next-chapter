@@ -33,6 +33,10 @@ object Money {
         return ceil(left / months).toInt()
     }
 
+    /** How full each of [slots] months is (1 = covered, partial for the last one), for the runway meter. */
+    fun runway(months: Double, slots: Int = 12): List<Float> =
+        List(slots) { i -> (months - i).coerceIn(0.0, 1.0).toFloat() }
+
     /** The CNY rate from open.er-api.com's reply, or null if it's missing or not believable. */
     fun parseCny(json: String): Double? =
         Regex("\"CNY\"\\s*:\\s*([0-9.]+)").find(json)?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf(::sane)

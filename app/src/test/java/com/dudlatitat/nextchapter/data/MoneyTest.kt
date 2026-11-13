@@ -40,4 +40,11 @@ class MoneyTest {
         assertNull(Money.parseCny("""{"rates":{"CNY":712.34}}"""))
         assertNull(Money.parseCny("""{"result":"error"}"""))
     }
+
+    @Test fun runwayFillsMonthByMonth() {
+        assertEquals(listOf(1f, 1f, 0.5f, 0f), Money.runway(2.5, 4))
+        assertEquals(listOf(1f, 1f), Money.runway(30.0, 2))
+        assertEquals(listOf(0f, 0f), Money.runway(0.0, 2))
+        assertEquals(12, Money.runway(3.0).size)
+    }
 }

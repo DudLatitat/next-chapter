@@ -101,6 +101,7 @@ tools/
     - Removed the unused `assets/pinyin.txt`, `Http.Request` and `Body.recentWeights`; QuickAdd uses `CardEdits.add`.
   - **PC A+ tab:** `/api/aplus` and `/api/aplus/grade` (`APlus.graded`, shared with the phone), with an exam countdown and domain bars. The remote tab value 2 is A+.
   - **Couch speaking check:** Phone remote → 🎤 Say it runs the offline check on the phone and sends `said` (value 0/1/2 plus R/T/M letters per character). The page colours the characters, and a clean answer auto-grades Good after 1.6 s.
+- **1.80 (runway + sky):** Move → "Life there" card: 12 lanterns lit by months of savings at your own monthly budget (`Money.runway`, `MoneyTest`; needs budget numbers on the Money page). PC page **Sky ✦** tab: every started card is a star placed by a hash of its id around its deck's spot (bright = known), and a fully known deck draws a constellation. Hover shows the phrase, click plays it; drawn at 10 fps. Remote tab value 3 = Sky.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

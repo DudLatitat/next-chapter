@@ -4,7 +4,10 @@ import com.dudlatitat.nextchapter.data.nextTripDate
 import com.dudlatitat.nextchapter.data.withNextTripDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -45,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Money
@@ -135,6 +139,9 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
                 if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose)
             }
         }
+
+        // Runway: what the savings mean there, in months of your own monthly budget (Money page).
+        item { Runway(state, onOpen = { page = "money" }) }
 
         // Checklist
         val done = state.tasks.count { it.done }
@@ -315,5 +322,41 @@ private fun MoveTool(icon: String, title: String, sub: String, modifier: Modifie
         Text(icon, style = MaterialTheme.typography.headlineSmall, color = Night.sun)
         Text(title, style = MaterialTheme.typography.titleSmall, color = Night.ink)
         Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+    }
+}
+
+/** Twelve little lanterns, lit by how many months of life there your savings would cover. */
+@Composable
+private fun Runway(state: AppState, onOpen: () -> Unit) {
+    val monthly = state.budget.sumOf { it.rmb }
+    GlassCard(onClick = onOpen) {
+        Text("Life there · 生活费", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+        if (monthly <= 0 || state.saved <= 0) {
+            Text(
+                if (monthly <= 0) "Add your monthly costs there (Money → budget) to see how long your savings would last."
+                else "Add what you've saved (✏️ above) to light the lanterns.",
+                style = MaterialTheme.typography.bodySmall, color = Night.muted,
+            )
+            return@GlassCard
+        }
+        val months = Money.monthsCovered(state.saved, state.rate, monthly)
+        Text(
+            if (months >= 12) "Over a year of life there ✨" else "≈ ${"%.1f".format(java.util.Locale.US, months)} months of life there",
+            style = MaterialTheme.typography.titleMedium, color = Night.ink,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+            Money.runway(months).forEachIndexed { i, f ->
+                val lit by androidx.compose.animation.core.animateFloatAsState(f, androidx.compose.animation.core.tween(500, delayMillis = i * 60), label = "lantern")
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        Modifier.size(18.dp, 24.dp)
+                            .background(Night.coral.copy(alpha = 0.12f + 0.75f * lit), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                    )
+                    Text("${i + 1}", fontSize = 9.sp, color = if (lit > 0.5f) Night.ink else Night.muted)
+                }
+            }
+        }
+        Text("${yuan(monthly)} a month · ${money(state.saved)} saved", style = MaterialTheme.typography.labelSmall, color = Night.muted)
     }
 }

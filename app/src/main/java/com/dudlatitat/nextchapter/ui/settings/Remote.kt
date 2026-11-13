@@ -174,6 +174,11 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                         Text("Open the page on your computer", color = Night.ink, textAlign = TextAlign.Center)
                         Text("It shows up here as soon as it's open.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
+                    s.view == "sky" -> {
+                        Text("✦", fontSize = 30.sp, color = Night.sun)
+                        Text("Your sky", color = Night.ink)
+                        Text("Every star is a phrase you know.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    }
                     s.view != "review" && s.view != "aplus" -> {
                         Text("短语", fontSize = 30.sp, color = Night.sun)
                         Text("Browsing phrases", color = Night.ink)
@@ -207,9 +212,10 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .05f)).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Segment("Phrases", !review) { press("tab", 0) }
+        Segment("Phrases", !review && p?.view != "sky") { press("tab", 0) }
         Segment("Review", review && !aplus) { press("tab", 1) }
         Segment("A+", aplus) { press("tab", 2) }
+        Segment("Sky", p?.view == "sky") { press("tab", 3) }
     }
 
     // Review buttons.
