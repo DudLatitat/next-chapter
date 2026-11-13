@@ -149,6 +149,10 @@ fun TodayScreen(
                 PrayerBlock(vm, Prayers.forDay(today()))
                 Spacer(Modifier.height(14.dp))
                 AmenButton(state, vm)
+                // Learn it by heart (Practice → Prayer ladder).
+                androidx.compose.material3.TextButton(onClick = { prayerOpen = false; onTool("prayer") }) {
+                    Text("🏮 Learn it by heart ›", color = Night.sun)
+                }
             }
         }
     }

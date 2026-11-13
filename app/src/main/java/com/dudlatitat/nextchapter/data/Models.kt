@@ -7,6 +7,10 @@ import java.time.LocalDate
 fun today(): Long = LocalDate.now().toEpochDay()
 
 /** One phrase to learn, and where it is in its review schedule. */
+/** One time a phrase was used for real (Said it for real ★). */
+@Serializable
+data class RealUse(val id: String, val day: Long)
+
 @Serializable
 data class Card(
     val id: String,
@@ -268,4 +272,13 @@ data class AppState(
     val calloutBest: Int = 0,
     /** Family dinner run-through: best 🥢 per scene id. */
     val dinnerBest: Map<String, Int> = emptyMap(),
+    // ---- Real life (1.86) ----
+    /** Phrases used for real with her or her family: one entry per tap (card id + day). */
+    val realUses: List<RealUse> = emptyList(),
+    /** Family map: what you call each relative's name, by relative id (on this phone only). */
+    val familyNames: Map<String, String> = emptyMap(),
+    /** Best Number ears score. */
+    val numbersBest: Int = 0,
+    /** Prayer ladder: how many hint levels you've climbed per prayer id (0 = full text shown). */
+    val prayerSteps: Map<String, Int> = emptyMap(),
 )

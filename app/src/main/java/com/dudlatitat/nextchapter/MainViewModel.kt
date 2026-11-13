@@ -63,6 +63,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
+    fun saveNumbersScore(score: Int) = store.edit { s -> if (score <= s.numbersBest) s else s.copy(numbersBest = score) }
+    fun setFamilyName(id: String, name: String) = store.edit { s ->
+        val n = name.trim().take(30)
+        s.copy(familyNames = if (n.isEmpty()) s.familyNames - id else s.familyNames + (id to n))
+    }
+    fun climbPrayer(prayer: String, rung: Int) = store.edit { s -> s.copy(prayerSteps = com.dudlatitat.nextchapter.data.Ladder.climbed(s.prayerSteps, prayer, rung)) }
+    fun recordReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.recordReal(s, card.id) }
+    fun saidForReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.saidForReal(s, card.id) }
     fun ungrade(before: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.ungrade(s, before) }
 
     /** Adds practice time to today (called when a session ends or closes). */

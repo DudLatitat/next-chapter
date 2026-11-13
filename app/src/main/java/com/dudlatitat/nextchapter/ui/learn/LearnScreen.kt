@@ -117,6 +117,9 @@ fun LearnScreen(
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
         tool == "callouts" -> CalloutScreen(state, vm, onBack = { tool = null })
         tool == "dinner" -> DinnerScreen(state, vm, onBack = { tool = null })
+        tool == "numbers" -> NumbersScreen(state, vm, onBack = { tool = null })
+        tool == "family" -> FamilyScreen(state, vm, onBack = { tool = null })
+        tool == "prayer" -> LadderScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
         else -> Overview(
             state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
@@ -140,6 +143,14 @@ private fun Overview(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("Chinese", "学中文 · for real life there") }
+        // Said it for real ★: the count that matters most.
+        val real = state.realUses.map { it.id }.toSet().size
+        if (real > 0) item {
+            Text(
+                "★ $real phrase${if (real == 1) "" else "s"} used for real with her and her family",
+                style = MaterialTheme.typography.titleSmall, color = Night.sun,
+            )
+        }
         item {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -165,7 +176,8 @@ private fun Overview(
         // Practice tools right under the review card (always open), grouped by what you're doing.
         item {
             val groups = listOf(
-                "Play" to listOf(Triple("家宴", "Dinner", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral),
+                "Play" to listOf(Triple("家宴", "Dinner", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
+                "Family & faith" to listOf(Triple("家谱", "Her family", "family") to Night.rose, Triple("祷告", "Prayer", "prayer") to Night.violet),
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
                 "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
                 "Write & go" to listOf(Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
@@ -285,6 +297,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
                             PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
                             Text(card.english, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                         }
+                        RealStar(state, card, vm)
                         when {
                             card.isKnown -> Pill("Known", Night.jade)
                             !card.isNew -> Pill("Learning", Night.violet)
@@ -486,6 +499,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     }
                     TextButton(onClick = { vm.speaker.say(card.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
                     if (shown) TextButton(onClick = { speaking = true }) { Text("🎤 Say it", color = Night.sun) }
+                    if (shown && !practice) RealStar(state, card, vm, onUse = { vm.recordReal(card); advance(card, Grade.GOOD) })
                 }
                 if (!shown) Text("Tap to reveal", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }

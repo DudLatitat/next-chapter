@@ -27,7 +27,7 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 
-@Serializable data class DCard(val id: String, val hanzi: String, val pinyin: String, val english: String, val deck: String, val isNew: Boolean, val custom: Boolean, val known: Boolean, val voice: String)
+@Serializable data class DCard(val id: String, val hanzi: String, val pinyin: String, val english: String, val deck: String, val isNew: Boolean, val custom: Boolean, val known: Boolean, val voice: String, val real: Int = 0)
 @Serializable data class DDeck(val id: String, val title: String, val hanzi: String, val count: Int, val started: Int)
 @Serializable data class DSummary(val due: Int, val fresh: Int, val streak: Int, val known: Int, val decks: List<DDeck>)
 @Serializable data class PairIn(val code: String)
@@ -186,7 +186,7 @@ class DesktopServer(private val context: Context, private val store: Store, val 
     private fun ok(any: String) = Http.response(200, "application/json; charset=utf-8", any.toByteArray())
     private fun bad(status: Int, message: String) = Http.response(status, "application/json; charset=utf-8", json.encodeToString(Msg(false, message)).toByteArray())
 
-    private fun DCardOf(c: Card) = DCard(c.id, c.hanzi, c.pinyin, c.english, c.deck, c.isNew, c.custom, c.isKnown, com.dudlatitat.nextchapter.Speaker.md5(c.hanzi.trim()))
+    private fun DCardOf(c: Card, real: Int = 0) = DCard(c.id, c.hanzi, c.pinyin, c.english, c.deck, c.isNew, c.custom, c.isKnown, com.dudlatitat.nextchapter.Speaker.md5(c.hanzi.trim()), real)
 
     private fun route(method: String, path: String, query: Map<String, String>, headers: Map<String, String>, body: String): ByteArray {
         if (method == "GET" && (path == "/" || path == "/index.html")) {
@@ -235,7 +235,8 @@ class DesktopServer(private val context: Context, private val store: Store, val 
             "GET /api/cards" -> {
                 val deck = query["deck"].orEmpty(); val q = query["q"].orEmpty().trim().lowercase()
                 val list = s.cards.filter { (deck.isEmpty() || it.deck == deck) && (q.isEmpty() || q in it.hanzi || q in it.pinyin.lowercase() || q in it.english.lowercase()) }
-                ok(json.encodeToString(list.take(3000).map { DCardOf(it) }))
+                val real = CardEdits.realCounts(s) // ★ uses, for gold stars in the Sky
+                ok(json.encodeToString(list.take(3000).map { DCardOf(it, real[it.id] ?: 0) }))
             }
             "POST /api/grade" -> {
                 val g = try { json.decodeFromString<GradeIn>(body) } catch (_: Exception) { return bad(400, "Bad grade") }

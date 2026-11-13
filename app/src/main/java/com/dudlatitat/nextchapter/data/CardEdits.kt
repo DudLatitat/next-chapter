@@ -32,5 +32,23 @@ object CardEdits {
     fun ungrade(s: AppState, before: Card, day: Long = today()): AppState =
         s.copy(cards = s.cards.map { if (it.id == before.id) before else it }).logged(day) { it.copy(reviews = (it.reviews - 1).coerceAtLeast(0)) }
 
+    /**
+     * Said it for real ★: you used this phrase with her or her family. It's remembered (one
+     * star per day per phrase) and counts as a Good answer, so a phrase you really use comes
+     * back less often. A second tap the same day changes nothing.
+     */
+    fun saidForReal(s: AppState, id: String, day: Long = today()): AppState {
+        if (s.realUses.any { it.id == id && it.day == day }) return s
+        if (s.cards.none { it.id == id }) return s
+        return recordReal(grade(s, id, Grade.GOOD, day), id, day)
+    }
+
+    /** Just the ★ (the review screen grades the card itself, so it isn't graded twice). */
+    fun recordReal(s: AppState, id: String, day: Long = today()): AppState =
+        if (s.realUses.any { it.id == id && it.day == day }) s else s.copy(realUses = s.realUses + RealUse(id, day))
+
+    /** How many times each phrase was used for real. */
+    fun realCounts(s: AppState): Map<String, Int> = s.realUses.groupingBy { it.id }.eachCount()
+
     fun delete(s: AppState, id: String): AppState = s.copy(cards = s.cards.filterNot { it.id == id })
 }

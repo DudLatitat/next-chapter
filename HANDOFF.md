@@ -113,6 +113,13 @@ tools/
   - The weight field starts at your last weigh-in, with ±0.2 steppers and Done to save.
   - Milestone pop-ups wait until you're off the Chinese tab and outside call time.
   - 48 dp tap targets on the body and trip pills; tool tile labels are 12 sp.
+- **1.86 (real life):**
+  - **Said it for real ★** (`ui/learn/RealStar.kt`; `CardEdits.saidForReal`/`recordReal`; `AppState.realUses`). Once per phrase per day, it counts as a Good grade; in Review, ★ records it and advances as Good, so the card isn't graded twice. It shows on deck rows and the review card, with a count on the Chinese tab, and `DCard.real` is sent to the PC (Sky gold stars to do).
+  - **Number ears** (`data/Numbers.kt`, `ui/learn/NumbersScreen.kt`): fixed price and time lines recorded in CI, each checked by the independent reader `Numbers.read` (`NumbersTest`). Uses `Speaker.say(speed)`, a big keypad, and the ¥ → $ line; best score in `numbersBest`.
+  - **Family map** (`data/Family.kt`, `ui/learn/FamilyScreen.kt`): her mom's side first, dad's side folded. Names live on the phone only (`familyNames`); the "Who's this?" quiz uses the speaking check.
+  - **Prayer ladder** (`data/Ladder.kt`, `ui/learn/LadderScreen.kt`): rungs mask characters and never change the text (`LadderTest`), saved in `prayerSteps`. Linked from Today's prayer sheet.
+  - `speech/Verdicts.kt`: the shared `Attempt.verdict()`.
+  - A new Practice group, "Family & faith".
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

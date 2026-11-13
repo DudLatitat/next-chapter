@@ -101,22 +101,23 @@ class Speaker(context: Context) {
         return t.voice?.name == name
     }
 
-    fun say(text: String, slow: Boolean = false) {
+    /** [speed] above 1 plays faster (Number ears speeds up as you get them right). */
+    fun say(text: String, slow: Boolean = false, speed: Float = 1f) {
         val file = "${md5(text.trim())}.mp3"
-        if (useRecordings && file in recorded && play("voice/$file", slow)) return
-        sayWithPhone(text, slow)
+        if (useRecordings && file in recorded && play("voice/$file", if (slow) 0.7f else speed)) return
+        sayWithPhone(text, slow, speed)
     }
 
-    private fun sayWithPhone(text: String, slow: Boolean) {
+    private fun sayWithPhone(text: String, slow: Boolean, speed: Float = 1f) {
         val t = tts ?: return
         if (!_ready.value) return
         try { player?.stop() } catch (_: Exception) {}
         applyVoice()
-        t.setSpeechRate(if (slow) 0.55f else 0.85f)
+        t.setSpeechRate(if (slow) 0.55f else 0.85f * speed)
         t.speak(text, TextToSpeech.QUEUE_FLUSH, null, text)
     }
 
-    private fun play(asset: String, slow: Boolean): Boolean {
+    private fun play(asset: String, speed: Float): Boolean {
         tts?.stop()
         player?.release()
         player = null // never keep a released player around (stop() on it would crash)
@@ -127,7 +128,7 @@ class Speaker(context: Context) {
                 p.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
             }
             p.prepare()
-            if (slow) p.playbackParams = PlaybackParams().setSpeed(0.7f).setPitch(1f)
+            if (speed != 1f) p.playbackParams = PlaybackParams().setSpeed(speed).setPitch(1f)
             p.start()
             player = p
             true

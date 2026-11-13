@@ -28,6 +28,29 @@ class CardEditsTest {
         assertEquals(0, CardEdits.ungrade(start, starter, d).days[d]!!.reviews)
     }
 
+    @Test fun saidForRealCountsOncePerDayAndAsGood() {
+        var s = AppState(cards = listOf(starter))
+        s = CardEdits.saidForReal(s, "games:玩", d)
+        assertEquals(1, s.realUses.size)
+        assertEquals("it counts as a Good review", d, s.cards[0].last)
+        assertTrue(s.cards[0].due > d)
+        val again = CardEdits.saidForReal(s, "games:玩", d)
+        assertEquals("a second tap the same day changes nothing", s, again)
+        s = CardEdits.saidForReal(s, "games:玩", d + 3)
+        assertEquals(mapOf("games:玩" to 2), CardEdits.realCounts(s))
+        assertEquals("unknown card: nothing", s, CardEdits.saidForReal(s, "nope", d))
+        val star = CardEdits.recordReal(AppState(cards = listOf(starter)), "games:玩", d)
+        assertEquals("recordReal doesn't grade", starter, star.cards[0])
+        assertEquals(1, star.realUses.size)
+    }
+
+    @Test fun oldSavesLoadWithoutRealUses() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true }
+        val old = json.decodeFromString(AppState.serializer(), """{"newPerDay":5}""")
+        assertTrue(old.realUses.isEmpty() && old.familyNames.isEmpty() && old.prayerSteps.isEmpty())
+        assertEquals(0, old.numbersBest)
+    }
+
     @Test fun addEditAndDelete() {
         var s = CardEdits.add(AppState(), " 我想你 ", "wǒ xiǎng nǐ", "I miss you", now = 5)
         assertEquals("mine:5", s.cards.single().id); assertEquals("我想你", s.cards.single().hanzi)
