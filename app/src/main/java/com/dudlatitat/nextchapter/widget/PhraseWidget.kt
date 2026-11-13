@@ -58,7 +58,8 @@ class PhraseWidget : AppWidgetProvider() {
             })
             v.setViewVisibility(R.id.status, View.VISIBLE)
             val open = PendingIntent.getActivity(
-                context, 2, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_STUDY, due > 0),
+                // Its own request code: PendingIntents that differ only in extras overwrite each other.
+                context, 12, Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_STUDY, due > 0),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             v.setOnClickPendingIntent(R.id.root, open)

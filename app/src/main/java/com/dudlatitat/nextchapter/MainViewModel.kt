@@ -26,15 +26,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val coach = com.dudlatitat.nextchapter.speech.Coach(app)
 
     init {
-        store.onChange = { PhraseWidget.refresh(app, it); com.dudlatitat.nextchapter.widget.WeekWidget.refresh(app, it) }
         PhraseWidget.refresh(app, store.state.value)
         com.dudlatitat.nextchapter.widget.WeekWidget.refresh(app, store.state.value)
-        Reminder.schedule(app, store.state.value)
-        com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
-        com.dudlatitat.nextchapter.notify.Deadlines.schedule(app, store.state.value)
-        com.dudlatitat.nextchapter.notify.PlaceWatch.register(app, store.state.value)
+        com.dudlatitat.nextchapter.notify.Alarms.all(app, store.state.value)
         com.dudlatitat.nextchapter.desktop.Desktop.resume(app)
-        com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
     // Progress in the learning tools (for milestones)
@@ -63,7 +58,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun restore(text: String): Boolean = store.restore(text).also {
-        if (it) Reminder.schedule(getApplication(), store.state.value)
+        // A restored backup brings its own settings: re-book every alarm and geofence from it.
+        if (it) com.dudlatitat.nextchapter.notify.Alarms.all(getApplication(), store.state.value)
     }
 
     fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
@@ -161,10 +157,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         s.copy(weekNotes = if (note.isBlank()) s.weekNotes - weekStart else s.weekNotes + (weekStart to note.trim()))
     }
     // ---- Life tab: A+, career, people ----
-    fun gradeAPlus(id: String, g: Grade) = store.edit { s ->
-        val r = com.dudlatitat.nextchapter.data.APlus.grade(com.dudlatitat.nextchapter.data.APlus.review(s, id), g)
-        s.copy(aplus = com.dudlatitat.nextchapter.data.APlus.withReview(s.aplus, r))
-    }
+    fun gradeAPlus(id: String, g: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.APlus.graded(s, id, g) }
     fun setAPlusExam(iso: String?) = store.edit { it.copy(aplusExam = iso) }
     fun setAPlusPerDay(n: Int) = store.edit { it.copy(aplusPerDay = n.coerceIn(3, 30)) }
     fun cycleCert(id: String) = store.edit { s ->

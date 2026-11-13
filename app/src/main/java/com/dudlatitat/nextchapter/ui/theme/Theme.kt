@@ -7,6 +7,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -129,11 +131,17 @@ fun StarryBackdrop(modifier: Modifier = Modifier.fillMaxSize()) {
         val r = Random(13)
         List(36) { floatArrayOf(r.nextFloat(), r.nextFloat() * 0.7f, 0.6f + r.nextFloat() * 1.2f, r.nextFloat() * 2f * PI.toFloat()) }
     }
-    val t by rememberInfiniteTransition(label = "stars").animateFloat(
-        initialValue = 0f, targetValue = 2f * PI.toFloat(),
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart), label = "twinkle",
-    )
-    Canvas(modifier) {
+    // A slow twinkle doesn't need 120 frames a second: step it 10 times a second, and draw it in
+    // its own layer so the stars redraw without touching anything on top.
+    var t by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val start = System.nanoTime()
+        while (true) {
+            kotlinx.coroutines.delay(100)
+            t = (((System.nanoTime() - start) / 1e9 / 9.0) % 1.0 * 2 * PI).toFloat()
+        }
+    }
+    Canvas(modifier.graphicsLayer()) {
         drawRect(Night.ground)
         stars.forEach { (x, y, size, phase) ->
             val a = 0.35f + 0.45f * ((sin(t + phase) + 1f) / 2f)

@@ -42,7 +42,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * available in the background (DesktopService, with its notification); a computer pairs once.
  */
 @Composable
-fun OnComputerScreen(onBack: () -> Unit) {
+fun OnComputerScreen(vm: com.dudlatitat.nextchapter.MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var on by remember { mutableStateOf(Desktop.enabled(context)) }
@@ -55,7 +55,12 @@ fun OnComputerScreen(onBack: () -> Unit) {
     val error by (server?.error ?: MutableStateFlow<String?>(null)).collectAsState()
     val addresses = remember(server) { DesktopServer.localAddresses() }
     var remote by remember { mutableStateOf(false) }
-    if (remote) { RemoteScreen(server) { remote = false }; return }
+    // A computer can pair only while this screen is open (so nobody else on the Wi-Fi can try codes).
+    androidx.compose.runtime.DisposableEffect(server, remote) {
+        if (!remote) server?.openPairing()
+        onDispose { server?.closePairing() }
+    }
+    if (remote) { RemoteScreen(server, vm) { remote = false }; return }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {

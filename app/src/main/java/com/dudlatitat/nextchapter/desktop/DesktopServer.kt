@@ -1,6 +1,7 @@
 package com.dudlatitat.nextchapter.desktop
 
 import android.content.Context
+import com.dudlatitat.nextchapter.data.APlus
 import com.dudlatitat.nextchapter.data.CardEdits
 import com.dudlatitat.nextchapter.data.Store
 import com.dudlatitat.nextchapter.data.Card
@@ -12,6 +13,7 @@ import com.dudlatitat.nextchapter.data.Stats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +38,10 @@ import java.net.Socket
 @Serializable data class PinyinOut(val pinyin: String)
 @Serializable data class Msg(val ok: Boolean, val message: String = "")
 /** A press on the phone remote, for the page: show, grade (1–4), play, tab (0 phrases, 1 review), scroll (pixels). */
-@Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0)
+@Serializable data class DAQ(val id: String, val domain: Int, val q: String, val a: String, val isNew: Boolean)
+@Serializable data class DDomain(val n: Int, val name: String, val share: Int, val strength: Float)
+@Serializable data class DAPlus(val exam: String?, val done: Int, val domains: List<DDomain>, val weakest: Int?, val queue: List<DAQ>)
+@Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0, val text: String = "")
 @Serializable data class RemoteOut(val last: Long, val cmds: List<RemoteCmd>)
 /** What the page is showing, so the phone remote can mirror it. */
 @Serializable data class PageState(val view: String = "", val english: String = "", val hanzi: String = "", val pinyin: String = "", val shown: Boolean = false, val left: Int = 0)
@@ -57,7 +62,14 @@ class DesktopServer(private val context: Context, private val store: Store, val 
     /** Wakes the phone briefly after each request, so a page in use stays quick with the screen off. */
     private val wake = (context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
         .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "NextChapter:desktop").apply { setReferenceCounted(false) }
-    private var wrongCodes = 0
+    private val gate = PairGate()
+    /** Pairing is allowed only while the phone's "Use on my computer" screen is open. */
+    fun openPairing() = gate.open()
+    fun closePairing() = gate.close()
+    // Its own few threads (not the app's shared IO pool), and a cap on open connections.
+    private val pool = java.util.concurrent.Executors.newFixedThreadPool(12)
+    private val dispatcher = pool.asCoroutineDispatcher()
+    private val slots = java.util.concurrent.Semaphore(12)
 
     private val _code = MutableStateFlow(Http.pairingCode())
     /** The code to type on the computer (a new one each start, and after 5 wrong tries). */
@@ -78,8 +90,8 @@ class DesktopServer(private val context: Context, private val store: Store, val 
     val seen: StateFlow<Long> = _seen
 
     /** A button on the phone remote: handed to the page waiting on /api/remote. */
-    fun send(cmd: String, value: Int = 0) = synchronized(remoteLock) {
-        cmds.addLast(RemoteCmd(nextCmd++, cmd, value))
+    fun send(cmd: String, value: Int = 0, text: String = "") = synchronized(remoteLock) {
+        cmds.addLast(RemoteCmd(nextCmd++, cmd, value, text))
         while (cmds.size > 50) cmds.removeFirst()
         remoteLock.notifyAll()
     }
@@ -125,7 +137,9 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 socket = server
                 while (isActive) {
                     val client = server.accept()
-                    launch { handle(client) }
+                    // Full: refuse rather than queue, so nothing on the network can pile up work.
+                    if (!slots.tryAcquire()) { try { client.close() } catch (_: Exception) {}; continue }
+                    launch(dispatcher) { try { handle(client) } finally { slots.release() } }
                 }
             } catch (e: Exception) {
                 if (scope != null) _error.value = e.message ?: "Couldn't start"
@@ -138,6 +152,7 @@ class DesktopServer(private val context: Context, private val store: Store, val 
         try { socket?.close() } catch (_: Exception) {}
         socket = null
         s?.cancel()
+        pool.shutdownNow()
         if (wake.isHeld) wake.release()
     }
 
@@ -150,7 +165,9 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 // Read the head (up to the blank line), then the body by Content-Length.
                 val head = ByteArrayOutputStream()
                 var last4 = 0
+                val deadline = System.currentTimeMillis() + 10_000 // the whole head, not per byte
                 while (true) {
+                    if (System.currentTimeMillis() > deadline) return
                     val b = input.read(); if (b < 0) return
                     head.write(b); last4 = (last4 shl 8) or b
                     if (last4 == 0x0D0A0D0A) break
@@ -161,8 +178,6 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 if (length > Http.MAX_BODY) { c.getOutputStream().write(Http.response(413, "text/plain", ByteArray(0))); return }
                 val body = ByteArray(length).also { var n = 0; while (n < length) { val r = input.read(it, n, length - n); if (r < 0) break; n += r } }
                 val (path, query) = Http.splitTarget(target)
-                // The remote's waiting request is always open while the page is: it mustn't keep the phone awake.
-                if (path != "/api/remote") wake.acquire(10 * 60 * 1000L)
                 c.getOutputStream().write(route(method, path, query, headers, String(body, Charsets.UTF_8)))
             } catch (_: Exception) {}
         }
@@ -179,13 +194,18 @@ class DesktopServer(private val context: Context, private val store: Store, val 
             return Http.response(200, "text/html; charset=utf-8", page)
         }
         if (method == "POST" && path == "/api/pair") {
+            when (val c = gate.check(System.currentTimeMillis())) {
+                PairGate.Closed -> return bad(403, "On your phone, open Settings → Use on my computer, then try the code.")
+                is PairGate.Locked -> return bad(429, "Too many wrong codes. Try again in ${c.seconds} s.")
+                PairGate.Ok -> {}
+            }
             val code = try { json.decodeFromString<PairIn>(body).code.trim() } catch (_: Exception) { "" }
             if (!Http.same(code, _code.value)) {
-                // Too many wrong guesses: a new code, so the 6 digits can't be guessed by trying them all.
-                if (++wrongCodes >= 5) { wrongCodes = 0; _code.value = Http.pairingCode() }
+                // Five wrong: locked for a while, and a fresh code on the phone.
+                if (gate.wrong(System.currentTimeMillis())) _code.value = Http.pairingCode()
                 return bad(401, "That code doesn't match. Check the phone.")
             }
-            wrongCodes = 0
+            gate.paired()
             val t = Http.token()
             synchronized(tokens) { tokens += t; prefs.edit().putStringSet("tokens", tokens.toSet()).apply() }
             _paired.value = tokens.size
@@ -193,6 +213,9 @@ class DesktopServer(private val context: Context, private val store: Store, val 
         }
         val token = headers["x-token"] ?: query["t"]
         if (synchronized(tokens) { tokens.none { Http.same(it, token) } }) return bad(401, "Not paired")
+        // Paired requests only: keep the phone awake a little so the page stays quick with the screen off.
+        // (Not the remote's waiting request, which is always open while the page is.)
+        if (path != "/api/remote") wake.acquire(5 * 60 * 1000L)
 
         Http.voiceAsset(path)?.let { asset ->
             val bytes = try { context.assets.open(asset).use { it.readBytes() } } catch (_: Exception) { return bad(404, "No recording") }
@@ -233,6 +256,22 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 val id = try { json.decodeFromString<IdIn>(body).id } catch (_: Exception) { return bad(400, "Bad id") }
                 val card = s.cards.firstOrNull { it.id == id && it.custom } ?: return bad(403, "Only your own phrases can be deleted")
                 store.edit { CardEdits.delete(it, card.id) }
+                ok(json.encodeToString(Msg(true)))
+            }
+            "GET /api/aplus" -> {
+                val strength = APlus.strength(s)
+                val reviews = s.aplus.associateBy { it.id }
+                val queue = APlus.queue(s).map { DAQ(it.id, it.domain, it.q, it.a, reviews[it.id]?.firstSeen == null) }
+                val domains = APlus.domains.map { (n, v) -> DDomain(n, v.first, v.second, strength[n] ?: 0f) }
+                val day = com.dudlatitat.nextchapter.data.today()
+                val done = s.aplus.count { it.last == day && it.due > day }
+                ok(json.encodeToString(DAPlus(s.aplusExam, done, domains, APlus.weakest(s), queue)))
+            }
+            "POST /api/aplus/grade" -> {
+                val g = try { json.decodeFromString<GradeIn>(body) } catch (_: Exception) { return bad(400, "Bad grade") }
+                if (APlus.core1.none { it.id == g.id }) return bad(404, "No such card")
+                val grade = Grade.entries.getOrNull(g.grade - 1) ?: return bad(400, "Grade is 1–4")
+                store.edit { APlus.graded(it, g.id, grade) }
                 ok(json.encodeToString(Msg(true)))
             }
             "GET /api/remote" -> {

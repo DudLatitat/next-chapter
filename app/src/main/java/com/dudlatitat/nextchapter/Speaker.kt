@@ -110,26 +110,29 @@ class Speaker(context: Context) {
     private fun sayWithPhone(text: String, slow: Boolean) {
         val t = tts ?: return
         if (!_ready.value) return
-        player?.stop()
+        try { player?.stop() } catch (_: Exception) {}
         applyVoice()
         t.setSpeechRate(if (slow) 0.55f else 0.85f)
         t.speak(text, TextToSpeech.QUEUE_FLUSH, null, text)
     }
 
-    private fun play(asset: String, slow: Boolean): Boolean = try {
+    private fun play(asset: String, slow: Boolean): Boolean {
         tts?.stop()
         player?.release()
-        val fd = app.assets.openFd(asset)
-        player = MediaPlayer().apply {
-            setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-            setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
-            fd.close()
-            prepare()
-            if (slow) playbackParams = PlaybackParams().setSpeed(0.7f).setPitch(1f)
-            start()
-        }
-        true
-    } catch (_: Exception) { false }
+        player = null // never keep a released player around (stop() on it would crash)
+        val p = MediaPlayer()
+        return try {
+            app.assets.openFd(asset).use { fd ->
+                p.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                p.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
+            }
+            p.prepare()
+            if (slow) p.playbackParams = PlaybackParams().setSpeed(0.7f).setPitch(1f)
+            p.start()
+            player = p
+            true
+        } catch (_: Exception) { p.release(); false }
+    }
 
     fun stop() {
         tts?.stop()

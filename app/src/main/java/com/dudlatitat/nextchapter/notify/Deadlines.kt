@@ -38,11 +38,14 @@ object Deadlines {
         var next = LocalDate.now().atStartOfDay().plusMinutes(AT_MINUTES.toLong())
         if (!next.isAfter(LocalDateTime.now())) next = next.plusDays(1)
         val at = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        alarms.setInexactRepeating(AlarmManager.RTC_WAKEUP, at, AlarmManager.INTERVAL_DAY, pending)
+        // A one-shot alarm within 10 minutes (a daily inexact one may drift by hours); show() books
+        // the next day's. setWindow needs no exact-alarm permission.
+        alarms.setWindow(AlarmManager.RTC_WAKEUP, at, 10 * 60 * 1000L, pending)
     }
 
     fun show(context: Context) {
         val state = Store.get(context).state.value
+        schedule(context, state) // book tomorrow's first
         if (!state.jobReminders) return
         val due = Career.remindToday(state, LocalDate.now())
         if (due.isEmpty()) return

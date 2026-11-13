@@ -45,10 +45,11 @@ fun AppState.taskProgress(): Float = if (tasks.isEmpty()) 0f else tasks.count { 
 fun AppState.moveReady(): Float = if (savingsGoal <= 0) taskProgress() else (taskProgress() + savingsProgress()) / 2f
 
 /** A phrase picked for today: the same all day, different tomorrow. */
-fun AppState.phraseOfTheDay(): Card? {
+fun AppState.phraseOfTheDay(day: Long = today()): Card? {
     if (cards.isEmpty()) return null
-    val pool = cards.filter { !it.isNew }.ifEmpty { cards }
-    return pool[(today() % pool.size).toInt()]
+    // Only cards learned before today, in a fixed order, so today's reviews and adds can't change the pick.
+    val pool = cards.filter { it.firstSeen != null && it.firstSeen < day }.ifEmpty { cards }.sortedBy { it.id }
+    return pool[Math.floorMod(day, pool.size.toLong()).toInt()]
 }
 
 /** Months and days, for a friendly countdown ("1 yr 7 mo"). */

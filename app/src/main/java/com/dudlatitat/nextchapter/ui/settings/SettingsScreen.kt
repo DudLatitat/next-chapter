@@ -63,7 +63,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     var micTest by remember { mutableStateOf(false) }
     if (micTest) { MicTestScreen(vm, onBack = { micTest = false }); return }
     var onComputer by remember { mutableStateOf(false) }
-    if (onComputer) { OnComputerScreen(onBack = { onComputer = false }); return }
+    if (onComputer) { OnComputerScreen(vm, onBack = { onComputer = false }); return }
     BackHandler(onBack = onBack)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
@@ -81,7 +81,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     var logOn by remember { mutableStateOf(com.dudlatitat.nextchapter.speech.VoiceLog.enabled(context)) }
     val logCount = remember(logTick) { com.dudlatitat.nextchapter.speech.VoiceLog.read(context).size }
     val exportLog = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) context.contentResolver.openOutputStream(uri)?.use { it.write(com.dudlatitat.nextchapter.speech.VoiceLog.export(context).toByteArray()) }
+        // A cloud folder or a revoked permission can refuse the file: don't crash over it.
+        if (uri != null) try { context.contentResolver.openOutputStream(uri)?.use { it.write(com.dudlatitat.nextchapter.speech.VoiceLog.export(context).toByteArray()) } } catch (_: Exception) {}
     }
     val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult

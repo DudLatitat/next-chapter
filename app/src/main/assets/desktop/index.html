@@ -113,6 +113,22 @@
   .g1 { background: var(--coral); } .g2 { background: var(--sun); } .g3 { background: var(--jade); } .g4 { background: var(--violet); }
   .hint { text-align: center; margin-top: 16px; font-size: 13px; color: var(--muted); }
 
+  .said { margin-top: 18px; padding: 10px 18px; border-radius: 14px; background: rgba(255,255,255,.05); animation: rise .4s both; }
+  .said .chars { font: 30px var(--zh); letter-spacing: 4px; }
+  .said .mR { color: var(--jade); } .said .mT { color: var(--sun); } .said .mM { color: var(--coral); text-decoration: underline wavy; }
+  .said.lvl2 { box-shadow: 0 0 40px -8px rgba(79,179,169,.6); } .said.miss { color: var(--coral); }
+  /* ---- A+ ---- */
+  .aplus { display: grid; grid-template-columns: 1fr 300px; gap: 22px; max-width: 1180px; margin: 0 auto; padding: 34px 28px 60px; }
+  .aplus .q { font-size: 28px; font-weight: 600; line-height: 1.35; }
+  .aplus .a { font-size: 21px; margin-top: 22px; color: var(--sun); line-height: 1.5; animation: rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .dom { margin: 12px 0; }
+  .dom .top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+  .dom .top span:last-child { font-size: 12px; white-space: nowrap; }
+  .dom .bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; margin-top: 5px; }
+  .dom .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--violet), #b7bbff); }
+  .dom.weak .top span:first-child { color: var(--coral); }
+  .exam { font-size: 40px; font-weight: 700; color: var(--violet); }
+  @media (max-width: 820px) { .aplus { grid-template-columns: 1fr; padding: 16px; } }
   /* ---- Dialog, toast ---- */
   .veil { position: fixed; inset: 0; background: rgba(5, 8, 20, .6); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 20; animation: fade .15s; }
   @keyframes fade { from { opacity: 0; } }
@@ -186,7 +202,7 @@ async function start() {
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav><button data-v="phrases">Phrases</button><button data-v="review">Review</button></nav>
+      <nav><button data-v="phrases">Phrases</button><button data-v="review">Review</button><button data-v="aplus">A+</button></nav>
       <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span></div>
     </header>
     <div id="main"></div>`;
@@ -194,7 +210,7 @@ async function start() {
   go(view);
   listen();
 }
-function go(v) { view = v; document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.v === view)); renderStats(); (view === "review" ? renderReview : renderPhrases)(); }
+function go(v) { view = v; document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.v === view)); renderStats(); ({ review: renderReview, aplus: renderAPlus }[view] || renderPhrases)(); }
 function renderStats() {
   const due = summary.due + summary.fresh;
   $("#stats").innerHTML = `<span class="pill sun">🔥 ${summary.streak}-day streak</span> <span class="pill">${summary.known} known</span> ${due ? `<span class="pill">${due} to review</span>` : ""}`;
@@ -283,7 +299,7 @@ function editor(c) {
 
 // ---- Review: Space shows, 1–4 grade, P plays (or the phone remote) ----
 let queue = [], shown = false, startSize = 0;
-async function renderReview() { queue = await api("/api/queue"); startSize = queue.length; shown = false; drawCard(); }
+async function renderReview() { said = null; queue = await api("/api/queue"); startSize = queue.length; shown = false; drawCard(); }
 function drawCard(flip) {
   const c = queue[0];
   if (!c) {
@@ -299,7 +315,7 @@ function drawCard(flip) {
       <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${shown ? "shown" : ""}">
         <div class="deckline">${c.isNew ? "✦ new · " : ""}${esc(deckName(c.deck))}</div>
         <div class="english">${esc(c.english)}</div>
-        ${shown ? `<div class="hanzi zh">${esc(c.hanzi)}</div><div class="pinyin">${tonePinyin(c.pinyin)}</div>`
+        ${shown ? `<div class="hanzi zh">${esc(c.hanzi)}</div><div class="pinyin">${tonePinyin(c.pinyin)}</div>${saidStrip(c)}`
                 : `<div class="ask">Say it out loud in Chinese, then show the answer.</div>`}
       </div></div>
       ${shown
@@ -312,20 +328,94 @@ function drawCard(flip) {
   else { document.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => grade(+b.dataset.g)); $("#play").onclick = () => play(c); }
   report(c, shown, queue.length);
 }
+// ---- Couch speaking check: the phone listened; colour each character and count a clean one as Good ----
+let said = null, autoGrade = null;
+function heard(level, marks) {
+  if (!queue.length) return;
+  said = { level, marks };
+  clearTimeout(autoGrade);
+  if (!shown) { shown = true; play(queue[0]); }
+  drawCard(true);
+  if (level === 2) autoGrade = setTimeout(() => { if (said) grade(3); }, 1600);
+}
+function saidStrip(c) {
+  if (!said) return "";
+  if (said.marks === "quiet") return `<div class="said miss">Didn't catch that. Try again a little louder.</div>`;
+  let k = 0;
+  const chars = [...c.hanzi].map((ch) => /[\u4e00-\u9fff]/.test(ch) ? `<span class="m${said.marks[k++] || "M"}">${esc(ch)}</span>` : esc(ch)).join("");
+  const label = ["Not quite. Listen and try again", "Close!", "Perfect! Counting it as Good"][said.level];
+  return `<div class="said lvl${said.level}"><div class="chars">${chars}</div><div>🎤 ${label}</div></div>`;
+}
 function reveal() { if (shown || !queue.length) return; shown = true; drawCard(true); play(queue[0]); }
 async function grade(g) {
   if (!shown || !queue.length) return;
-  const c = queue.shift(); shown = false;
+  const c = queue.shift(); shown = false; said = null; clearTimeout(autoGrade);
   await api("/api/grade", { id: c.id, grade: g });
   if (g === 1) queue.push(c); // missed: once more before you're done
   await refreshSummary(); drawCard();
 }
 document.addEventListener("keydown", (e) => {
-  if (view !== "review" || !queue.length || e.target.tagName === "INPUT") return;
+  if (e.target.tagName === "INPUT") return;
+  if (view === "aplus" && aq.length) {
+    if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
+    return;
+  }
+  if (view !== "review" || !queue.length) return;
   if (e.code === "Space") { e.preventDefault(); reveal(); }
   else if ("1234".includes(e.key)) grade(+e.key);
   else if (e.key.toLowerCase() === "p") play(queue[0]);
 });
+
+
+// ---- A+ (CompTIA Core 1): the same flip-card review, with how each domain is going ----
+let aq = [], aShown = false, aStart = 0, aInfo = null;
+async function renderAPlus() { aInfo = await api("/api/aplus"); aq = aInfo.queue; aStart = aq.length; aShown = false; drawA(); }
+function examLine() {
+  if (!aInfo.exam) return `<p class="muted">Set your exam date on the phone (Life → A+) to see a countdown.</p>`;
+  const days = Math.ceil((new Date(aInfo.exam + "T00:00:00") - new Date(new Date().toDateString())) / 86400000);
+  return days >= 0 ? `<div class="exam">${days}</div><div class="muted">day${days === 1 ? "" : "s"} to the exam</div>` : `<p class="muted">Exam date passed. How did it go?</p>`;
+}
+function drawA(flip) {
+  const c = aq[0];
+  const side = `<aside class="glass" style="padding:20px;align-self:start">
+      ${examLine()}
+      <h4 style="margin:18px 0 4px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">How it's going</h4>
+      ${aInfo.domains.map((d) => `<div class="dom ${aInfo.weakest === d.n ? "weak" : ""}"><div class="top"><span>${esc(d.name)}${aInfo.weakest === d.n ? " · focus" : ""}</span><span class="muted">${Math.round(d.strength * 100)}% · ${d.share}% of exam</span></div><div class="bar"><i style="width:${Math.round(d.strength * 100)}%"></i></div></div>`).join("")}
+      <p class="tag" style="margin-top:14px">Known = remembered a week or more. ${aInfo.done} reviewed today.</p>
+    </aside>`;
+  if (!c) {
+    $("#main").innerHTML = `<div class="aplus"><div class="glass face" style="text-align:center"><div style="font-size:54px">✓</div><h2 style="margin:6px 0">A+ done for today</h2><p class="muted">New cards arrive tomorrow. The weakest domain is highlighted on the right.</p></div>${side}</div>`;
+    report(null, false, 0); return;
+  }
+  const done = aStart ? Math.min(1, (aStart - aq.length) / aStart) : 0;
+  const dom = (aInfo.domains.find((d) => d.n === c.domain) || {}).name || "";
+  $("#main").innerHTML = `
+    <div class="aplus"><div>
+      <div style="display:flex;justify-content:space-between"><span class="muted">${aq.length} to go</span><span class="tag">${Math.round(done * 100)}%</span></div>
+      <div class="progress"><i style="width:${Math.round(done * 100)}%;background:linear-gradient(90deg,var(--violet),#b7bbff)"></i></div>
+      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${aShown ? "shown" : ""}">
+        <div class="deckline">${c.isNew ? "✦ new · " : ""}${esc(dom)}</div>
+        <div class="q">${esc(c.q)}</div>
+        ${aShown ? `<div class="a">${esc(c.a)}</div>` : `<div class="ask">Answer it in your head (or out loud), then show it.</div>`}
+      </div></div>
+      ${aShown
+        ? `<div class="grades" style="grid-template-columns:repeat(4,1fr)"><button class="btn g1" data-g="1">Again <kbd>1</kbd></button><button class="btn g2" data-g="2">Hard <kbd>2</kbd></button>
+           <button class="btn g3" data-g="3">Good <kbd>3</kbd></button><button class="btn g4" data-g="4">Easy <kbd>4</kbd></button></div>`
+        : `<div class="grades" style="grid-template-columns:1fr"><button class="btn" id="ashow" style="background:var(--violet)">Show answer <kbd>Space</kbd></button></div>`}
+    </div>${side}</div>`;
+  if (!aShown) $("#ashow").onclick = aReveal;
+  else document.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => aGrade(+b.dataset.g));
+  api("/api/state", { view, english: c.q, hanzi: aShown ? c.a : "", pinyin: "", shown: aShown, left: aq.length }).catch(() => {});
+}
+function aReveal() { if (aShown || !aq.length) return; aShown = true; drawA(true); }
+async function aGrade(g) {
+  if (!aShown || !aq.length) return;
+  const c = aq.shift(); aShown = false;
+  await api("/api/aplus/grade", { id: c.id, grade: g });
+  if (g === 1) aq.push(c);
+  const fresh = await api("/api/aplus"); aInfo.domains = fresh.domains; aInfo.weakest = fresh.weakest; aInfo.done = fresh.done;
+  drawA();
+}
 
 // ---- Phone remote: the page waits for presses (long-poll) and acts on them ----
 async function listen() {
@@ -341,10 +431,12 @@ async function listen() {
 }
 function act(c) {
   const dot = $("#rdot"); if (dot) { dot.style.display = "inline-block"; clearTimeout(act.t); act.t = setTimeout(() => dot.style.display = "none", 60000); }
-  if (c.cmd === "tab") return go(c.value === 1 ? "review" : "phrases");
+  if (c.cmd === "tab") return go(["phrases", "review", "aplus"][c.value] || "phrases");
   if (c.cmd === "scroll") return window.scrollBy({ top: c.value, behavior: "smooth" });
   if (c.cmd === "top") return window.scrollTo({ top: 0, behavior: "smooth" });
+  if (view === "aplus") { if (c.cmd === "show") aReveal(); else if (c.cmd === "grade") aGrade(c.value); return; }
   if (view !== "review") { if (c.cmd === "show" || c.cmd === "grade") go("review"); return; }
+  if (c.cmd === "said") return heard(c.value, c.text);
   if (c.cmd === "show") reveal();
   else if (c.cmd === "grade") grade(c.value);
   else if (c.cmd === "play") play(queue[0]);

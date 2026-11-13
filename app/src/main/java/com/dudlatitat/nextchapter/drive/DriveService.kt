@@ -183,7 +183,8 @@ class DriveService : Service() {
                 val log = s.days[d] ?: DayLog()
                 s.copy(
                     driveMinutes = s.driveMinutes + minutes,
-                    days = s.days + (d to log.copy(seconds = log.seconds + seconds, reviews = log.reviews + played)),
+                    // Listening isn't a review: only the 10-phrase rule below may count the day for the streak.
+                    days = s.days + (d to log.copy(seconds = log.seconds + seconds)),
                     // Ten phrases or more counts as today's practice for the streak.
                     studyDays = if (played >= 10 && d !in s.studyDays) s.studyDays + d else s.studyDays,
                 )

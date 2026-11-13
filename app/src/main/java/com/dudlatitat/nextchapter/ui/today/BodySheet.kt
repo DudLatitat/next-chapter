@@ -137,7 +137,7 @@ fun BodySheet(state: AppState, vm: MainViewModel) {
                 colors = ButtonDefaults.buttonColors(containerColor = Night.violet, contentColor = Night.ground2),
             ) { Text("Save goals") }
         }
-        val history = Body.history(state, day)
+        val history = remember(state.weights, state.calorieAdds, day) { Body.history(state, day) }
         if (history.isNotEmpty()) {
             Spacer(Modifier.height(18.dp))
             Text("Every day · 每天", style = MaterialTheme.typography.labelMedium, color = Night.muted)

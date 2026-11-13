@@ -38,12 +38,14 @@ object Reminder {
         var next = LocalDate.now().atStartOfDay().plusMinutes(state.reminderMinutes.toLong())
         if (!next.isAfter(LocalDateTime.now())) next = next.plusDays(1)
         val at = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        // Inexact is fine for a practice nudge, and needs no special alarm permission.
-        alarms.setInexactRepeating(AlarmManager.RTC_WAKEUP, at, AlarmManager.INTERVAL_DAY, pending)
+        // A one-shot alarm within 10 minutes (a daily inexact one may drift by hours); show() books
+        // the next day's. setWindow needs no exact-alarm permission.
+        alarms.setWindow(AlarmManager.RTC_WAKEUP, at, 10 * 60 * 1000L, pending)
     }
 
     fun show(context: Context) {
         val state = Store.get(context).state.value
+        schedule(context, state) // book tomorrow's first
         if (!state.reminderOn) return
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -80,11 +82,19 @@ class ReminderReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            Reminder.schedule(context, Store.get(context).state.value)
-            Evening.schedule(context, Store.get(context).state.value)
-            Deadlines.schedule(context, Store.get(context).state.value)
-            PlaceWatch.register(context, Store.get(context).state.value)
+            Alarms.all(context, Store.get(context).state.value)
             com.dudlatitat.nextchapter.desktop.Desktop.resume(context)
         }
+    }
+}
+
+/** Every alarm, geofence and background check, booked from the saved state (app start, boot, restore). */
+object Alarms {
+    fun all(context: Context, state: AppState) {
+        Reminder.schedule(context, state)
+        Evening.schedule(context, state)
+        Deadlines.schedule(context, state)
+        PlaceWatch.register(context, state)
+        FareWatch.schedule(context)
     }
 }

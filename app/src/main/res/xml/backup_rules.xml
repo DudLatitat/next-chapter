@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android's own backup (Android 11 and older): keep progress, leave out keys and computer tokens. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="fares.xml" />
+    <exclude domain="sharedpref" path="desktop.xml" />
+</full-backup-content>

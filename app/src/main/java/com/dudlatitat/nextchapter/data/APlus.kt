@@ -219,6 +219,10 @@ object APlus {
 
     fun withReview(list: List<Review>, r: Review): List<Review> = list.filterNot { it.id == r.id } + r
 
+    /** The whole state after grading one card (shared by the phone and the computer page). */
+    fun graded(s: AppState, id: String, g: Grade, day: Long = today()): AppState =
+        s.copy(aplus = withReview(s.aplus, grade(review(s, id), g, day)))
+
     /** Share of each domain's cards you know (remembered a week or more), 0–1. */
     fun strength(state: AppState): Map<Int, Float> {
         val known = state.aplus.filter { it.interval >= 7 }.map { it.id }.toSet()

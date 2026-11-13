@@ -79,12 +79,15 @@ object Pinyin {
         return out
     }
 
+    // Building the ICU transliterator is slow: make it once (it isn't thread-safe, hence synchronized).
+    @Volatile private var hanLatin: android.icu.text.Transliterator? = null
+
     /** Pinyin with tone marks for Chinese text, from the phone's own dictionary (Android 10+). */
     fun fromHanzi(hanzi: String): String? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || hanzi.isBlank()) return null
         return try {
-            android.icu.text.Transliterator.getInstance("Han-Latin").transliterate(hanzi.trim())
-                .replace(Regex("\\s+"), " ").trim()
+            val t = hanLatin ?: android.icu.text.Transliterator.getInstance("Han-Latin").also { hanLatin = it }
+            synchronized(t) { t.transliterate(hanzi.trim()) }.replace(Regex("\\s+"), " ").trim()
         } catch (_: Exception) { null }
     }
 

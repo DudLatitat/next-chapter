@@ -121,6 +121,7 @@ object Offline {
             }
         }
     } catch (e: Throwable) {
+        if (e is kotlinx.coroutines.CancellationException) throw e // leaving the screen stops the check
         // Includes a missing native library (UnsatisfiedLinkError): show it instead of crashing.
         VoskResult("", emptyList(), "Offline recognizer failed: ${e.javaClass.simpleName}: ${e.message}")
     }

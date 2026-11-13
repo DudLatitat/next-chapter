@@ -13,8 +13,6 @@ import java.security.SecureRandom
 object Http {
     const val MAX_BODY = 64 * 1024
 
-    data class Request(val method: String, val path: String, val query: Map<String, String>, val headers: Map<String, String>, val body: String)
-
     /** Parses the request line and headers ("GET /api/queue?x=1 HTTP/1.1" …); null if it isn't HTTP. */
     fun parseHead(head: String): Triple<String, String, Map<String, String>>? {
         val lines = head.split("\r\n")

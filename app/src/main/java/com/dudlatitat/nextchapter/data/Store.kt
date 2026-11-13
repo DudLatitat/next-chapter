@@ -20,21 +20,31 @@ class Store private constructor(context: Context) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     // One writer, newest state wins (see Saver): declared before _state, which saves while seeding.
+    private val tmp = File(context.filesDir, "state.json.tmp")
     private val saver = Saver<AppState>(scope) { s ->
-        val tmp = File(file.parentFile, "state.json.tmp")
-        tmp.writeText(json.encodeToString(AppState.serializer(), s))
-        tmp.renameTo(file)
+        // Write a temp file, force it onto the disk (sync), then swap it in: a crash or a dead
+        // battery mid-save leaves either the old file or the new one, never half of one.
+        java.io.FileOutputStream(tmp).use { out ->
+            out.write(json.encodeToString(AppState.serializer(), s).toByteArray())
+            out.fd.sync()
+        }
+        if (!tmp.renameTo(file)) { tmp.copyTo(file, overwrite = true); tmp.delete() }
     }
+    // Widgets and other listeners hear about changes off the main thread, newest state only.
+    private val notifier = Saver<AppState>(scope) { s -> onChange?.invoke(s) }
 
     private val _state = MutableStateFlow(seed(load()))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
-    private fun load(): AppState = try {
-        if (file.exists()) json.decodeFromString(AppState.serializer(), file.readText()) else AppState()
-    } catch (_: Exception) {
-        // A broken file: keep it aside rather than lose it, and start fresh.
-        file.renameTo(File(file.parentFile, "state-broken-${System.currentTimeMillis()}.json"))
-        AppState()
+    private fun read(f: File): AppState? = try {
+        if (f.exists() && f.length() > 0) json.decodeFromString(AppState.serializer(), f.readText()) else null
+    } catch (_: Exception) { null }
+
+    private fun load(): AppState {
+        read(file)?.let { return it }
+        // A broken or empty file: keep it aside rather than lose it, then try the last temp copy.
+        if (file.exists()) file.renameTo(File(file.parentFile, "state-broken-${System.currentTimeMillis()}.json"))
+        return read(tmp) ?: AppState()
     }
 
     /** Adds starter phrases and tasks the saved state doesn't have yet. */
@@ -56,7 +66,7 @@ class Store private constructor(context: Context) {
     fun edit(change: (AppState) -> AppState) {
         _state.update(change)
         save(_state.value)
-        onChange?.invoke(_state.value)
+        notifier.save(_state.value)
     }
 
     /** Replaces everything with a backup; false if the text isn't a Next Chapter backup. */
@@ -77,7 +87,15 @@ class Store private constructor(context: Context) {
 
         /** One store for the whole app (the main screen, quick-add, widget and reminder share it). */
         fun get(context: Context): Store = instance ?: synchronized(this) {
-            instance ?: Store(context.applicationContext).also { instance = it }
+            instance ?: Store(context.applicationContext).also { st ->
+                // Widgets follow every change, whoever made it (app, computer page, Drive, arrivals).
+                val app = context.applicationContext
+                st.onChange = { s ->
+                    com.dudlatitat.nextchapter.widget.PhraseWidget.refresh(app, s)
+                    com.dudlatitat.nextchapter.widget.WeekWidget.refresh(app, s)
+                }
+                instance = st
+            }
         }
     }
 }

@@ -79,8 +79,11 @@ fun TodayScreen(
     onPhrasebook: () -> Unit = {}, onOpenLife: () -> Unit = {}, onAPlus: () -> Unit = {},
     onTool: (String) -> Unit = {}, onLifePage: (String) -> Unit = {},
 ) {
+    // The clock this screen runs on: ticks each minute and on coming back to the app, so the
+    // greeting, the Now card, her time and "today" never go stale.
+    val minute = rememberMinute()
     // Opening the app by 30 minutes after your wake time counts toward the early-start streak.
-    LaunchedEffect(Unit) { if (Life.earlyStart(LocalTime.now(), state.wakeMinutes)) vm.markEarlyStart() }
+    LaunchedEffect(minute) { if (today() !in state.wakeDays && Life.earlyStart(LocalTime.now(), state.wakeMinutes)) vm.markEarlyStart() }
     val part = Life.partOf(LocalTime.now())
     var prayerOpen by remember { mutableStateOf(false) }
     var jobOpen by remember { mutableStateOf(false) }
@@ -102,11 +105,11 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Hero(state, vm, part, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
+        Hero(state, vm, part, minute, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
-        TodayRings(state, part, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
+        TodayRings(state, part, minute, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
-        NowCard(state, vm, part, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
+        NowCard(state, vm, part, minute, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
         val nm = LocalTime.now().let { it.hour * 60 + it.minute }
         if (com.dudlatitat.nextchapter.data.TonightLine.showing(state.tonight, today(), nm)) state.tonight?.let { t ->
@@ -180,7 +183,7 @@ fun TodayScreen(
 /** The warm header: greeting, both clocks, the trip, the streaks, and a call-time note. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit, onTrip: () -> Unit) {
+private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit, onTrip: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -257,7 +260,7 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, onSettings
  */
 @Composable
 private fun NowCard(
-    state: AppState, vm: MainViewModel, part: Life.Part, startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit,
+    state: AppState, vm: MainViewModel, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit,
     onPray: () -> Unit, onChinese: () -> Unit, onAPlus: () -> Unit, onDrive: () -> Unit,
 ) {
     val R = com.dudlatitat.nextchapter.data.Routine
@@ -311,12 +314,12 @@ private fun NowLine(title: String, line: String, button: String, color: Color, o
 
 /** Four rings for today's small things. Tap one to do it. */
 @Composable
-private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit, onWeek: () -> Unit) {
+private fun TodayRings(state: AppState, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit, onWeek: () -> Unit) {
     val d = today()
     val queue = Srs.queue(state)
     val zhDone = state.cards.count { it.last == d && it.due > d }
     val zhTotal = zhDone + queue.size
-    val aDone = state.aplus.count { it.last == d }
+    val aDone = state.aplus.count { it.last == d && it.due > d }
     val aTotal = aDone + APlus.queue(state).size
     val prayed = d in state.prayedDays
     val R = com.dudlatitat.nextchapter.data.Routine
@@ -356,16 +359,18 @@ private fun TodayRings(state: AppState, part: Life.Part, onChinese: () -> Unit, 
 private fun Ring(label: String, progress: Float, color: Color, center: String, onClick: () -> Unit, sub: String? = null, breathe: Boolean = false) {
     // Unfinished rings breathe in their own color: a soft glow swells behind the ring and fades,
     // slow enough to feel calm, bright enough to notice. Done rings sit still.
-    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe")
-    // Read only while drawing (not composing), so breathing redraws the glow without re-laying out the ring.
-    val breath = pulse.animateFloat(
-        0f, 1f,
-        androidx.compose.animation.core.infiniteRepeatable(
-            androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-            androidx.compose.animation.core.RepeatMode.Reverse,
-        ),
-        label = "breath",
-    )
+    // Read only while drawing (not composing), so breathing redraws the glow without re-laying out
+    // the ring; finished rings don't run the animation at all.
+    val breath: androidx.compose.runtime.State<Float> = if (breathe) {
+        androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe").animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(
+                androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                androidx.compose.animation.core.RepeatMode.Reverse,
+            ),
+            label = "breath",
+        )
+    } else remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     Column(Modifier.width(72.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         androidx.compose.foundation.layout.Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
             if (breathe) androidx.compose.foundation.Canvas(Modifier.size(64.dp)) {
@@ -405,4 +410,18 @@ private fun PhraseRow(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewMo
             IconButton(onClick = { vm.speaker.say(card.hanzi) }) { Icon(Icons.Rounded.PlayArrow, "Listen", tint = Night.ink) }
         }
     }
+}
+
+/** The current minute (epoch minutes): changes every minute and whenever the app comes back. */
+@Composable
+fun rememberMinute(): Long {
+    var m by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis() / 60_000) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000 - System.currentTimeMillis() % 60_000 + 50)
+            m = System.currentTimeMillis() / 60_000
+        }
+    }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { m = System.currentTimeMillis() / 60_000; onPauseOrDispose { } }
+    return m
 }

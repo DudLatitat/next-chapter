@@ -69,10 +69,6 @@ object Body {
         }
     }
 
-    /** Weigh-ins in the last [days] days, oldest first (for the little chart). */
-    fun recentWeights(weights: List<WeightEntry>, today: Long, days: Int = 30): List<WeightEntry> =
-        weights.filter { it.day > today - days }.sortedBy { it.day }
-
     /** "182.4", "170" (one decimal, no ".0"). */
     fun lbs(v: Double): String {
         val r = (v * 10).roundToInt() / 10.0

@@ -82,6 +82,25 @@ tools/
 - **1.76 (remote polish):** `Remote.kt` rebuilt: Connected/Waiting dot (`DesktopServer.seen`, set on each `/api/remote` check-in; live if < 30 s), mini flashcard with tilt on change, tone-coloured pinyin, session progress bar, "🔥 N in a row" for Good/Easy streaks (phone-side only, not saved), Phrases/Review switch, grade pads with Chinese labels and press bounce, touchpad with dot grid and a glow under the finger. Page: review card centred, deck line on top, gold glow when the answer shows.
 - **1.77 (Identity V, finding each other):** 28 new `idv` phrases (now 48): meeting up and coming to her (你在哪里？, 我过去找你, 站着别动，我来找你…) and directions (左转/右转, 在你左边, 楼上/楼下, 撤离点, 庄园入口). Seed.VERSION 13; `SeedTest` checks the idv count. All characters pass the Vosk vocabulary check. 28 new phrases is under the 50 that triggers a tone-model retrain.
 - **1.78 (optimize + Play):** `data/Saver.kt`: Store writes now go through one conflating writer (ordered, newest wins, a failed write doesn't stop later ones; `SaverTest`); before, parallel save coroutines could land an older state last. Today rings read the breathing animation only in draw/graphicsLayer (no per-frame recomposition). New Practice group "Play": **Callouts** (`data/Callouts.kt`, `ui/learn/Callouts.kt`: 10 idv prompts, 8 s clock, speaking check → GREAT/CLOSE/MISS, points + combo, best in `AppState.calloutBest`; `CalloutsTest`) and **Family dinner** (`data/Dinner.kt` 3 scenes / 26 beats, `ui/learn/DinnerScreen.kt` chat-style, 🥢 per answer, best per scene in `AppState.dinnerBest`; `DinnerTest`). `tools/make_voice.py` now records Dinner.kt lines too.
+- **1.79 (audit fixes + PC A+ + couch speaking):**
+  - Fixes from a full audit:
+    - Pairing only while Use on my computer is open, with a doubling lockout after 5 wrong codes (`desktop/PairGate.kt`, `PairGateTest`).
+    - The server has its own 12-thread pool and a connection cap, a 10 s whole-head deadline, and takes the wake lock only after the token check.
+    - The phrase widget has its own PendingIntent request code (12).
+    - `configChanges` on MainActivity, so folding doesn't reset tests or sessions.
+    - Today ticks every minute and on resume (`rememberMinute`).
+    - Drive no longer counts listens as reviews.
+    - The phrase of the day is stable (`PlanTest`).
+    - Reminder and Deadlines use one-shot `setWindow` alarms that book the next day; `notify/Alarms.all` runs on start, boot and restore.
+    - Store fsyncs and falls back to `state.json.tmp`; widgets refresh off the main thread from `Store.get` (works without the app open).
+    - Recorder survives a busy mic, a dead audio service and has no boxing; Speaker never keeps a released player.
+    - Offline check rethrows cancellation; the Pinyin transliterator is cached.
+    - Stars step at 10 fps in their own layer; only breathing rings animate; remote breathe is read in draw.
+    - A+ ring done = due > today.
+    - Backup rules exclude `fares.xml`/`desktop.xml`.
+    - Removed the unused `assets/pinyin.txt`, `Http.Request` and `Body.recentWeights`; QuickAdd uses `CardEdits.add`.
+  - **PC A+ tab:** `/api/aplus` and `/api/aplus/grade` (`APlus.graded`, shared with the phone), with an exam countdown and domain bars. The remote tab value 2 is A+.
+  - **Couch speaking check:** Phone remote → 🎤 Say it runs the offline check on the phone and sends `said` (value 0/1/2 plus R/T/M letters per character). The page colours the characters, and a clean answer auto-grades Good after 1.6 s.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

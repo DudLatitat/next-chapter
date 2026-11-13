@@ -40,4 +40,16 @@ class PlanTest {
         assertEquals(0.5f, AppState(savingsGoal = 1000, saved = 500).savingsProgress(), 1e-6f)
         assertEquals(1f, AppState(savingsGoal = 1000, saved = 5000).savingsProgress(), 1e-6f)
     }
+
+    @Test fun phraseOfTheDayStaysPutWhileYouReview() {
+        val day = 20_000L
+        val learned = (1..5).map { Card("d:$it", "字$it", "zì", "w$it", "daily", firstSeen = day - 10, due = day) }
+        val fresh = Card("d:new", "新", "xīn", "new", "daily")
+        val morning = AppState(cards = learned + fresh)
+        val pick = morning.phraseOfTheDay(day)
+        // After the morning review the new card is seen today and another phrase is added: same pick.
+        val evening = morning.copy(cards = learned + fresh.copy(firstSeen = day, due = day + 1) + Card("mine:x", "加", "jiā", "add", "mine", custom = true))
+        assertEquals(pick, evening.phraseOfTheDay(day))
+        assertEquals("never a card first seen today", true, pick!!.firstSeen!! < day)
+    }
 }

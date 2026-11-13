@@ -65,24 +65,33 @@ object Recorder {
     @SuppressLint("MissingPermission")
     suspend fun record(maxSeconds: Float = 6f, stop: () -> Boolean = { false }, level: (Float) -> Unit = {}): Clip = withContext(Dispatchers.IO) {
         val minBuf = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
-        val rec = AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuf, RATE))
+        val rec = try {
+            AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minBuf, RATE))
+        } catch (_: Exception) { return@withContext Clip(FloatArray(0), RATE) }
+        // The mic is busy (a call, another app) or unavailable: an empty clip reads as "too quiet", no crash.
+        if (rec.state != AudioRecord.STATE_INITIALIZED) { rec.release(); return@withContext Clip(FloatArray(0), RATE) }
         // The phone's own noise suppression, where it has it, cleans up background noise.
         val ns = try { if (android.media.audiofx.NoiseSuppressor.isAvailable()) android.media.audiofx.NoiseSuppressor.create(rec.audioSessionId)?.apply { enabled = true } else null } catch (_: Exception) { null }
         val chunk = ShortArray(RATE / 20) // 50 ms
-        val all = ArrayList<Float>(RATE * 4)
+        // Samples in a plain FloatArray that grows (no boxing of ~100k Floats per recording).
+        var all = FloatArray(RATE * 4)
+        var size = 0
         var heard = false
         var quiet = 0
         var noise = 0.004f
         try {
-            rec.startRecording()
-            while (coroutineContext.isActive && !stop() && all.size < maxSeconds * RATE) {
+            try { rec.startRecording() } catch (_: Exception) { return@withContext Clip(FloatArray(0), RATE) }
+            val giveUp = System.currentTimeMillis() + (maxSeconds * 1000).toLong() + 3000
+            while (coroutineContext.isActive && !stop() && size < maxSeconds * RATE && System.currentTimeMillis() < giveUp) {
                 val n = rec.read(chunk, 0, chunk.size)
-                if (n <= 0) continue
+                if (n < 0) break // the audio system gave up: stop instead of spinning
+                if (n == 0) continue
+                if (size + n > all.size) all = all.copyOf(maxOf(all.size * 2, size + n))
                 var e = 0.0
-                for (i in 0 until n) { val s = chunk[i] / 32768f; all += s; e += s * s }
+                for (i in 0 until n) { val s = chunk[i] / 32768f; all[size++] = s; e += s * s }
                 val rms = sqrt(e / n).toFloat()
                 level((rms * 12f).coerceIn(0f, 1f))
-                if (!heard && all.size < RATE / 2) noise = maxOf(noise, rms * 0.9f).coerceAtMost(0.03f)
+                if (!heard && size < RATE / 2) noise = maxOf(noise, rms * 0.9f).coerceAtMost(0.03f)
                 if (rms > noise * 3f + 0.01f) { heard = true; quiet = 0 } else if (heard) quiet++
                 if (heard && quiet >= 18) break
             }
@@ -91,7 +100,7 @@ object Recorder {
             try { ns?.release() } catch (_: Exception) {}
             rec.release()
         }
-        Clip(all.toFloatArray(), RATE)
+        Clip(all.copyOf(size), RATE)
     }
 
     /** Decodes a recording from the app's assets (MP3) to mono floats. */

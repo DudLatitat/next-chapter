@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: cloud backup and phone-to-phone transfer keep progress, never the fare key or computer tokens. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="fares.xml" />
+        <exclude domain="sharedpref" path="desktop.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="fares.xml" />
+        <exclude domain="sharedpref" path="desktop.xml" />
+    </device-transfer>
+</data-extraction-rules>

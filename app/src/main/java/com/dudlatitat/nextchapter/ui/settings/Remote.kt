@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,6 +79,7 @@ import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.theme.Night
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Settings → Use on my computer → Phone remote. Each press is queued on the phone's server; the
@@ -85,7 +87,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * It drives the page, not Windows itself: a web page can't move the computer's mouse.
  */
 @Composable
-fun RemoteScreen(server: DesktopServer?, onBack: () -> Unit) {
+fun RemoteScreen(server: DesktopServer?, vm: com.dudlatitat.nextchapter.MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     val none = remember { MutableStateFlow<PageState?>(null) }
@@ -103,7 +105,7 @@ fun RemoteScreen(server: DesktopServer?, onBack: () -> Unit) {
         }
         if (server == null) {
             GlassCard { Text("Turn on \"Available on my computer\" first.", color = Night.coral) }
-        } else RemoteBody(server, page) { c, v -> press(c, v) }
+        } else RemoteBody(server, vm, page) { c, v -> press(c, v) }
     }
 }
 
@@ -126,9 +128,10 @@ private fun Connection(server: DesktopServer) {
 }
 
 @Composable
-private fun ColumnScope.RemoteBody(server: DesktopServer, page: PageState?, press: (String, Int) -> Unit) {
+private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nextchapter.MainViewModel, page: PageState?, press: (String, Int) -> Unit) {
     val p = page
-    val review = p?.view == "review"
+    val aplus = p?.view == "aplus"
+    val review = p?.view == "review" || aplus
     // Session progress: the most cards seen waiting since Review opened.
     var most by remember { mutableIntStateOf(0) }
     LaunchedEffect(review, p?.left) { most = if (!review) 0 else maxOf(most, p?.left ?: 0) }
@@ -171,24 +174,27 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, page: PageState?, pres
                         Text("Open the page on your computer", color = Night.ink, textAlign = TextAlign.Center)
                         Text("It shows up here as soon as it's open.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
-                    s.view != "review" -> {
+                    s.view != "review" && s.view != "aplus" -> {
                         Text("短语", fontSize = 30.sp, color = Night.sun)
                         Text("Browsing phrases", color = Night.ink)
                         Text("Swipe below to scroll, or start a review.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
                     s.english.isEmpty() -> {
                         Text("🌙", fontSize = 34.sp)
-                        Text("All caught up · 都复习完了", color = Night.jade)
+                        Text(if (s.view == "aplus") "A+ done for today ✓" else "All caught up · 都复习完了", color = Night.jade)
                         Text("Nice work. New phrases arrive tomorrow.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
                     else -> {
                         Text(s.english, style = MaterialTheme.typography.titleLarge, color = Night.ink, textAlign = TextAlign.Center)
-                        if (s.shown) {
+                        if (s.shown && s.view == "aplus") {
+                            Spacer(Modifier.height(6.dp))
+                            Text(s.hanzi, style = MaterialTheme.typography.bodyLarge, color = Night.sun, textAlign = TextAlign.Center)
+                        } else if (s.shown) {
                             Spacer(Modifier.height(4.dp))
                             Text(s.hanzi, fontSize = 40.sp, color = Night.sun, textAlign = TextAlign.Center)
                             PinyinText(s.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                         } else {
-                            Text("Say it out loud first", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                            Text(if (s.view == "aplus") "Answer it in your head first" else "Say it out loud first", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                         }
                     }
                 }
@@ -201,17 +207,21 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, page: PageState?, pres
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .05f)).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Segment("Phrases · 短语", !review) { press("tab", 0) }
-        Segment("Review · 复习", review) { press("tab", 1) }
+        Segment("Phrases", !review) { press("tab", 0) }
+        Segment("Review", review && !aplus) { press("tab", 1) }
+        Segment("A+", aplus) { press("tab", 2) }
     }
 
     // Review buttons.
     if (review && p!!.english.isNotEmpty()) {
         if (!p.shown) {
-            val breathe by rememberInfiniteTransition(label = "show").animateFloat(
+            val breathe = rememberInfiniteTransition(label = "show").animateFloat(
                 0.18f, 0.34f, infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "b",
             )
-            Row { Pad("Show answer", "看答案", Night.sun, tall = true, fill = breathe) { press("show", 0) } }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Pad("Show answer", "看答案", Night.sun, tall = true, fill = { breathe.value }) { press("show", 0) }
+                if (!aplus) SayIt(server, vm, p) { combo++ }
+            }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Pad("Again", "再来", Night.coral, tall = true) { combo = 0; press("grade", 1) }
@@ -219,7 +229,7 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, page: PageState?, pres
                 Pad("Good", "不错", Night.jade, tall = true) { combo++; press("grade", 3) }
                 Pad("Easy", "简单", Night.violet, tall = true) { combo++; press("grade", 4) }
             }
-            Row { Pad("🔊  Play again", null, Night.ink, fill = 0.06f) { press("play", 0) } }
+            if (!aplus) Row { Pad("🔊  Play again", null, Night.ink, fill = { 0.06f }) { press("play", 0) } }
         }
     }
 
@@ -289,14 +299,15 @@ private fun RowScope.Segment(label: String, on: Boolean, onClick: () -> Unit) {
 
 /** A big button that sinks a little when pressed. */
 @Composable
-private fun RowScope.Pad(label: String, zh: String?, color: Color, tall: Boolean = false, fill: Float = 0.2f, onClick: () -> Unit) {
+private fun RowScope.Pad(label: String, zh: String?, color: Color, tall: Boolean = false, fill: () -> Float = { 0.2f }, onClick: () -> Unit) {
     val shape = RoundedCornerShape(20.dp)
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy), label = "press")
     Column(
         Modifier.weight(1f).height(if (tall) 76.dp else 52.dp).graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)
-            .background(color.copy(alpha = if (pressed) fill + 0.15f else fill))
+            // Fill read while drawing, so a breathing button doesn't recompose the screen every frame.
+            .drawBehind { drawRect(color.copy(alpha = if (pressed) fill() + 0.15f else fill())) }
             .border(1.dp, color.copy(alpha = .6f), shape)
             .clickable(interactionSource = source, indication = null, onClick = onClick),
         verticalArrangement = Arrangement.Center,
@@ -305,4 +316,45 @@ private fun RowScope.Pad(label: String, zh: String?, color: Color, tall: Boolean
         Text(label, color = if (color == Night.ink) Night.ink else color, fontWeight = FontWeight.SemiBold)
         if (zh != null) Text(zh, color = color.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall)
     }
+}
+
+/**
+ * Couch speaking check: say the card into the phone; the offline check runs here and the result
+ * goes to the computer, which colours each character. A clean answer counts as Good there.
+ */
+@Composable
+private fun RowScope.SayIt(server: DesktopServer, vm: com.dudlatitat.nextchapter.MainViewModel, p: PageState, onGreat: () -> Unit) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var recording by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var stopNow by remember { mutableStateOf(false) }
+    val mic = com.dudlatitat.nextchapter.ui.learn.rememberMic {
+        if (recording) { stopNow = true; return@rememberMic }
+        val hanzi = p.hanzi; val pinyin = p.pinyin
+        scope.launch {
+            vm.speaker.stop()
+            recording = true; stopNow = false
+            val clip = com.dudlatitat.nextchapter.speech.Recorder.record(maxSeconds = 6f, stop = { stopNow })
+            recording = false; busy = true
+            val a = vm.coach.check(clip, hanzi, pinyin)
+            busy = false
+            val marks = a.chars
+            val M = com.dudlatitat.nextchapter.speech.Mark
+            val v = when {
+                a.tooQuiet -> com.dudlatitat.nextchapter.data.Callouts.Verdict.MISS
+                marks == null -> com.dudlatitat.nextchapter.data.Callouts.Verdict.CLOSE
+                else -> com.dudlatitat.nextchapter.data.Callouts.verdict(marks.count { it.mark == M.RIGHT }, marks.count { it.mark == M.TONE }, marks.count { it.mark == M.MISSED })
+            }
+            // R = right, T = tone off, M = missed, one letter per character.
+            val text = marks?.joinToString("") { when (it.mark) { M.RIGHT -> "R"; M.TONE -> "T"; M.MISSED -> "M" } } ?: ""
+            server.send("said", when (v) { com.dudlatitat.nextchapter.data.Callouts.Verdict.GREAT -> 2; com.dudlatitat.nextchapter.data.Callouts.Verdict.CLOSE -> 1; else -> 0 }, if (a.tooQuiet) "quiet" else text)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            if (v == com.dudlatitat.nextchapter.data.Callouts.Verdict.GREAT) onGreat()
+        }
+    }
+    Pad(
+        when { recording -> "■  Stop"; busy -> "Checking…"; else -> "🎤  Say it" }, if (recording) "listening" else "说一说",
+        if (recording) Night.coral else Night.jade, tall = true, fill = { if (recording) 0.32f else 0.2f },
+    ) { if (!busy) mic() }
 }
