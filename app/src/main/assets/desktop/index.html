@@ -154,6 +154,102 @@
   .sky .tip { position: fixed; pointer-events: none; padding: 8px 12px; border-radius: 12px; background: rgba(15, 22, 52, .95); border: 1px solid var(--line); display: none; z-index: 10; }
   .sky .tip .h { font: 24px var(--zh); }
   .sky .legend { display: flex; gap: 18px; align-items: center; margin: 12px 4px 0; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  /* ---- Terminal dojo ---- */
+  .dojo { max-width: 1320px; margin: 0 auto; padding: 20px 28px 50px; }
+  .dtop { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .seg { display: flex; gap: 4px; background: rgba(255,255,255,.05); padding: 4px; border-radius: 999px; }
+  .seg button { background: none; border: 0; color: var(--muted); font-weight: 600; padding: 6px 16px; border-radius: 999px; cursor: pointer; transition: .2s; }
+  .seg button:hover { color: var(--ink); }
+  .seg button.on { background: rgba(142, 148, 242, .25); color: var(--ink); box-shadow: inset 0 0 0 1px rgba(142, 148, 242, .45); }
+  .dprog { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .dprog .bar { width: 140px; height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; }
+  .dprog .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--jade), #7ed6c9); transition: width .5s; }
+  .picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
+  .sc { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 0 9px; align-items: center; text-align: left; padding: 8px 11px; border-radius: 14px; cursor: pointer;
+        background: rgba(29, 40, 86, .55); border: 1px solid var(--line); color: inherit; transition: background .15s, border-color .2s, transform .15s; }
+  .sc:hover { background: rgba(29, 40, 86, .9); transform: translateY(-1px); }
+  .sc.on { border-color: rgba(255, 207, 122, .55); background: rgba(255, 207, 122, .08); }
+  .sc .no { grid-row: span 2; font: 600 13px ui-monospace, monospace; color: var(--muted); }
+  .sc .nm { font-weight: 600; font-size: 13.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 14px; }
+  .sc .tp { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+  .dots { letter-spacing: 2px; font-size: 9px; color: var(--sun); } .dots .off { color: rgba(255,255,255,.18); }
+  .sc .ok { position: absolute; top: 6px; right: 9px; color: var(--jade); font-weight: 700; }
+  .sc.solved .no { color: var(--jade); }
+  .dwork { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 16px; align-items: start; }
+  .term { position: relative; display: flex; flex-direction: column; height: 480px; border-radius: 18px; overflow: hidden;
+          background: rgba(5, 8, 22, .94); border: 1px solid rgba(255,255,255,.09); box-shadow: 0 24px 60px -30px #000c; }
+  .term.focus { border-color: rgba(255, 207, 122, .35); }
+  .tbar { display: flex; align-items: center; gap: 10px; padding: 7px 12px 7px 14px; background: rgba(255,255,255,.045); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .tbar .tab { display: flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 8px; background: rgba(255,255,255,.06); color: var(--ink); }
+  .tbar .tab b { font: 700 11px ui-monospace, monospace; color: var(--sun); }
+  .tbar .win { margin-left: auto; letter-spacing: 14px; opacity: .6; }
+  .tout { flex: 1; overflow: auto; padding: 12px 16px 16px; cursor: text;
+          font: 13.5px/1.45 "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", ui-monospace, monospace; color: #cdd3f3; }
+  .tout div { white-space: pre; min-height: 1.45em; }
+  .tout .cmdl { color: var(--ink); } .tout .pr { color: #e8c88a; }
+  .tout .err { color: #ff9d9d; } .tout .ok { color: #8fe3d6; }
+  .tout .note { color: #b7bbff; font-style: italic; white-space: pre-wrap; font-family: "Segoe UI", system-ui, sans-serif; font-size: 13px; }
+  .tline .ghost { color: rgba(205, 211, 243, .35); font-style: italic; }
+  .caret { display: inline-block; min-width: .6em; background: var(--sun); color: #0b1129; animation: blink 1.1s steps(1) infinite; }
+  .term:not(.focus) .caret { background: none; color: inherit; box-shadow: inset 0 0 0 1px rgba(255, 207, 122, .6); animation: none; }
+  @keyframes blink { 50% { background: transparent; color: inherit; } }
+  .tin { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+  .ticket { padding: 18px 20px; }
+  .ticket .head { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+  .ticket h3 { margin: 6px 0 8px; font-size: 19px; }
+  .ticket .said2 { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border-left: 3px solid var(--violet); font-size: 14px; }
+  .ticket .job { margin: 10px 0 4px; font-size: 14px; } .ticket .job b { color: var(--sun); font-weight: 600; }
+  .steps { list-style: none; padding: 0; margin: 10px 0 6px; font-size: 14px; }
+  .steps li { display: flex; gap: 9px; padding: 4px 0; color: var(--muted); }
+  .steps li .m { width: 18px; flex: none; text-align: center; }
+  .steps li.done { color: var(--ink); } .steps li.done .m { color: var(--jade); } .steps li.next { color: var(--ink); }
+  .steps li.done.pop .m { animation: popin .4s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes popin { from { transform: scale(0); } }
+  .drow { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .drow .btn { padding: 7px 13px; font-size: 13px; }
+  .hintbox { margin-top: 10px; font-size: 13px; color: var(--muted); animation: rise .35s both; }
+  .chip { font: 12.5px ui-monospace, Consolas, monospace; padding: 3px 9px; border-radius: 8px; background: rgba(0,0,0,.35); color: var(--sun); border: 1px solid rgba(255, 207, 122, .3); cursor: pointer; }
+  .chip:hover { background: rgba(255, 207, 122, .12); }
+  .dq { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); animation: rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .dq h4 { margin: 0 0 8px; font-size: 15px; }
+  .ch { display: grid; grid-template-columns: auto 1fr; gap: 9px; width: 100%; text-align: left; margin: 6px 0; padding: 9px 11px; border-radius: 12px; cursor: pointer;
+        background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--ink); font-size: 13.5px; line-height: 1.4; transition: background .15s, border-color .2s; }
+  .ch:hover { background: rgba(255,255,255,.09); }
+  .ch kbd { align-self: start; margin-top: 1px; }
+  .ch.wrong { border-color: rgba(255, 107, 107, .5); color: #ffc2c2; opacity: .75; animation: shake .35s; }
+  .ch.right { border-color: rgba(79, 179, 169, .7); background: rgba(79, 179, 169, .14); }
+  @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+  .why { position: relative; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(79, 179, 169, .08); border: 1px solid rgba(79, 179, 169, .25); font-size: 14px; animation: rise .45s both; }
+  .why h5 { margin: 0 0 4px; font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--jade); }
+  .why .tipx { margin-top: 10px; padding-top: 9px; border-top: 1px dashed rgba(255,255,255,.12); }
+  .why .tipx h5 { color: var(--sun); }
+  .stamp { position: absolute; top: -14px; right: 12px; padding: 3px 10px; border: 2px solid var(--jade); border-radius: 8px; color: var(--jade); font: 800 13px ui-monospace, monospace; letter-spacing: 2px;
+           background: #10203c; transform: rotate(-8deg); animation: stamp .4s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes stamp { from { opacity: 0; transform: rotate(-8deg) scale(2); } }
+  /* Port Rush */
+  .rush { max-width: 680px; margin: 6px auto 0; padding: 28px 32px; text-align: center; transition: box-shadow .25s, border-color .25s; }
+  .rush.good { border-color: rgba(79, 179, 169, .6); box-shadow: 0 0 60px -12px rgba(79, 179, 169, .55), 0 20px 50px -30px #000a; }
+  .rush.bad { animation: shake .35s; border-color: rgba(255, 107, 107, .5); }
+  .rhud { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); }
+  .rhud b { color: var(--ink); font-size: 20px; }
+  .rtime { height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; margin: 12px 0 22px; }
+  .rtime i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--jade), var(--sun)); }
+  .rtime.low i { background: var(--coral); }
+  .proto { font-size: 62px; font-weight: 700; letter-spacing: 2px; line-height: 1.1; }
+  .proto.in { animation: rise .3s cubic-bezier(.2,.8,.2,1) both; }
+  .rush input#rin { margin: 18px 0 6px; width: 220px; text-align: center; font: 600 34px ui-monospace, Consolas, monospace; letter-spacing: 4px; }
+  .rfb { min-height: 26px; font-weight: 600; }
+  .rfb.y { color: var(--jade); } .rfb.n { color: #ffb0b0; }
+  .rfb span { display: inline-block; animation: rise .25s both; }
+  .bigscore { font-size: 64px; font-weight: 700; color: var(--sun); line-height: 1.1; }
+  .best { display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 999px; background: rgba(255, 207, 122, .16); color: var(--sun); font-weight: 600; animation: stamp .5s cubic-bezier(.2,1.4,.4,1) both; }
+  .misses { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0 4px; }
+  .misses span { padding: 4px 10px; border-radius: 10px; background: rgba(255,255,255,.06); font-size: 13px; }
+  .ptable { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 18px; text-align: left; font-size: 13px; margin-top: 10px; }
+  .ptable span b { display: inline-block; min-width: 64px; color: var(--ink); }
+  details.peek { margin-top: 16px; color: var(--muted); } details.peek summary { cursor: pointer; }
+  @media (max-width: 1000px) { .dwork { grid-template-columns: 1fr; } .picker { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .picker { grid-template-columns: repeat(2, 1fr); } .dojo { padding: 14px 16px 40px; } .ptable { grid-template-columns: 1fr 1fr; } .term { height: 420px; } }
   /* The browser's own blue clear button doesn't fit the night theme. */
   input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   /* ---- Dialog, toast ---- */
@@ -320,7 +416,7 @@ function showPair(message) {
 }
 
 // ---- Shell ----
-const VIEWS = ["phrases", "review", "aplus", "sky"];
+const VIEWS = ["phrases", "review", "aplus", "sky", "terminal"]; // the phone remote sends a tab as its index here
 let view = VIEWS.includes(ls.get("nc-view")) ? ls.get("nc-view") : "phrases", summary = null;
 const deckName = (id) => (summary?.decks.find((d) => d.id === id) || {}).title || id;
 async function start() {
@@ -329,7 +425,7 @@ async function start() {
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button></nav>
+      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="terminal" title="G then T">Terminal</button></nav>
       <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span>
         <button class="icon help" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button></div>
     </header>
@@ -342,9 +438,9 @@ async function start() {
 function go(v) {
   view = VIEWS.includes(v) ? v : "phrases"; ls.set("nc-view", view);
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
-  renderStats(); clearInterval(skyTimer);
+  renderStats(); clearInterval(skyTimer); djStop();
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
-  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky }[view] || renderPhrases)());
+  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderDojo }[view] || renderPhrases)());
 }
 function watch(p) {
   return Promise.resolve(p).then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
@@ -362,8 +458,10 @@ function report(card, shown, left) {
 
 // ---- Keyboard: shortcuts everywhere, never while typing ----
 const KEYS = [
-  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Terminal dojo", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
   ["Review and A+", [["Show the answer", "Space"], ["Again · Hard", "1 · 2"], ["Good · Easy", "3 · 4"], ["Play the phrase", "P"]]],
+  ["Terminal dojo", [["Start typing in the terminal", "Enter"], ["Leave the terminal (shortcuts work again)", "Esc"], ["Earlier commands", "↑ ↓"], ["Answer the ticket question", "1 2 3 4"],
+    ["Show a hint", "H"], ["Port Rush: start · skip one", "Enter"]]],
 ];
 function toggleHelp() {
   const open = $(".dialog.keys"); if (open) return open.parentElement.close();
@@ -392,13 +490,14 @@ document.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (chord && Date.now() - chord < 1500) {
     chord = 0;
-    const to = { p: "phrases", r: "review", a: "aplus", s: "sky" }[k];
+    const to = { p: "phrases", r: "review", a: "aplus", s: "sky", t: "terminal" }[k];
     if (to) { e.preventDefault(); go(to); return; }
   }
   chord = 0;
   if (k === "g") { chord = Date.now(); return; }
   if (e.key === "/") { e.preventDefault(); focusSearch(); return; }
   if (k === "n") { e.preventDefault(); editor(null); return; }
+  if (view === "terminal") { djKey(e, k); return; }
   if (view === "aplus" && aq.length) {
     if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
     return;
@@ -730,6 +829,948 @@ async function renderSky() {
   report(null, false, 0);
 }
 
+// ---- Terminal dojo: help-desk tickets on a pretend Windows PC, plus Port Rush ----
+// Nothing here runs on a real computer: every command is answered by the small simulator below.
+const DJ_KEY = "nc-dojo", RUSH_KEY = "nc-ports-best";
+let dj = (() => {
+  try { const o = JSON.parse(ls.get(DJ_KEY) || "{}"); return { solved: o.solved || {}, cur: o.cur || "", mode: o.mode === "rush" ? "rush" : "cases" }; }
+  catch { return { solved: {}, cur: "", mode: "cases" }; }
+})();
+const djSave = () => ls.set(DJ_KEY, JSON.stringify(dj));
+
+// The tickets. need: [pattern a command's tag must match, the goal in plain words, a command that does it (the hint)].
+const SC = [
+  { id: "apipa", title: "No internet at all", topic: "DHCP · APIPA", diff: 1,
+    ticket: "“Nothing loads: no websites, no email.” The network switch in their office was restarted this morning.",
+    task: "Find out what IP address the PC has, then get it a proper one.",
+    pc: { apipa: true, ip: "169.254.83.17", mask: "255.255.0.0", gw: "" },
+    need: [["^ipconfig$", "See what IP address the PC has", "ipconfig"], ["^renew-ok$", "Ask DHCP for a fresh address", "ipconfig /release & ipconfig /renew"]],
+    choices: ["The DNS server was down", "The PC couldn't reach a DHCP server, so Windows gave itself a 169.254.x.x (APIPA) address", "The network cable was unplugged", "The web browser was corrupted"], a: 1,
+    why: "When Windows asks for an address and no DHCP server answers (here, the switch was still rebooting), it makes one up in 169.254.x.x. That address only talks to other 169.254 machines, so nothing else works. With the switch back, /release and /renew got a real lease.",
+    tip: "169.254.x.x = APIPA = a DHCP problem. Check the cable, switch and DHCP server, then ipconfig /release and ipconfig /renew. (An unplugged cable shows “Media disconnected” instead.)" },
+  { id: "hung", title: "Frozen spreadsheet", topic: "Processes", diff: 1,
+    ticket: "“Excel froze with my report open. Clicking X does nothing and the title bar says Not Responding.”",
+    task: "Find the frozen program and end it.",
+    pc: { hung: "EXCEL.EXE" },
+    need: [["^tasklist", "Find the frozen program and its PID", "tasklist"], ["^taskkill-ok:excel\\.exe$", "End it for good", "taskkill /im excel.exe /f"]],
+    choices: ["Excel stopped responding, so it ignores polite close requests; taskkill /F ends it by force", "Excel has a virus", "The PC ran out of disk space", "Excel needs a Windows update"], a: 0,
+    why: "A hung program stops reading its messages, so clicking X (or a plain taskkill) only asks it to close, and it never hears. /F tells Windows to end it no matter what. Anything unsaved in it is lost, so give it a minute first.",
+    tip: "tasklist shows every program and its PID (process ID). taskkill /PID 1234 /F or taskkill /IM name.exe /F ends one; /T also ends the programs it started." },
+  { id: "gateway", title: "Whole floor offline", topic: "Default gateway", diff: 2,
+    ticket: "“The whole sales floor lost the internet, but we can still print and open the shared drive.”",
+    task: "Check the PC's settings, then find where the connection stops.",
+    pc: { gwUp: false },
+    need: [["^ipconfig", "Check the IP settings", "ipconfig"], ["^ping:gw:timeout$", "Test the default gateway (the router)", "ping 192.168.1.1"]],
+    choices: ["The PC's IP address is wrong", "DNS is down", "The default gateway (the router) isn't answering, so nothing can leave the local network", "The printer took the PC's IP address"], a: 2,
+    why: "The PC's settings look right and other machines on 192.168.1.x answer, so the local network is fine. The default gateway is the door out of the local network; when it doesn't answer, nothing reaches the internet. Next stop: the router itself.",
+    tip: "Ping outward in order: 127.0.0.1 (your own TCP/IP), your own IP, the default gateway, then something outside like 8.8.8.8. Where the replies stop is where the problem is." },
+  { id: "dns", title: "“The internet is down”", topic: "DNS", diff: 2,
+    ticket: "“No website opens. It says it can't find the server.” Their work chat app is still connected, oddly.",
+    task: "Find out if it's the connection itself or looking up names.",
+    pc: { dnsUp: false },
+    need: [["^ping:net:ok$", "Reach the internet by IP address", "ping 8.8.8.8"], ["^(nslookup:fail|ping-name-fail)$", "Try looking up a website's name", "nslookup example.com"]],
+    choices: ["The default gateway is down", "The DNS server isn't answering, so names like example.com can't be turned into IP addresses", "The PC has an APIPA address", "The firewall blocks every website"], a: 1,
+    why: "Pinging 8.8.8.8 works, so the PC can reach the internet. Names fail, so the part that turns a name into an address (DNS) is broken. Asking another server (nslookup example.com 8.8.8.8) works, which points at the office DNS server, 192.168.1.10.",
+    tip: "Works by IP but not by name = DNS. Tools: nslookup, ipconfig /all (shows which DNS servers the PC uses), ipconfig /flushdns (forgets old answers). DNS uses port 53." },
+  { id: "sfc", title: "Broken after a power cut", topic: "System files", diff: 1,
+    ticket: "“Since the power cut yesterday, Settings closes as soon as I open it and the Start menu flickers.”",
+    task: "Check Windows' own system files and repair them.",
+    pc: { corrupt: true },
+    need: [["^sfc-scan$", "Scan and repair protected system files", "sfc /scannow"]],
+    choices: ["The hard drive is full", "A virus deleted the Start menu", "Some protected Windows system files were damaged; System File Checker replaced them with good copies", "The user's profile was deleted"], a: 2,
+    why: "A power cut while Windows is writing can leave its files half-written. sfc /scannow compares every protected system file with a known-good copy and replaces the damaged ones. It needs an administrator prompt, which this one is.",
+    tip: "Corrupt system files = sfc /scannow (as administrator). If sfc can't fix them, run DISM /Online /Cleanup-Image /RestoreHealth first (it repairs the copies sfc uses), then sfc again." },
+  { id: "netuse", title: "The S: drive is gone", topic: "Mapped drives", diff: 2,
+    ticket: String.raw`“My S: drive disappeared. That's where all the team folders are.” Over the weekend IT moved the shared folders to the new file server, \\fs01\shared.`,
+    task: "See what S: points to, then map it to the new server.",
+    pc: { maps: [["S:", String.raw`\\fs-old\shared`], ["H:", String.raw`\\fs01\home\jsmith`]] },
+    need: [["^netuse-list$", "List the mapped drives", "net use"], ["^netuse-map:s:fs01$", "Point S: at the new server", String.raw`net use S: /delete & net use S: \\fs01\shared`]],
+    choices: [String.raw`S: still pointed at the old server (fs-old), which is gone; it had to be removed and mapped to \\fs01\shared`, "The user lost permission to the folders", "The PC's DNS is broken", "The disk behind S: failed"], a: 0,
+    why: String.raw`A mapped drive is just a shortcut: a letter pointing at a network share (\\server\share). The old server was switched off, so S: pointed at nothing. Windows won't reuse a letter that's taken, so net use S: /delete came first.`,
+    tip: String.raw`net use lists mappings; net use S: \\server\share maps one (add /persistent:yes to keep it after a restart). System error 85 = letter already in use; 53 = network path not found. File sharing (SMB) uses port 445.` },
+  { id: "gpo", title: "New policy didn't arrive", topic: "Group Policy", diff: 2,
+    ticket: "IT just pushed a policy that locks the screen after 10 minutes and sets the company wallpaper. Every PC has it except this one.",
+    task: "Check which policies reached the PC, then make it fetch them now.",
+    pc: { gpoNew: false },
+    need: [["^gpresult$", "See which policies applied", "gpresult /r"], ["^gpupdate", "Refresh Group Policy now", "gpupdate /force"]],
+    choices: ["The user isn't in the domain", "The PC hadn't refreshed Group Policy yet; gpupdate /force made it fetch and apply the new settings now", "The wallpaper file is corrupt", "DHCP gave the PC the wrong address"], a: 1,
+    why: "Domain PCs check for policy changes on their own about every 90 minutes (plus a random 0–30), so a brand-new policy can take a while. gpupdate /force fetches and re-applies every policy now; gpresult /r shows which policies (GPOs) actually reached the PC and user.",
+    tip: "gpupdate /force = apply Group Policy now. gpresult /r = which policies applied. Some settings still need a sign-out or restart, and gpupdate says so when they do." },
+  { id: "chkdsk", title: "Files on D: won't open", topic: "Disks", diff: 2,
+    ticket: "“Some files on my D: drive say they're corrupt, and the PC makes a faint clicking sound.”",
+    task: "Check drive D: for errors and bad sectors, and repair it.",
+    pc: { badD: true },
+    need: [["^chkdsk:d:repair$", "Check D: and repair it, bad sectors included", "chkdsk D: /r"]],
+    choices: ["Corrupt Windows system files on C:", "S: is mapped to an old server", "D: is simply full", "File system errors and bad sectors on D:; chkdsk repaired what it could, and the clicking says: back it up and replace that drive soon"], a: 3,
+    why: "chkdsk checks a drive's file system (the index of where every file lives) and, with /r, reads the whole surface to find bad sectors and move data off them. Bad sectors plus clicking mean a hard drive that's failing: the repair buys time; a backup and a new drive fix it.",
+    tip: "chkdsk /f fixes file system errors; chkdsk /r also finds bad sectors (and includes /f). On C: it offers to run at the next restart, because Windows is using that drive." },
+  { id: "subnet", title: "New PC, no network", topic: "Subnets", diff: 3,
+    ticket: "A new reception PC was set up by hand (a static IP) yesterday. It can't reach anything: not the internet, not the printer, not the file server.",
+    task: "Check its IP settings, test the gateway, and find the mistake.",
+    pc: { dhcp: false, ip: "192.168.2.50" },
+    need: [["^ipconfig", "Check the IP settings", "ipconfig /all"], ["^ping:(gw|lan|net):unreach$", "Ping the default gateway", "ping 192.168.1.1"]],
+    choices: ["The PC has an APIPA address", "The DNS server is down", "The router is switched off", "The PC's IP (192.168.2.50) is on a different subnet from its gateway (192.168.1.1); it should be 192.168.1.something"], a: 3,
+    why: "With mask 255.255.255.0, the first three numbers must match for two devices to share a local network. 192.168.2.50 and 192.168.1.1 don't, so the PC can't even reach its own gateway: Windows answers “Destination host unreachable” itself. Fix the IP to a free 192.168.1.x, or switch it back to DHCP.",
+    tip: "Same subnet = same network part of the address (with 255.255.255.0, the first three numbers). A gateway outside your subnet can never be reached. ipconfig /renew on a static IP fails: there's no lease to renew." },
+  { id: "netstat", title: "Something is listening", topic: "Ports · security", diff: 3,
+    ticket: "Security saw this laptop accepting connections on TCP port 3389 from outside the office. The user says they “didn't turn anything on”.",
+    task: "List the ports this PC listens on, then find which program owns 3389.",
+    pc: { rdp: true },
+    need: [["^netstat-a$", "List listening ports", "netstat -an"], ["^(netstat-o|netstat-b|tasklist-svc)$", "Find which program owns port 3389", "netstat -ano  (then tasklist /svc)"]],
+    choices: ["Remote Desktop (RDP) is on and accepting connections on port 3389; it should be turned off or only reachable through the company VPN", "The PC is sending email on port 3389", "This laptop is running a DNS server", "It's normal Windows file sharing"], a: 0,
+    why: "netstat -an lists every connection and listening port as numbers; -o adds the PID, which tasklist /svc turns into a program (svchost.exe running TermService, the Remote Desktop service). RDP open to the internet is a favorite target for password guessing, and there's even a live session from outside.",
+    tip: "LISTENING = waiting for incoming connections; ESTABLISHED = a live one. RDP is TCP 3389. netstat -ano gives the PID; tasklist /svc /fi \"pid eq N\" names the service." },
+];
+
+// ---- The pretend PC ----
+const PROCS = [ // image, PID, session, memory, services
+  ["System Idle Process", 0, "Services", "8 K", "N/A"], ["System", 4, "Services", "2,184 K", "N/A"], ["smss.exe", 412, "Services", "1,060 K", "N/A"],
+  ["csrss.exe", 620, "Services", "5,412 K", "N/A"], ["wininit.exe", 704, "Services", "6,880 K", "N/A"], ["services.exe", 780, "Services", "10,244 K", "N/A"],
+  ["lsass.exe", 796, "Services", "21,036 K", "KeyIso, SamSs, VaultSvc"], ["svchost.exe", 924, "Services", "31,420 K", "BrokerInfrastructure, DcomLaunch, PlugPlay, Power"],
+  ["svchost.exe", 1012, "Services", "14,388 K", "RpcEptMapper, RpcSs"], ["svchost.exe", 1184, "Services", "11,276 K", "TermService"], ["svchost.exe", 1320, "Services", "9,812 K", "Dnscache"],
+  ["svchost.exe", 1456, "Services", "8,104 K", "LanmanWorkstation"], ["spoolsv.exe", 2210, "Services", "12,660 K", "Spooler"], ["explorer.exe", 4312, "Console", "98,612 K", "N/A"],
+  ["msedge.exe", 5520, "Console", "145,220 K", "N/A"], ["notepad.exe", 6104, "Console", "14,880 K", "N/A"], ["EXCEL.EXE", 7420, "Console", "412,904 K", "N/A"],
+  ["cmd.exe", 8120, "Console", "4,920 K", "N/A"], ["conhost.exe", 8132, "Console", "18,316 K", "N/A"],
+];
+const TITLES = { "explorer.exe": "N/A", "msedge.exe": "New tab - Work - Microsoft Edge", "notepad.exe": "Untitled - Notepad", "EXCEL.EXE": "Q3 report.xlsx - Excel", "cmd.exe": "Administrator: Command Prompt" };
+function makePC(o) {
+  const pc = Object.assign({
+    host: "WS-FRONT-07", user: "contoso\\jsmith", ip: "192.168.1.42", mask: "255.255.255.0", gw: "192.168.1.1", dns: "192.168.1.10",
+    dhcp: true, apipa: false, gwUp: true, dnsUp: true, rdp: false, corrupt: false, badD: false, hung: null, gpoNew: true, gpTime: null,
+    lan: ["192.168.1.10", "192.168.1.20", "192.168.1.30"], maps: [["H:", String.raw`\\fs01\home\jsmith`], ["S:", String.raw`\\fs01\shared`]],
+  }, o);
+  pc.lease = { ip: pc.apipa ? "192.168.1.57" : pc.ip, mask: "255.255.255.0", gw: "192.168.1.1" };
+  if (pc.apipa) pc.gw = "";
+  pc.procs = PROCS.filter((p) => pc.rdp || p[4] !== "TermService").map((p) => p.slice());
+  pc.maps = pc.maps.map((m) => m.slice());
+  return pc;
+}
+const ip4 = (s) => /^\d{1,3}(\.\d{1,3}){3}$/.test(s) && s.split(".").every((n) => +n < 256);
+const ipNum = (s) => s.split(".").reduce((a, n) => a * 256 + +n, 0);
+const sameNet = (a, b, m) => ((ipNum(a) & ipNum(m)) >>> 0) === ((ipNum(b) & ipNum(m)) >>> 0);
+const isPrivate = (ip) => /^(10|127|192\.168|169\.254|172\.(1[6-9]|2\d|3[01]))\./.test(ip);
+// Can this PC reach that address? ok · timeout (nobody answers) · unreach (no route: Windows answers itself) · fail (no usable address at all)
+function reach(pc, ip) {
+  if (/^127\./.test(ip) || ip === pc.ip) return "ok";
+  if (!pc.ip || pc.apipa) return "fail";
+  if (sameNet(ip, pc.ip, pc.mask)) return ip === pc.gw ? (pc.gwUp ? "ok" : "timeout") : pc.lan.includes(ip) ? "ok" : "timeout";
+  if (!pc.gw || !sameNet(pc.gw, pc.ip, pc.mask)) return "unreach";
+  if (!pc.gwUp) return "timeout";
+  return isPrivate(ip) ? "timeout" : "ok";
+}
+function ipKind(pc, ip) {
+  if (/^127\./.test(ip)) return "loop";
+  if (ip === pc.ip) return "self";
+  if (ip === pc.gw || ip === pc.lease.gw) return "gw";
+  return isPrivate(ip) ? "lan" : "net";
+}
+const NAMES = { "dc01": "192.168.1.10", "fs01": "192.168.1.20", "printer01": "192.168.1.30", "example.com": "93.184.215.14", "www.example.com": "93.184.215.14",
+  "google.com": "142.250.72.14", "www.google.com": "142.250.72.4", "microsoft.com": "20.70.246.20", "dns.google": "8.8.8.8", "one.one.one.one": "1.1.1.1" };
+const SERVERS = { "192.168.1.10": "dc01.contoso.local", "8.8.8.8": "dns.google", "1.1.1.1": "one.one.one.one" };
+const dnsOk = (pc, srv) => !!srv && reach(pc, srv) === "ok" && (srv !== "192.168.1.10" || pc.dnsUp);
+function lookup(pc, name, server) {
+  if (ip4(name)) return { ip: name };
+  const n = name.toLowerCase().replace(/\.$/, ""), short = n.replace(/\.contoso\.local$/, "");
+  if (n === "localhost") return { ip: "127.0.0.1", byName: true, fq: pc.host };
+  if (short === pc.host.toLowerCase()) return { ip: pc.ip || "127.0.0.1", byName: true, fq: pc.host };
+  const srv = server || (pc.apipa || !pc.ip ? "" : pc.dns);
+  if (!dnsOk(pc, srv)) return { why: "timeout" };
+  if (["dc01", "fs01", "printer01"].includes(short)) return srv === "192.168.1.10" ? { ip: NAMES[short], byName: true, fq: short + ".contoso.local", auth: true } : { why: "nx" };
+  if (NAMES[n]) return { ip: NAMES[n], byName: true, fq: n };
+  if (!n.includes(".") || /\.local$/.test(n)) return { why: "nx" };
+  const h = hash(n); return { ip: `104.21.${h % 250}.${(h >>> 8) % 250}`, byName: true, fq: n };
+}
+const TODAY = () => new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+const SHORTDAY = (d = new Date()) => `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+const CLOCK = (d = new Date()) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+const note = (t) => ({ t, c: "note" }), err = (t) => ({ t, c: "err" }), okl = (t) => ({ t, c: "ok" });
+
+function ipShow(pc, all) {
+  const L = (label, v) => `   ${label} ${v}`;
+  const out = ["", "Windows IP Configuration", ""];
+  if (all) out.push(L("Host Name . . . . . . . . . . . . :", pc.host), L("Primary Dns Suffix  . . . . . . . :", "contoso.local"), L("Node Type . . . . . . . . . . . . :", "Hybrid"),
+    L("IP Routing Enabled. . . . . . . . :", "No"), L("WINS Proxy Enabled. . . . . . . . :", "No"), L("DNS Suffix Search List. . . . . . :", "contoso.local"), "");
+  const live = pc.ip && !pc.apipa;
+  out.push("Ethernet adapter Ethernet:", "", L("Connection-specific DNS Suffix  . :", live && pc.dhcp ? "contoso.local" : ""));
+  if (all) out.push(L("Description . . . . . . . . . . . :", "Intel(R) Ethernet Connection (17) I219-LM"), L("Physical Address. . . . . . . . . :", "3C-52-82-4A-1F-07"),
+    L("DHCP Enabled. . . . . . . . . . . :", pc.dhcp ? "Yes" : "No"), L("Autoconfiguration Enabled . . . . :", "Yes"));
+  const pref = all ? "(Preferred)" : "";
+  out.push(L("Link-local IPv6 Address . . . . . :", "fe80::1c4b:9e2f:7a10:3d21%12" + pref));
+  if (pc.ip) {
+    out.push(pc.apipa ? L("Autoconfiguration IPv4 Address. . :", pc.ip + pref) : L("IPv4 Address. . . . . . . . . . . :", pc.ip + pref));
+    out.push(L("Subnet Mask . . . . . . . . . . . :", pc.mask));
+    if (all && live && pc.dhcp) {
+      const t = new Date(); t.setHours(7, 58, 12);
+      const tm = new Date(t.getTime() + 86400000);
+      const f = (d) => `${d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} ${CLOCK(d)}`;
+      out.push(L("Lease Obtained. . . . . . . . . . :", f(t)), L("Lease Expires . . . . . . . . . . :", f(tm)));
+    }
+  }
+  out.push(L("Default Gateway . . . . . . . . . :", pc.ip ? pc.gw : ""));
+  if (all) {
+    if (live && pc.dhcp) out.push(L("DHCP Server . . . . . . . . . . . :", "192.168.1.10"));
+    if (live) out.push(L("DNS Servers . . . . . . . . . . . :", pc.dns));
+    else out.push(L("DNS Servers . . . . . . . . . . . :", "fec0:0:0:ffff::1%1"), "                                       fec0:0:0:ffff::2%1");
+    out.push(L("NetBIOS over Tcpip. . . . . . . . :", "Enabled"));
+  }
+  out.push("", "Wireless LAN adapter Wi-Fi:", "", L("Media State . . . . . . . . . . . :", "Media disconnected"), L("Connection-specific DNS Suffix  . :", ""));
+  if (all) out.push(L("Description . . . . . . . . . . . :", "Intel(R) Wi-Fi 6E AX211 160MHz"), L("Physical Address. . . . . . . . . :", "70-A8-D3-5C-21-9E"),
+    L("DHCP Enabled. . . . . . . . . . . :", "Yes"), L("Autoconfiguration Enabled . . . . :", "Yes"));
+  return out.join("\n");
+}
+
+const USAGE = {
+  ipconfig: "\nUSAGE:\n    ipconfig [/all | /release | /renew | /flushdns | /displaydns]\n\nwhere\n    /all         Display full configuration information.\n    /release     Release the IPv4 address for the specified adapter.\n    /renew       Renew the IPv4 address for the specified adapter.\n    /flushdns    Purges the DNS Resolver cache.\n    /displaydns  Display the contents of the DNS Resolver Cache.",
+  ping: "\nUsage: ping [-t] [-n count] target_name\n\nOptions:\n    -t        Ping the specified host until stopped (Ctrl+C).\n    -n count  Number of echo requests to send (default 4).",
+  tracert: "\nUsage: tracert [-d] [-h maximum_hops] target_name\n\nOptions:\n    -d                 Do not resolve addresses to hostnames.\n    -h maximum_hops    Maximum number of hops to search for target.",
+  nslookup: "\nUsage:\n   nslookup name           look up a name with the default DNS server\n   nslookup name server    look it up with another server (e.g. 8.8.8.8)",
+  netstat: "\nDisplays protocol statistics and current TCP/IP network connections.\n\nNETSTAT [-a] [-b] [-n] [-o]\n\n  -a   Displays all connections and listening ports.\n  -b   Displays the executable involved in creating each connection or listening port.\n  -n   Displays addresses and port numbers in numerical form.\n  -o   Displays the owning process ID associated with each connection.",
+  arp: "\nARP -a    Displays current ARP entries (which IP address belongs to which MAC address on the local network).",
+  sfc: "\nMicrosoft (R) Windows (R) Resource Checker Version 6.0\n\nSFC [/SCANNOW] [/VERIFYONLY]\n\n/SCANNOW     Scans integrity of all protected system files and repairs files with\n             problems when possible.\n/VERIFYONLY  Scans integrity of all protected system files. No repair operation is\n             performed.",
+  dism: "\nDISM /Online /Cleanup-Image { /CheckHealth | /ScanHealth | /RestoreHealth }\n\n  /RestoreHealth  Scans the image for component store corruption and repairs it.",
+  chkdsk: "\nChecks a disk and displays a status report.\n\nCHKDSK [volume] [/F] [/R] [/SCAN]\n\n  volume   Specifies the drive letter (followed by a colon).\n  /F       Fixes errors on the disk.\n  /R       Locates bad sectors and recovers readable information (implies /F).\n  /SCAN    Runs an online scan on the volume.",
+  tasklist: "\nTASKLIST [/SVC | /V] [/FI filter]\n\n  /SVC   Displays services hosted in each process.\n  /V     Displays verbose task information.\n  /FI    Filter, e.g. /FI \"STATUS eq NOT RESPONDING\" or /FI \"PID eq 1184\".",
+  taskkill: "\nTASKKILL { /PID processid | /IM imagename } [/T] [/F]\n\n  /PID  Process ID of the process to be terminated (from TASKLIST).\n  /IM   Image name of the process, e.g. notepad.exe.\n  /T    Terminates the process and any child processes it started.\n  /F    Forcefully terminates the process.",
+  gpupdate: "\nUpdates Group Policy settings.\n\nGPUPDATE [/Target:{Computer | User}] [/Force]\n\n  /Force   Reapplies all policy settings. By default, only policy settings\n           that have changed are applied.",
+  gpresult: "\nGPRESULT [/R | /Z]\n\n  /R   Displays RSoP summary data.\n  /Z   Displays super-verbose information.",
+  net: "\nNET USE [devicename | *] [\\\\computername\\sharename] [/PERSISTENT:{YES | NO}]\nNET USE devicename /DELETE",
+  diskpart: "\nDISKPART  starts the disk tool. Inside it: list disk, list volume, select disk N,\nlist partition, detail disk, exit. (Careful: clean wipes the selected disk.)",
+  whoami: "\nWHOAMI   Displays the user name of the person signed in (domain\\user).",
+  hostname: "\nHOSTNAME   Prints the name of the current host.",
+};
+const NET_SYNTAX = "The syntax of this command is:\n\nNET\n    [ ACCOUNTS | COMPUTER | CONFIG | CONTINUE | FILE | GROUP | HELP |\n      HELPMSG | LOCALGROUP | PAUSE | SESSION | SHARE | START |\n      STATISTICS | STOP | TIME | USE | USER | VIEW ]\n";
+const UNSIM = ["dir", "copy", "xcopy", "robocopy", "del", "erase", "md", "mkdir", "rd", "rmdir", "ren", "rename", "move", "type", "attrib", "format", "systeminfo",
+  "powershell", "pwsh", "pathping", "route", "netsh", "getmac", "bcdedit", "bootrec", "regedit", "msconfig", "mstsc", "notepad", "explorer", "control", "winver", "sc", "manage-bde",
+  "cipher", "label", "vol", "tree", "find", "findstr", "more", "sort", "set", "path", "reg", "wmic", "msinfo32", "eventvwr", "taskmgr", "perfmon", "resmon", "nbtstat", "w32tm",
+  "curl", "ssh", "ftp", "certutil", "runas", "where", "start", "fc", "comp", "assoc", "ftype", "schtasks", "net1", "query", "qwinsta", "logoff", "mmc", "devmgmt.msc",
+  "diskmgmt.msc", "services.msc", "gpedit.msc", "eventvwr.msc", "compmgmt.msc", "lusrmgr.msc", "secpol.msc", "cleanmgr", "dfrgui", "defrag", "winget"];
+
+const CMDS = {
+  help: ({ la }) => la[0] && USAGE[la[0].replace(/\.exe$/, "")] ? [USAGE[la[0].replace(/\.exe$/, "")]] : [
+    "\nOn a real PC, HELP lists the built-in commands. In this dojo these are simulated:\n",
+    "  Network   ipconfig  ping  tracert  nslookup  netstat  arp",
+    "  Repair    sfc  dism  chkdsk  diskpart",
+    "  Programs  tasklist  taskkill",
+    "  Domain    gpupdate  gpresult  net use  whoami  hostname",
+    "  Basics    cls  echo  ver  date /t  time /t  help\n",
+    note("Add /? after a command for its main options (ipconfig /?). ↑ and ↓ bring back earlier commands. & runs two commands in a row.")],
+  cls: () => [{ cls: true }],
+  ver: () => ["\nMicrosoft Windows [Version 10.0.22631.4460]"],
+  hostname: ({ pc, tag }) => { tag("hostname"); return [pc.host]; },
+  whoami: ({ pc, tag }) => { tag("whoami"); return [pc.user]; },
+  echo: ({ raw }) => /^\s*echo\.\s*$/i.test(raw) ? [""] : [raw.replace(/^\s*echo\s?/i, "") || "ECHO is on."],
+  date: ({ la }) => la.includes("/t") ? [new Date().toLocaleDateString("en-US", { weekday: "short" }) + " " + SHORTDAY().replace(/\b(\d)\b/g, "0$1")] : [note("Use date /t to just print the date (without /t it would ask for a new one).")],
+  time: ({ la }) => la.includes("/t") ? [new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })] : [note("Use time /t to just print the time.")],
+  cd: ({ args }) => args.length ? [note("The dojo stays in C:\\Windows\\system32. The tickets don't need other folders.")] : ["C:\\Windows\\system32"],
+  exit: () => [note("The dojo window stays open. Pick another ticket above, or press Esc and then G and a letter to go to another tab.")],
+  shutdown: () => [note("The pretend PC stays on. On a real one, shutdown /r /t 0 restarts right away and shutdown /s /t 0 turns it off.")],
+  title: () => [], color: () => [note("Nice try. The night-sea colors stay.")],
+
+  ipconfig({ pc, la, tag }) {
+    const op = (la[0] || "").replace(/^-/, "/");
+    if (!op) { tag("ipconfig"); return [ipShow(pc, false)]; }
+    if (op === "/all") { tag("ipconfig"); tag("ipconfig-all"); return [ipShow(pc, true)]; }
+    const noState = err("\nWindows IP Configuration\n\nThe operation failed as no adapter is in the state permissible for\nthis operation.");
+    if (op === "/release") {
+      tag("release");
+      if (!pc.dhcp) return [noState];
+      Object.assign(pc, { ip: "", apipa: false, mask: "", gw: "" });
+      return [{ wait: 600 }, ipShow(pc, false)];
+    }
+    if (op === "/renew") {
+      tag("renew");
+      if (!pc.dhcp) return [{ wait: 400 }, noState];
+      Object.assign(pc, { ip: pc.lease.ip, mask: pc.lease.mask, gw: pc.lease.gw, apipa: false });
+      tag("renew-ok");
+      return [{ wait: 1600 }, ipShow(pc, false)];
+    }
+    if (op === "/flushdns") { tag("flushdns"); return ["\nWindows IP Configuration\n", okl("Successfully flushed the DNS Resolver Cache.")]; }
+    if (op === "/displaydns") {
+      tag("displaydns");
+      return ["\nWindows IP Configuration\n\n    dc01.contoso.local\n    ----------------------------------------\n    Record Name . . . . . : dc01.contoso.local\n    Record Type . . . . . : 1\n    Time To Live  . . . . : 2841\n    Data Length . . . . . : 4\n    Section . . . . . . . : Answer\n    A (Host) Record . . . : 192.168.1.10\n"];
+    }
+    return [err("\nError: unrecognized or incomplete command line."), USAGE.ipconfig];
+  },
+
+  ping({ pc, args, la, tag }) {
+    let n = 4, target = "", forever = false;
+    for (let i = 0; i < la.length; i++) {
+      const a = la[i].replace(/^\//, "-");
+      if (a === "-n") n = Math.max(1, Math.min(10, parseInt(la[++i], 10) || 4));
+      else if (a === "-t") forever = true;
+      else if (a === "-l" || a === "-w" || a === "-i") i++;
+      else if (a[0] !== "-") target = args[i];
+    }
+    if (!target) return [USAGE.ping];
+    if (forever) n = 6;
+    const r = lookup(pc, target);
+    if (!r.ip) { tag("ping-name-fail"); return [{ wait: 500 }, err(`Ping request could not find host ${target}. Please check the name and try again.`)]; }
+    const ip = r.ip, res = reach(pc, ip), kind = ipKind(pc, ip);
+    tag(`ping:${kind}:${res}`);
+    const out = [`\nPinging ${r.byName ? `${r.fq} [${ip}]` : ip} with 32 bytes of data:`], times = [];
+    let got = 0;
+    for (let k = 0; k < n; k++) {
+      if (res === "ok") {
+        const ms = kind === "net" ? 12 + ((k * 5 + ip.length) % 6) : 0; times.push(ms); got++;
+        out.push({ wait: 380 }, `Reply from ${ip}: bytes=32 time${ms ? "=" + ms : "<1"}ms TTL=${kind === "net" ? 117 : kind === "gw" ? 64 : 128}`);
+      } else if (res === "timeout") out.push({ wait: 900 }, err("Request timed out."));
+      else if (res === "unreach") { got++; out.push({ wait: 380 }, err(`Reply from ${pc.ip}: Destination host unreachable.`)); }
+      else out.push({ wait: 300 }, err("PING: transmit failed. General failure."));
+    }
+    out.push(`\nPing statistics for ${ip}:\n    Packets: Sent = ${n}, Received = ${got}, Lost = ${n - got} (${Math.round(100 * (n - got) / n)}% loss),`);
+    if (times.length) out.push(`Approximate round trip times in milli-seconds:\n    Minimum = ${Math.min(...times)}ms, Maximum = ${Math.max(...times)}ms, Average = ${Math.round(times.reduce((a, b) => a + b) / times.length)}ms`);
+    if (forever) out.push("Control-C\n^C", note("-t keeps pinging until you press Ctrl+C. The dojo stops after 6."));
+    if (res === "unreach") out.push(note("“Received = 4” but every reply came from this PC itself, saying it has no route there. That still counts as a failure."));
+    return out;
+  },
+
+  tracert({ pc, args, la, tag }) {
+    let target = "";
+    for (let i = 0; i < la.length; i++) { const a = la[i].replace(/^\//, "-"); if (a === "-h" || a === "-w" || a === "-j") i++; else if (a[0] !== "-") target = args[i]; }
+    if (!target) return [USAGE.tracert];
+    const r = lookup(pc, target);
+    if (!r.ip) return [{ wait: 600 }, err(`Unable to resolve target system name ${target}.`)];
+    const ip = r.ip, res = reach(pc, ip), kind = ipKind(pc, ip);
+    tag("tracert"); tag(`tracert:${res}`);
+    const t = (ms) => (ms ? String(ms) : "<1").padStart(6) + " ms";
+    const hop = (n, a, b, c, who) => String(n).padStart(3) + t(a) + t(b) + t(c) + "  " + who;
+    const out = [`\nTracing route to ${r.byName ? `${r.fq} [${ip}]` : ip}\nover a maximum of 30 hops:\n`];
+    if (res === "fail") out.push({ wait: 500 }, err("Transmit error: code 1231."));
+    else if (res === "unreach") out.push({ wait: 500 }, err(`  1  ${pc.host} [${pc.ip}]  reports: Destination host unreachable.`));
+    else if (res === "timeout") {
+      for (let k = 1; k <= 4; k++) out.push({ wait: 1100 }, err(String(k).padStart(3) + "     *        *        *     Request timed out."));
+      out.push(note("The real tracert keeps going to hop 30 (Ctrl+C stops it). No answer even at hop 1 means the very first router, your default gateway, isn't replying."));
+      return out;
+    } else if (kind === "loop" || kind === "self" || kind === "lan" || kind === "gw") out.push({ wait: 400 }, hop(1, 0, 0, 0, ip));
+    else out.push({ wait: 400 }, hop(1, 0, 0, 0, pc.gw), { wait: 500 }, hop(2, 8, 7, 9, "100.64.0.1"), { wait: 500 }, hop(3, 11, 12, 11, "203.0.113.9"), { wait: 500 }, hop(4, 14, 13, 14, ip));
+    out.push("\nTrace complete.");
+    return out;
+  },
+
+  nslookup({ pc, args, tag }) {
+    const [name, server] = args.filter((a) => !a.startsWith("-"));
+    const srv = server ? (ip4(server) ? server : lookup(pc, server).ip || "") : (pc.apipa || !pc.ip ? "" : pc.dns);
+    const srvName = SERVERS[srv] || "UnKnown", dead = !dnsOk(pc, srv);
+    const timeout = err("DNS request timed out.\n    timeout was 2 seconds.");
+    if (!name) return dead ? [{ wait: 1500 }, timeout, `Default Server:  UnKnown\nAddress:  ${srv || "::1"}\n`, note("(Interactive mode isn't simulated. Try: nslookup example.com)")]
+      : [`Default Server:  ${srvName}\nAddress:  ${srv}\n`, note("(Interactive mode isn't simulated. Try: nslookup example.com)")];
+    const which = server ? "nslookup-alt" : "nslookup";
+    if (dead) { tag(which + ":fail"); return [{ wait: 1500 }, timeout, `Server:  UnKnown\nAddress:  ${srv || "::1"}\n`, { wait: 1500 }, timeout, { wait: 1500 }, timeout, err("*** Request to UnKnown timed-out")]; }
+    const out = [{ wait: 300 }, `Server:  ${srvName}\nAddress:  ${srv}\n`];
+    if (ip4(name)) {
+      tag(which + ":ok");
+      out.push(SERVERS[name] ? `Name:    ${SERVERS[name]}\nAddress:  ${name}\n` : err(`*** ${srvName} can't find ${name}: Non-existent domain`));
+      return out;
+    }
+    const r = lookup(pc, name, srv);
+    tag(which + (r.ip ? ":ok" : ":nx"));
+    out.push(r.ip ? `${r.auth ? "" : "Non-authoritative answer:\n"}Name:    ${r.fq}\nAddress:  ${r.ip}\n` : err(`*** ${srvName} can't find ${name}: Non-existent domain`));
+    return out;
+  },
+
+  netstat({ pc, la, tag }) {
+    const flags = la.filter((a) => /^[-/]/.test(a)).join("").replace(/[-/]/g, "");
+    if (la.some((a) => !/^[-/]/.test(a)) || /[^anobfqrse]/.test(flags)) return [USAGE.netstat];
+    if (/[rse]/.test(flags)) return [note("netstat -r (routes), -s and -e (statistics) are real, but the dojo only simulates -a, -n, -o and -b.")];
+    const A = flags.includes("a"), N = flags.includes("n"), O = flags.includes("o"), B = flags.includes("b");
+    tag("netstat"); if (A) tag("netstat-a"); if (O) tag("netstat-o"); if (B) tag("netstat-b");
+    const me = pc.ip || "0.0.0.0", up = pc.ip && !pc.apipa;
+    const listen = [["TCP", "0.0.0.0:135", 1012], ["TCP", "0.0.0.0:445", 4], ...(pc.rdp ? [["TCP", "0.0.0.0:3389", 1184]] : []), ["TCP", "0.0.0.0:49664", 796], ["TCP", "0.0.0.0:49665", 704],
+      ...(up ? [["TCP", `${me}:139`, 4]] : [])].map(([p, l, pid]) => [p, l, "0.0.0.0:0", "LISTENING", pid]);
+    const est = [];
+    if (up && reach(pc, "192.168.1.20") === "ok") est.push(["TCP", `${me}:49712`, "192.168.1.20:445", "ESTABLISHED", 4]);
+    if (up && pc.rdp) est.push(["TCP", `${me}:3389`, "198.51.100.77:51544", "ESTABLISHED", 1184]);
+    if (up && reach(pc, "93.184.215.14") === "ok") est.push(["TCP", `${me}:49731`, "93.184.215.14:443", "ESTABLISHED", 5520], ["TCP", `${me}:49740`, "142.250.72.14:443", "TIME_WAIT", 0]);
+    const udp = A ? [["UDP", "0.0.0.0:5353", "*:*", "", 1320], ...(up ? [["UDP", `${me}:137`, "*:*", "", 4], ["UDP", `${me}:138`, "*:*", "", 4]] : [])] : [];
+    const PN = { 135: "epmap", 137: "netbios-ns", 138: "netbios-dgm", 139: "netbios-ssn", 443: "https", 445: "microsoft-ds", 3389: "ms-wbt-server" };
+    const nm = (addr, foreign) => {
+      if (N) return addr;
+      const [h, p] = [addr.slice(0, addr.lastIndexOf(":")), addr.slice(addr.lastIndexOf(":") + 1)];
+      const host = foreign ? (h === "0.0.0.0" || h === me ? pc.host : h === "192.168.1.20" ? "fs01" : h) : h;
+      return `${host}:${PN[p] || p}`;
+    };
+    const out = ["\nActive Connections\n", "  Proto  Local Address          Foreign Address        State" + (O ? "           PID" : "")];
+    for (const [p, l, f, s, pid] of [...(A ? listen : []), ...est, ...udp]) {
+      out.push({ wait: 40 }, `  ${p.padEnd(7)}${nm(l).padEnd(23)}${(f === "*:*" ? f : nm(f, true)).padEnd(23)}${s.padEnd(16)}${O ? pid : ""}`.trimEnd());
+      if (B) {
+        const pr = pc.procs.find((x) => x[1] === pid);
+        if (!pid || pid === 4) out.push(" Can not obtain ownership information");
+        else { if (pr && pr[4] !== "N/A") out.push(`  ${pr[4].split(",")[0]}`); out.push(` [${pr ? pr[0] : "Unknown"}]`); }
+      }
+    }
+    if (!N && A) out.push(note("Tip: add -n (netstat -an) to see plain port numbers, the way exam questions show them. It's faster too."));
+    return out;
+  },
+
+  arp({ pc, la, tag }) {
+    if (!la.some((a) => /^[-/][ag]$/.test(a))) return [USAGE.arp];
+    tag("arp");
+    const rows = [];
+    if (pc.ip && !pc.apipa) {
+      if (pc.gwUp && sameNet(pc.gw, pc.ip, pc.mask)) rows.push([pc.gw, "00-1a-2b-3c-4d-5e", "dynamic"]);
+      pc.lan.filter((ip) => sameNet(ip, pc.ip, pc.mask)).forEach((ip, i) => rows.push([ip, `3c-52-82-11-0a-${(16 + i).toString(16)}`, "dynamic"]));
+    }
+    const net = pc.ip ? pc.ip.split(".").slice(0, pc.apipa ? 2 : 3).join(".") + (pc.apipa ? ".255.255" : ".255") : "255.255.255.255";
+    rows.push([net, "ff-ff-ff-ff-ff-ff", "static"], ["224.0.0.22", "01-00-5e-00-00-16", "static"], ["224.0.0.251", "01-00-5e-00-00-fb", "static"], ["239.255.255.250", "01-00-5e-7f-ff-fa", "static"]);
+    return [`\nInterface: ${pc.ip || "0.0.0.0"} --- 0xc\n  Internet Address      Physical Address      Type`, ...rows.map(([a, m, t]) => `  ${a.padEnd(22)}${m.padEnd(22)}${t}`)];
+  },
+
+  sfc({ pc, la, tag }) {
+    const op = la[0] || "";
+    if (op !== "/scannow" && op !== "/verifyonly") return [USAGE.sfc];
+    const fix = op === "/scannow";
+    tag(fix ? "sfc-scan" : "sfc-verify");
+    const out = ["\nBeginning system scan.  This process will take some time.\n\nBeginning verification phase of system scan.", { bar: (p) => `Verification ${p}% complete.`, ms: 2800 }, ""];
+    const log = "For online repairs, details are included in the CBS log file located at\nwindir\\Logs\\CBS\\CBS.log. For example C:\\Windows\\Logs\\CBS\\CBS.log.";
+    if (!pc.corrupt) out.push(okl("Windows Resource Protection did not find any integrity violations."));
+    else if (!fix) out.push(err("Windows Resource Protection found integrity violations.\n" + log));
+    else { pc.corrupt = false; out.push(okl("Windows Resource Protection found corrupt files and successfully repaired them.\n" + log)); }
+    return out;
+  },
+
+  dism({ la, tag }) {
+    const s = la.join(" ");
+    const op = /restorehealth/.test(s) ? "restore" : /scanhealth/.test(s) ? "scan" : /checkhealth/.test(s) ? "check" : "";
+    if (!/\/online/.test(s) || !/\/cleanup-image/.test(s) || !op) return [USAGE.dism];
+    tag("dism");
+    const out = ["\nDeployment Image Servicing and Management tool\nVersion: 10.0.22621.2792\n\nImage Version: 10.0.22631.4460\n"];
+    if (op !== "check") out.push({ bar: (p) => `[${"=".repeat(Math.round(p * .56)).padEnd(56)}] ${p}.0%`, ms: 2600 });
+    out.push(okl(op === "restore" ? "The restore operation completed successfully.\nThe operation completed successfully." : "No component store corruption detected.\nThe operation completed successfully."));
+    return out;
+  },
+
+  chkdsk({ pc, la, tag }) {
+    let drive = "c", f = false, r = false;
+    for (const a of la) {
+      if (/^[a-z]:$/.test(a)) drive = a[0];
+      else if (a === "/f") f = true; else if (a === "/r") r = true;
+      else if (a === "/scan" || a === "/x" || a === "/spotfix") { /* accepted */ }
+      else return [err(`Invalid parameter - ${a}`)];
+    }
+    if (!"cd".includes(drive)) return [err("Cannot open volume for direct access.")];
+    const D = drive.toUpperCase();
+    if (drive === "c" && (f || r)) {
+      tag("chkdsk:c:sched");
+      T.ask = (ans) => /^y/.test(ans) ? ["This volume will be checked the next time the system restarts."] : [];
+      return ["The type of the file system is NTFS.\nCannot lock current drive.\n\nChkdsk cannot run because the volume is in use by another\nprocess.  Would you like to schedule this volume to be\nchecked the next time the system restarts? (Y/N) "];
+    }
+    tag(`chkdsk:${drive}:${r ? "repair" : f ? "fix" : "ro"}`);
+    const sick = drive === "d" && pc.badD, fsBad = sick && !pc.dFixed;
+    const out = [`The type of the file system is NTFS.\nVolume label is ${drive === "c" ? "Windows" : "Data"}.\n`];
+    if (!f && !r) out.push("WARNING!  /F parameter not specified.\nRunning CHKDSK in read-only mode.\n");
+    out.push("Stage 1: Examining basic file system structure ...", { bar: (p) => `  ${Math.round(p * 2560)} file records processed.`, ms: 900 });
+    if (fsBad) out.push(f || r ? "Deleting corrupt attribute record (128, \"\")\nfrom file record segment 2041." : err("  Found 2 corrupt file records."));
+    out.push("File verification completed.\n\nStage 2: Examining file name linkage ...", { bar: (p) => `  ${Math.round(p * 3412)} index entries processed.`, ms: 900 });
+    if (fsBad) out.push(f || r ? "Recovering orphaned file Q3REPO~1.XLS (2041) into directory file 5." : err("  Found 1 orphaned file."));
+    out.push("Index verification completed.\n\nStage 3: Examining security descriptors ...\nSecurity descriptor verification completed.");
+    if (r) {
+      out.push("\nStage 4: Looking for bad clusters in user file data ...", { bar: (p) => `  ${Math.round(p * 2544)} files processed.`, ms: 1500 });
+      if (sick && !pc.dRepaired) out.push(err("Windows replaced bad clusters in file 2041\nof name \\Projects\\Q3 report.xlsx."));
+      out.push("File data verification completed.\n\nStage 5: Looking for bad, free clusters ...", { bar: (p) => `  ${Math.round(p * 9811)} free clusters processed.`, ms: 1200 });
+      out.push("Free space verification is complete.");
+      if (sick && !pc.dRepaired) out.push(err("Windows has replaced 6 bad clusters and added them to the Bad Clusters File."));
+    }
+    out.push("");
+    if (fsBad && !f && !r) out.push(err("Windows has scanned the file system and found problems.\nRun CHKDSK with the /F (fix) option to correct these."));
+    else if (sick && (fsBad || (r && !pc.dRepaired))) out.push(okl("Windows has made corrections to the file system.\nNo further action is required."));
+    else out.push(okl("Windows has scanned the file system and found no problems.\nNo further action is required."));
+    out.push(drive === "c" ? "\n 497454079 KB total disk space.\n 211873400 KB in 312904 files.\n       0 KB in bad sectors.\n 284716604 KB available on disk."
+      : `\n1953513471 KB total disk space.\n 812340776 KB in 25440 files.\n       ${sick && (r || pc.dRepaired) ? "24" : " 0"} KB in bad sectors.\n1141117143 KB available on disk.`);
+    if (sick && (f || r)) pc.dFixed = true;
+    if (sick && r) pc.dRepaired = true;
+    if (sick && f && !r) out.push(note("The file system is fixed, but the clicking hints at physical damage. /r also hunts for bad sectors."));
+    return out;
+  },
+
+  tasklist({ pc, args, la, tag }) {
+    const f = la.map((a) => a.replace(/^-/, "/"));
+    const V = f.includes("/v"), SVC = f.includes("/svc");
+    let list = pc.procs.concat([["tasklist.exe", 8840, "Console", "9,876 K", "N/A"]]);
+    const fi = f.indexOf("/fi");
+    if (fi >= 0) {
+      const m = (la[fi + 1] || "").match(/^\s*(imagename|pid|status)\s+eq\s+(.+?)\s*$/);
+      if (!m) return [err(`ERROR: Invalid argument/option - '${args[fi + 1] || ""}'.\nType "TASKLIST /?" for usage.`)];
+      list = list.filter((p) => m[1] === "pid" ? String(p[1]) === m[2] : m[1] === "status" ? statusOf(pc, p).toLowerCase() === m[2] : p[0].toLowerCase() === m[2]);
+      if (!list.length) return ["INFO: No tasks are running which match the specified criteria."];
+    }
+    tag("tasklist"); if (SVC) tag("tasklist-svc");
+    if (SVC) return ["\nImage Name                     PID Services\n========================= ======== ============================================",
+      ...list.map((p) => `${p[0].padEnd(25)} ${String(p[1]).padStart(8)} ${p[4]}`)];
+    const row = (a, b, c, d, e, s, w) => `${a.padEnd(25)} ${b.padStart(8)} ${c.padEnd(16)} ${d.padStart(11)} ${e.padStart(12)}${V ? ` ${s.padEnd(15)} ${w}` : ""}`;
+    return ["\n" + row("Image Name", "PID", "Session Name", "Session#", "Mem Usage", "Status", "Window Title"),
+      row("=".repeat(25), "=".repeat(8), "=".repeat(16), "=".repeat(11), "=".repeat(12), "=".repeat(15), "=".repeat(30)),
+      ...list.map((p) => { const st = statusOf(pc, p); const line = row(p[0], String(p[1]), p[2], p[2] === "Console" ? "1" : "0", p[3], st, p[2] === "Console" ? TITLES[p[0]] || "N/A" : "N/A"); return st === "Not Responding" && V ? err(line) : line; })];
+  },
+
+  taskkill({ pc, la, tag }) {
+    const f = la.map((a) => a.replace(/^-/, "/"));
+    const force = f.includes("/f"), targets = [];
+    for (let i = 0; i < f.length; i++) if (f[i] === "/im" || f[i] === "/pid") targets.push([f[i], la[++i] || ""]);
+    if (!targets.length) return [err("ERROR: Invalid syntax. Neither /FI nor /PID nor /IM were specified.\nType \"TASKKILL /?\" for usage.")];
+    const out = [];
+    for (const [k, v] of targets) {
+      const hits = pc.procs.filter((p) => k === "/pid" ? String(p[1]) === v : p[0].toLowerCase() === v);
+      if (!hits.length) { out.push(err(`ERROR: The process "${v}" not found.`)); continue; }
+      for (const p of hits) {
+        const hung = pc.hung && p[0] === pc.hung;
+        if (p[1] < 800 || ["cmd.exe", "conhost.exe"].includes(p[0])) {
+          out.push(err(`ERROR: The process "${p[0]}" with PID ${p[1]} could not be terminated.\nReason: Access is denied.`));
+          if (p[0] === "cmd.exe" || p[0] === "conhost.exe") out.push(note("That's the window you're typing in, so the dojo keeps it alive."));
+          continue;
+        }
+        if (!force && p[2] === "Services") { out.push(err(`ERROR: The process "${p[0]}" with PID ${p[1]} could not be terminated.\nReason: This process can only be terminated forcefully (with /F option).`)); continue; }
+        if (!force) {
+          out.push(okl(`SUCCESS: Sent termination signal to the process "${p[0]}" with PID ${p[1]}.`));
+          if (hung) { out.push(note("Excel is frozen, so it never reads that polite request and stays open. Check with tasklist, then add /F.")); tag("taskkill-polite"); }
+          else { pc.procs = pc.procs.filter((q) => q !== p); tag(`taskkill-ok:${p[0].toLowerCase()}`); }
+          continue;
+        }
+        pc.procs = pc.procs.filter((q) => q !== p);
+        if (hung) pc.hung = null;
+        tag(`taskkill-ok:${p[0].toLowerCase()}`);
+        out.push(okl(`SUCCESS: The process "${p[0]}" with PID ${p[1]} has been terminated.`));
+        if (p[0] === "explorer.exe") out.push(note("Explorer runs the taskbar and desktop, so they just vanished. On a real PC, type explorer to bring them back."));
+      }
+    }
+    return out;
+  },
+
+  gpupdate({ pc, la, tag }) {
+    const f = la.map((a) => a.replace(/^-/, "/"));
+    if (f.some((a) => !/^\/(force|target:(user|computer)|wait:\d+|boot|logoff|sync)$/.test(a))) return [USAGE.gpupdate];
+    tag("gpupdate"); if (f.includes("/force")) tag("gpupdate-force");
+    if (reach(pc, "192.168.1.10") !== "ok") return ["Updating policy...\n", { wait: 2500 }, err("Computer policy could not be updated successfully. The following errors were encountered:\n\nThe processing of Group Policy failed because of lack of network connectivity to a domain\ncontroller. This may be a transient condition.")];
+    pc.gpoNew = true; pc.gpTime = new Date();
+    return ["Updating policy...\n", { wait: 1600 }, okl("Computer Policy update has completed successfully."), { wait: 900 }, okl("User Policy update has completed successfully.\n")];
+  },
+
+  gpresult({ pc, la, tag }) {
+    const f = la.map((a) => a.replace(/^-/, "/"));
+    if (!f.some((a) => a === "/r" || a === "/z" || a === "/v")) return [USAGE.gpresult];
+    tag("gpresult");
+    const at = pc.gpTime || (() => { const d = new Date(); d.setHours(7, 58, 12); return d; })();
+    const when = `${SHORTDAY(at)} at ${CLOCK(at)}`, sales = pc.gpoNew ? "\n        Sales - Screen Lock and Wallpaper" : "";
+    return [{ wait: 700 }, `
+Microsoft (R) Windows (R) Operating System Group Policy Result tool v2.0
+(C) Microsoft Corporation. All rights reserved.
+
+Created on ${SHORTDAY()} at ${CLOCK()}
+
+
+RSOP data for CONTOSO\\jsmith on ${pc.host} : Logging Mode
+------------------------------------------------------------
+
+OS Configuration:            Member Workstation
+OS Version:                  10.0.22631
+Site Name:                   Default-First-Site-Name
+Domain Name:                 CONTOSO
+Domain Type:                 Windows 2008 or later
+
+COMPUTER SETTINGS
+------------------
+    Last time Group Policy was applied: ${when}
+    Group Policy was applied from:      dc01.contoso.local
+    Group Policy slow link threshold:   500 kbps
+
+    Applied Group Policy Objects
+    -----------------------------
+        Default Domain Policy${sales}
+
+USER SETTINGS
+--------------
+    Last time Group Policy was applied: ${when}
+    Group Policy was applied from:      dc01.contoso.local
+
+    Applied Group Policy Objects
+    -----------------------------
+        Drive Maps
+        Default Domain Policy${sales}
+
+    The user is a part of the following security groups
+    ---------------------------------------------------
+        Domain Users
+        Sales
+        Everyone`];
+  },
+
+  net({ pc, args, la, tag }) {
+    if (!la[0]) return [NET_SYNTAX];
+    if (la[0] !== "use") return [note(`net ${la[0]} is real, but the dojo only simulates net use.`)];
+    const a = args.slice(1).filter((x) => !/^\/(persistent|p|savecred)/i.test(x)), l = a.map((x) => x.toLowerCase());
+    const status = (path) => { const m = path.match(/^\\\\([^\\]+)\\([^\\]+)/); const ok = m && shareOk(pc, m[1].toLowerCase(), m[2].toLowerCase()) === "ok"; return ok ? "OK" : "Unavailable"; };
+    if (!l.length) {
+      tag("netuse-list");
+      if (!pc.maps.length) return ["New connections will be remembered.\n\nThere are no entries in the list.\n"];
+      return ["New connections will be remembered.\n\n", "Status       Local     Remote                    Network\n", "-".repeat(79),
+        ...pc.maps.map(([d, p]) => `${status(p).padEnd(13)}${d.padEnd(10)}${p.padEnd(26)}Microsoft Windows Network`), "The command completed successfully.\n"];
+    }
+    const dev = a[0].toUpperCase();
+    if (l.includes("/delete") || l.includes("/d")) {
+      if (dev === "*") {
+        if (!pc.maps.length) return ["There are no entries in the list.\n"];
+        T.ask = (ans) => { if (!/^y/.test(ans)) return ["The command completed successfully."]; pc.maps = []; tag("netuse-del:*"); return ["The command completed successfully.\n"]; };
+        return ["You have these remote connections:\n\n" + pc.maps.map(([d, p]) => `    ${d.padEnd(10)}${p}`).join("\n") + "\nContinue with the operation? (Y/N) [N]: "];
+      }
+      if (!pc.maps.some((m) => m[0] === dev)) return [err("The network connection could not be found.\n\nMore help is available by typing NET HELPMSG 2250.\n")];
+      pc.maps = pc.maps.filter((m) => m[0] !== dev);
+      tag(`netuse-del:${dev[0].toLowerCase()}`);
+      return [`${dev} was deleted successfully.\n`];
+    }
+    if (!/^([A-Z]:|\*)$/.test(dev)) return [USAGE.net];
+    const path = a.slice(1).find((x) => x.startsWith("\\\\"));
+    if (!path) { const m = pc.maps.find((x) => x[0] === dev); return m ? [`Local name        ${dev}\nRemote name       ${m[1]}\nResource type     Disk\nStatus            ${status(m[1])}\nThe command completed successfully.\n`] : [err("The network connection could not be found.\n")]; }
+    if (dev !== "*" && pc.maps.some((m) => m[0] === dev)) return [{ wait: 300 }, err("System error 85 has occurred.\n\nThe local device name is already in use.\n")];
+    const m = path.match(/^\\\\([^\\]+)\\([^\\]+)\\?/);
+    const why = m ? shareOk(pc, m[1].toLowerCase(), m[2].toLowerCase()) : "53";
+    if (why === "53") return [{ wait: 1800 }, err("System error 53 has occurred.\n\nThe network path was not found.\n")];
+    if (why === "67") return [{ wait: 700 }, err("System error 67 has occurred.\n\nThe network name cannot be found.\n")];
+    const letter = dev !== "*" ? dev : "ZYXWVUTRQPONMLKJIG".split("").map((c) => c + ":").find((c) => !pc.maps.some((x) => x[0] === c));
+    pc.maps.push([letter, path]);
+    tag(`netuse-map:${letter[0].toLowerCase()}:${m[1].toLowerCase().replace(/\.contoso\.local$/, "")}`);
+    return [{ wait: 600 }, ...(dev === "*" ? [`Drive ${letter} is now connected to ${path}.\n`] : []), okl("The command completed successfully.\n")];
+  },
+
+  diskpart({ pc, tag }) { T.diskpart = true; T.sel = null; tag("diskpart"); return [{ wait: 500 }, `\nMicrosoft DiskPart version 10.0.22621.1\n\nCopyright (C) Microsoft Corporation.\nOn computer: ${pc.host}\n`]; },
+};
+const statusOf = (pc, p) => pc.hung && p[0] === pc.hung ? "Not Responding" : p[2] === "Services" ? "Unknown" : "Running";
+function shareOk(pc, server, share) {
+  const s = server.replace(/\.contoso\.local$/, ""), shares = { fs01: ["shared", "home", "public"], dc01: ["netlogon", "sysvol"] }[s];
+  const r = lookup(pc, server);
+  if (!shares || !r.ip || reach(pc, r.ip) !== "ok") return "53";
+  return shares.includes(share) ? "ok" : "67";
+}
+function diskpartCmd(line) {
+  const w = line.trim().toLowerCase().split(/\s+/).filter(Boolean).map((x, i) => i < 2 ? x.slice(0, 3) : x);
+  if (!w.length) return [];
+  T.tags.add("diskpart:" + w.join(" "));
+  const disks = [["0", "476 GB", "0 B"], ["1", "1863 GB", "1024 KB"]];
+  if (w[0] === "exi") { T.diskpart = false; return ["\nLeaving DiskPart..."]; }
+  if (w[0] === "lis" && w[1] === "dis") return ["\n  Disk ###  Status         Size     Free     Dyn  Gpt\n  --------  -------------  -------  -------  ---  ---",
+    ...disks.map(([n, s, f]) => `${T.sel === n ? "*" : " "} Disk ${n}    Online       ${s.padStart(9)}  ${f.padStart(7)}        *`), ""];
+  if (w[0] === "lis" && w[1] === "vol") return ["\n  Volume ###  Ltr  Label        Fs     Type        Size     Status     Info\n  ----------  ---  -----------  -----  ----------  -------  ---------  --------",
+    "  Volume 0     C   Windows      NTFS   Partition    475 GB  Healthy    Boot", "  Volume 1         SYSTEM       FAT32  Partition    100 MB  Healthy    System",
+    "  Volume 2         Recovery     NTFS   Partition    750 MB  Healthy    Hidden", "  Volume 3     D   Data         NTFS   Partition   1863 GB  Healthy", ""];
+  if (w[0] === "lis" && w[1] === "par") {
+    if (T.sel == null) return ["\nThere is no disk selected to list partitions.\nPlease select a disk and try again.\n"];
+    return ["\n  Partition ###  Type              Size     Offset\n  -------------  ----------------  -------  -------", ...(T.sel === "0"
+      ? ["  Partition 1    System             100 MB  1024 KB", "  Partition 2    Reserved            16 MB   101 MB", "  Partition 3    Primary            475 GB   117 MB", "  Partition 4    Recovery           750 MB   475 GB"]
+      : ["  Partition 1    Reserved           128 MB    17 KB", "  Partition 2    Primary           1863 GB   129 MB"]), ""];
+  }
+  if (w[0] === "sel" && w[1] === "dis") {
+    if (!["0", "1"].includes(w[2])) return ["\nThe disk you specified is not valid.\n\nThere is no disk selected.\n"];
+    T.sel = w[2]; return [`\nDisk ${w[2]} is now the selected disk.\n`];
+  }
+  if (w[0] === "det" && w[1] === "dis") {
+    if (T.sel == null) return ["\nThere is no disk selected.\nPlease select a disk and try again.\n"];
+    return [T.sel === "0" ? "\nSamsung SSD 980 PRO 512GB\nType   : NVMe\nStatus : Online\nBoot Disk  : Yes\n" : "\nWDC WD20EZAZ-00GGJB0\nType   : SATA\nStatus : Online\nBoot Disk  : No\n"];
+  }
+  if (w[0] === "cle") {
+    if (T.sel == null) return ["\nThere is no disk selected.\nPlease select a disk and try again.\n"];
+    return ["\nDiskPart succeeded in cleaning the disk.\n", note("Simulator only: nothing was erased. On a real PC, clean wipes the selected disk's partition table instantly, with no undo. Always run list disk and check the * first.")];
+  }
+  return ["\nMicrosoft DiskPart version 10.0.22621.1\n\n  LIST DISK       List the disks (* = selected).\n  LIST VOLUME     List the volumes and their drive letters.\n  LIST PARTITION  List the partitions on the selected disk.\n  SELECT DISK n   Choose a disk to work on.\n  DETAIL DISK     Show the selected disk's details.\n  CLEAN           Wipe the selected disk (careful!).\n  EXIT            Leave DiskPart.\n"];
+}
+
+// ---- The terminal itself ----
+const T = { pc: null, sid: "", tags: new Set(), hist: [], hi: 0, busy: false, ask: null, diskpart: false, sel: null, gen: 0, saved: "",
+            wrong: new Set(), done: false, hint: false, met: "" };
+const PROMPT = "C:\\Windows\\system32>";
+const tPrompt = () => T.ask ? "" : T.diskpart ? "DISKPART> " : PROMPT;
+function runCmd(raw) {
+  const toks = [...raw.matchAll(/"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2]);
+  const glued = toks[0].match(/^([^/]+)(\/.+)$/);            // ipconfig/all works on Windows too
+  if (glued) toks.splice(0, 1, glued[1], glued[2]);
+  const name = toks[0], key = name.toLowerCase().replace(/\.exe$/, ""), args = toks.slice(1), la = args.map((a) => a.toLowerCase());
+  const f = Object.prototype.hasOwnProperty.call(CMDS, key) ? CMDS[key] : null;
+  if (f && (la.includes("/?") || la.includes("-?"))) return [USAGE[key] || note("No extra options to show for this one.")];
+  if (f) return f({ pc: T.pc, args, la, raw, tag: (t) => T.tags.add(t) }) || [];
+  if (UNSIM.includes(key)) return [note(`${name} is a real Windows command, but the dojo doesn't simulate it. Type help for the list.`)];
+  return [`'${name}' is not recognized as an internal or external command,\noperable program or batch file.`];
+}
+function tAdd(text, cls) {
+  const log = $("#tlog"); if (!log) return null;
+  const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = text; log.appendChild(d);
+  while (log.childElementCount > 600) log.firstChild.remove();
+  return d;
+}
+const tScroll = () => { const o = $("#tout"); if (o) o.scrollTop = o.scrollHeight; };
+const nap = (ms) => new Promise((ok) => setTimeout(ok, ms));
+async function tOut(items) {
+  const g = T.gen;
+  for (const it of items) {
+    if (g !== T.gen || !$("#tlog")) return;
+    if (typeof it === "string") tAdd(it);
+    else if (it.cls) { $("#tlog").innerHTML = ""; }
+    else if (it.wait) { tLine(); await nap(it.wait); }
+    else if (it.bar) {
+      const d = tAdd(it.bar(0)); const steps = 10;
+      for (let i = 1; i <= steps; i++) { await nap(it.ms / steps); if (g !== T.gen) return; d.textContent = it.bar(i * 10); tScroll(); }
+    } else tAdd(it.t, it.c);
+    tScroll();
+  }
+}
+async function tSubmit(line) {
+  if (T.busy) return;
+  const echo = document.createElement("div"); echo.className = "cmdl";
+  echo.innerHTML = `<span class="pr">${esc(tPrompt())}</span>${esc(line)}`;
+  $("#tlog")?.appendChild(echo);
+  if (line.trim() && !T.ask) { if (T.hist[T.hist.length - 1] !== line) T.hist.push(line); if (T.hist.length > 60) T.hist.shift(); }
+  T.hi = T.hist.length;
+  T.busy = true; tLine();
+  const g = T.gen;
+  try {
+    if (T.ask) { const f = T.ask; T.ask = null; await tOut(f(line.trim().toLowerCase())); }
+    else if (T.diskpart) await tOut(diskpartCmd(line));
+    else for (const part of line.split(/\s*&&?\s*/)) { if (g !== T.gen) break; if (part.trim()) await tOut(runCmd(part.trim())); if (T.ask) break; }
+  } finally { if (g === T.gen) { T.busy = false; if ($("#tlog")?.childElementCount) tAdd(""); } }
+  if (g !== T.gen) return;
+  tLine(); tScroll(); djCheck();
+}
+// The input line: prompt, what's typed, and a block caret where the cursor is.
+function tLine() {
+  const el = $("#tline"), inp = $("#tin"); if (!el || !inp) return;
+  if (T.busy) { el.innerHTML = ""; return; }
+  const v = inp.value, at = inp.selectionStart ?? v.length, focused = document.activeElement === inp;
+  el.innerHTML = `<span class="pr">${esc(tPrompt())}</span>${esc(v.slice(0, at))}<span class="caret">${esc(v[at] || " ")}</span>${esc(v.slice(at + 1))}`
+    + (!v && !focused ? `<span class="ghost">  click here or press Enter to type</span>` : "");
+}
+function tKey(e) {
+  const inp = e.target;
+  if (e.key === "Enter") { e.preventDefault(); if (T.busy) return; const v = inp.value; inp.value = ""; tSubmit(v); return; }
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    e.preventDefault(); if (!T.hist.length) return;
+    T.hi = Math.max(0, Math.min(T.hist.length, T.hi + (e.key === "ArrowUp" ? -1 : 1)));
+    inp.value = T.hist[T.hi] || ""; inp.setSelectionRange(inp.value.length, inp.value.length); tLine(); return;
+  }
+  if (e.ctrlKey && (e.key === "c" || e.key === "C") && !inp.value.slice(inp.selectionStart, inp.selectionEnd)) {
+    e.preventDefault(); T.gen++; T.busy = false; T.ask = null; tAdd(`${tPrompt()}${inp.value}^C`, "cmdl"); inp.value = ""; tLine(); tScroll(); return;
+  }
+  if (e.ctrlKey && (e.key === "l" || e.key === "L")) { e.preventDefault(); $("#tlog").innerHTML = ""; return; }
+  requestAnimationFrame(tLine);
+}
+
+// ---- Tickets: picker, panel, question ----
+const curSc = () => SC.find((s) => s.id === dj.cur) || SC[0];
+const dots = (n) => `<span class="dots" aria-label="difficulty ${n} of 3">${[1, 2, 3].map((i) => i <= n ? "●" : `<span class="off">●</span>`).join("")}</span>`;
+const djMet = (s) => s.need.map(([re]) => { const r = new RegExp(re); return [...T.tags].some((t) => r.test(t)); });
+function djStart(id, focus) {
+  const s = SC.find((x) => x.id === id) || SC[0];
+  dj.cur = s.id; djSave();
+  T.gen++; Object.assign(T, { pc: makePC(s.pc), sid: s.id, tags: new Set(), busy: false, ask: null, diskpart: false, sel: null, wrong: new Set(), done: false, hint: false, met: "" });
+  $("#tlog").innerHTML = "";
+  tAdd("Microsoft Windows [Version 10.0.22631.4460]\n(c) Microsoft Corporation. All rights reserved.\n");
+  tAdd(`Ticket #${1040 + SC.indexOf(s) + 1} · ${T.pc.host} · signed in as ${T.pc.user}. Type help to see what works here.`, "note");
+  tAdd("");
+  $("#tin").value = "";
+  djPicker(); djPanel(); tLine();
+  if (focus) $("#tin").focus();
+}
+function djPicker() {
+  const n = SC.filter((s) => dj.solved[s.id]).length, pr = $("#dprog");
+  if (pr) pr.innerHTML = dj.mode === "rush" ? "" : `<span>${n === SC.length ? "All 10 tickets closed. Help-desk legend ✦" : `${n} of ${SC.length} tickets closed`}</span><span class="bar"><i style="width:${100 * n / SC.length}%"></i></span>`;
+  const box = $("#picker"); if (!box) return;
+  box.innerHTML = SC.map((s, i) => `<button class="sc ${s.id === dj.cur ? "on" : ""} ${dj.solved[s.id] ? "solved" : ""}" data-s="${s.id}" aria-pressed="${s.id === dj.cur}"
+      aria-label="Ticket ${i + 1}: ${esc(s.title)}, difficulty ${s.diff} of 3${dj.solved[s.id] ? ", solved" : ""}">
+      <span class="no">${String(i + 1).padStart(2, "0")}</span><span class="nm">${esc(s.title)}</span><span class="tp">${dots(s.diff)} ${esc(s.topic)}</span>${dj.solved[s.id] ? `<span class="ok" aria-hidden="true">✓</span>` : ""}</button>`).join("");
+  box.querySelectorAll("[data-s]").forEach((b) => b.onclick = () => djStart(b.dataset.s, true));
+}
+function djPanel(popIdx) {
+  const box = $("#ticket"); if (!box) return;
+  const s = curSc(), met = djMet(s), all = met.every(Boolean), next = met.indexOf(false), i = SC.indexOf(s);
+  box.innerHTML = `
+    <div class="head"><span>Ticket #${1040 + i + 1} · ${esc(s.topic)}</span>${dots(s.diff)}</div>
+    <h3>${esc(s.title)}${dj.solved[s.id] ? ` <span style="color:var(--jade);font-size:15px">✓</span>` : ""}</h3>
+    <div class="said2">${esc(s.ticket)}</div>
+    <div class="job"><b>Your job:</b> ${esc(s.task)}</div>
+    <ol class="steps" aria-label="Steps">${s.need.map(([, goal], k) => `<li class="${met[k] ? "done" : k === next ? "next" : ""} ${popIdx?.includes(k) ? "pop" : ""}"><span class="m" aria-hidden="true">${met[k] ? "✓" : "○"}</span><span>${esc(goal)}</span></li>`).join("")}</ol>
+    ${!all ? `<div class="drow"><button class="btn ghost" id="dhint">Hint <kbd>H</kbd></button><button class="btn ghost" id="dreset" title="Start this ticket over on a fresh PC">Reset PC</button></div>
+      ${T.hint ? `<div class="hintbox">Try <button class="chip" id="dchip" title="Put it in the terminal">${esc(s.need[next][2])}</button> <span class="tag">(click to type it in)</span></div>` : ""}` : ""}
+    ${all ? `<div class="dq"><h4>${esc(s.q || "What's wrong?")}</h4>
+      ${s.choices.map((c, k) => `<button class="ch ${T.wrong.has(k) ? "wrong" : ""} ${T.done && k === s.a ? "right" : ""}" data-c="${k}" ${T.done ? "disabled" : ""}><kbd>${k + 1}</kbd><span>${esc(c)}</span></button>`).join("")}
+      ${T.done ? `<div class="why" role="status"><span class="stamp" aria-hidden="true">RESOLVED</span><h5>Why</h5><div>${esc(s.why)}</div><div class="tipx"><h5>Exam tip</h5><div>${esc(s.tip)}</div></div></div>
+        <div class="drow" style="margin-top:12px"><button class="btn" id="dnext">Next ticket →</button><button class="btn ghost" id="dreset">Run it again</button></div>` : ""}
+    </div>` : ""}`;
+  $("#dhint")?.addEventListener("click", djHint);
+  $("#dreset")?.addEventListener("click", () => djStart(s.id, true));
+  $("#dchip")?.addEventListener("click", () => { const inp = $("#tin"); inp.value = s.need[next][2].replace(/\s+\(.*\)$/, ""); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); tLine(); });
+  box.querySelectorAll("[data-c]").forEach((b) => b.onclick = () => djChoose(+b.dataset.c));
+  $("#dnext")?.addEventListener("click", () => { const j = SC.indexOf(s); const nx = SC.slice(j + 1).concat(SC.slice(0, j)).find((x) => !dj.solved[x.id]) || SC[(j + 1) % SC.length]; djStart(nx.id, true); });
+}
+// After every command: tick off any newly met steps; when they're all met, the question appears.
+function djCheck() {
+  const s = curSc(), met = djMet(s), key = met.join();
+  if (key === T.met) return;
+  const before = T.met ? T.met.split(",").map((x) => x === "true") : met.map(() => false);
+  T.met = key; T.hint = false;
+  djPanel(met.map((m, k) => m && !before[k] ? k : -1).filter((k) => k >= 0));
+  if (met.every(Boolean)) tAdd("Nice. You've got what you need: answer the question on the right.", "note"), tScroll();
+}
+function djHint() { if (view !== "terminal" || dj.mode !== "cases" || djMet(curSc()).every(Boolean)) return; T.hint = true; djPanel(); }
+function djChoose(k) {
+  const s = curSc();
+  if (view !== "terminal" || dj.mode !== "cases" || T.done || !djMet(s).every(Boolean) || !(k >= 0 && k < s.choices.length)) return;
+  if (k !== s.a) { T.wrong.add(k); djPanel(); toast("Not quite. Look at the output again."); return; }
+  T.done = true; const first = !dj.solved[s.id];
+  dj.solved[s.id] = true; djSave();
+  djPicker(); djPanel();
+  toast(first ? "Ticket closed ✓" : "Closed again ✓");
+  $("#dnext")?.focus({ preventScroll: true });
+}
+
+// ---- Port Rush: 60 seconds, a protocol flashes, type its port ----
+const PORTS = [
+  ["FTP", "File transfer", [20, 21], "20 data · 21 control"], ["SSH", "Secure remote shell (also SFTP, SCP)", [22]], ["Telnet", "Old remote shell, no encryption", [23]],
+  ["SMTP", "Sending email", [25]], ["DNS", "Turns names into IP addresses", [53]], ["DHCP", "Hands out IP addresses", [67, 68], "67 server · 68 client"],
+  ["HTTP", "Web pages, unencrypted", [80]], ["POP3", "Downloads email to one device", [110]], ["NetBIOS", "Old Windows names and sessions", [137, 138, 139], "137 name · 138 datagram · 139 session"],
+  ["IMAP", "Email that stays on the server", [143]], ["SNMP", "Monitoring network devices", [161, 162], "161 queries · 162 traps"], ["LDAP", "Directory lookups (Active Directory)", [389]],
+  ["HTTPS", "Web over TLS (the padlock)", [443]], ["SMB", "Windows file and printer sharing", [445]], ["RDP", "Remote Desktop", [3389]],
+];
+const portText = (p) => p[3] || p[2].join(" / ");
+const ROUND = 60000;
+const R = { on: false, t0: 0, score: 0, combo: 0, maxCombo: 0, right: 0, seen: 0, cur: null, last: [], back: [], miss: [], timer: null, lock: false, ended: false, newBest: false };
+const rushBest = () => +(ls.get(RUSH_KEY) || 0);
+const mult = () => Math.min(5, 1 + Math.floor(R.combo / 3));
+function rushStart() {
+  Object.assign(R, { on: true, t0: Date.now(), score: 0, combo: 0, maxCombo: 0, right: 0, seen: 0, cur: null, last: [], back: [], miss: [], lock: false, ended: false, newBest: false });
+  djBody(); rushNext();
+  clearInterval(R.timer); R.timer = setInterval(rushTick, 100);
+  report(null, false, 0);
+}
+function rushNext() {
+  let p;
+  if (R.back.length && R.back[0].at <= R.seen) p = R.back.shift().p;      // a missed one comes back a few turns later
+  else { const pool = PORTS.filter((x) => !R.last.includes(x)); p = pool[Math.floor(Math.random() * pool.length)]; }
+  R.cur = p; R.last = [p, ...R.last].slice(0, 4); R.seen++; R.lock = false;
+  const pr = $("#rproto"); if (!pr) return;
+  pr.textContent = p[0]; pr.classList.remove("in"); void pr.offsetWidth; pr.classList.add("in");
+  $("#rdesc").textContent = p[1];
+  const inp = $("#rin"); inp.value = ""; inp.disabled = false; inp.focus();
+}
+function rushHud() {
+  const s = $("#rscore"); if (!s) return;
+  s.textContent = R.score;
+  $("#rcombo").textContent = R.combo >= 2 ? `Combo ${R.combo} · ×${mult()}` : "×1";
+}
+function rushFeedback(html, cls) { const f = $("#rfb"); if (!f) return; f.className = "rfb " + cls; f.innerHTML = `<span>${html}</span>`; }
+function rushAnswer(val, skip) {
+  if (!R.on || R.lock || !R.cur) return;
+  const p = R.cur, nums = (val.match(/\d+/g) || []).map(Number);
+  const card = $("#rcard");
+  if (!skip && nums.some((n) => p[2].includes(n))) {
+    R.combo++; R.maxCombo = Math.max(R.maxCombo, R.combo); R.right++;
+    const pts = 10 * mult(); R.score += pts;
+    rushFeedback(`✓ ${esc(p[0])} · ${esc(portText(p))} <span class="muted">+${pts}</span>`, "y");
+    card?.classList.remove("bad"); card?.classList.add("good"); setTimeout(() => card?.classList.remove("good"), 260);
+    rushHud(); rushNext(); return;
+  }
+  R.combo = 0; R.lock = true;
+  if (!R.miss.includes(p)) R.miss.push(p);
+  R.back.push({ p, at: R.seen + 3 });
+  rushFeedback(`${skip ? "Skipped" : "✗ Not " + esc(nums.join(", ") || val)}: ${esc(p[0])} is <b>${esc(portText(p))}</b>`, "n");
+  card?.classList.remove("bad"); void card?.offsetWidth; card?.classList.add("bad");
+  $("#rin").disabled = true;
+  rushHud();
+  setTimeout(() => { if (R.on && R.cur === p) rushNext(); }, 1500);
+}
+function rushTick() {
+  const left = Math.max(0, ROUND - (Date.now() - R.t0));
+  const bar = $("#rbar"); if (!bar) return;
+  bar.style.width = (100 * left / ROUND) + "%";
+  bar.parentElement.classList.toggle("low", left < 10000);
+  $("#rsec").textContent = Math.ceil(left / 1000);
+  if (!left) rushEnd();
+}
+function rushEnd() {
+  clearInterval(R.timer); R.on = false; R.ended = true;
+  if (R.score > rushBest()) { R.newBest = R.score > 0; ls.set(RUSH_KEY, String(R.score)); }
+  djBody();
+}
+function rushScreen() {
+  const best = rushBest(), table = `<details class="peek"><summary>Peek at the port list</summary><div class="ptable">${PORTS.map((p) => `<span><b>${esc(p[0])}</b> ${esc(portText(p).replace(/ · /g, ", "))}</span>`).join("")}</div></details>`;
+  if (R.on) return `<div class="rush glass" id="rcard">
+      <div class="rhud"><span>Score <b id="rscore">0</b></span><span class="pill sun" id="rcombo">×1</span><span><b id="rsec">60</b> s left</span></div>
+      <div class="rtime" aria-hidden="true"><i id="rbar"></i></div>
+      <div class="proto" id="rproto" aria-live="polite"></div><div class="muted" id="rdesc"></div>
+      <input id="rin" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Port number" placeholder="port">
+      <div class="rfb" id="rfb" aria-live="polite"></div>
+      <p class="tag">A right answer counts the moment it's complete. Enter on an empty box skips. Every 3 in a row raises the multiplier.</p></div>`;
+  if (R.ended) {
+    const acc = R.seen ? Math.round(100 * R.right / Math.max(1, R.right + R.miss.length)) : 0;
+    return `<div class="rush glass" role="status">
+      <div class="tag" style="letter-spacing:1.5px;text-transform:uppercase">Time!</div>
+      <div class="bigscore">${R.score}</div>${R.newBest ? `<div class="best">New best ✦</div>` : `<div class="muted">Best: ${best}</div>`}
+      <div class="sumgrid" style="margin:18px auto 10px"><div><b class="t3">${R.right}</b><span>right</span></div><div><b>${R.maxCombo}</b><span>best combo</span></div><div><b>${acc}%</b><span>accuracy</span></div></div>
+      ${R.miss.length ? `<p class="muted" style="margin:10px 0 0">Worth another look:</p><div class="misses">${R.miss.map((p) => `<span><b>${esc(p[0])}</b> ${esc(portText(p))}</span>`).join("")}</div>`
+        : `<p class="muted">Not a single miss. Lovely.</p>`}
+      <div class="drow" style="justify-content:center;margin-top:16px"><button class="btn" id="rgo">Play again <kbd>Enter</kbd></button></div>${table}</div>`;
+  }
+  return `<div class="rush glass">
+      <div style="font-size:40px;color:var(--sun)">⚡</div><h2 style="margin:4px 0">Port Rush</h2>
+      <p class="muted" style="max-width:480px;margin:6px auto">A protocol flashes; type its port number. 60 seconds. Streaks multiply your points, and anything you miss comes back a few turns later.
+      For protocols with more than one port (FTP, DHCP, NetBIOS, SNMP), any of them counts.</p>
+      ${best ? `<div class="muted">Your best: <b style="color:var(--sun)">${best}</b></div>` : ""}
+      <div class="drow" style="justify-content:center;margin-top:16px"><button class="btn" id="rgo">Start <kbd>Enter</kbd></button></div>${table}</div>`;
+}
+
+// ---- The tab ----
+function renderDojo() {
+  $("#main").innerHTML = `<div class="dojo">
+    <div class="dtop"><div class="seg" role="group" aria-label="Dojo mode"><button data-m="cases">Tickets</button><button data-m="rush">Port Rush ⚡</button></div>
+      <span class="tag">A pretend Windows PC: nothing here runs on your computer.</span><div class="dprog" id="dprog"></div></div>
+    <div id="dbody"></div></div>`;
+  document.querySelectorAll("[data-m]").forEach((b) => b.onclick = () => { if (dj.mode === b.dataset.m) return; djStop(); dj.mode = b.dataset.m; djSave(); djBody(); });
+  djBody();
+  report(null, false, 0);
+}
+function djBody() {
+  const body = $("#dbody"); if (!body) return;
+  document.querySelectorAll("[data-m]").forEach((b) => { b.classList.toggle("on", b.dataset.m === dj.mode); b.setAttribute("aria-pressed", b.dataset.m === dj.mode); });
+  if (dj.mode === "rush") {
+    body.innerHTML = rushScreen(); djPicker();
+    $("#rgo")?.addEventListener("click", rushStart);
+    const inp = $("#rin");
+    if (inp) {
+      inp.oninput = () => { const v = inp.value.trim(); if (/^\d+$/.test(v) && R.cur?.[2].includes(+v)) rushAnswer(v); };
+      inp.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); rushAnswer(inp.value.trim(), !inp.value.trim()); } };
+    }
+    return;
+  }
+  body.innerHTML = `<div class="picker" id="picker" aria-label="Tickets"></div>
+    <div class="dwork">
+      <div class="term" id="term">
+        <div class="tbar"><span class="tab"><b>&gt;_</b> Administrator: Command Prompt</span><span class="win" aria-hidden="true">─▢✕</span></div>
+        <div class="tout" id="tout" role="log" aria-label="Terminal output"><div id="tlog"></div><div class="tline" id="tline"></div></div>
+        <input class="tin" id="tin" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type a command">
+      </div>
+      <section class="glass ticket" id="ticket" aria-live="polite"></section>
+    </div>`;
+  const inp = $("#tin"), term = $("#term");
+  inp.onkeydown = tKey;
+  inp.oninput = tLine; inp.onselect = tLine;
+  inp.onfocus = () => { term.classList.add("focus"); tLine(); };
+  inp.onblur = () => { term.classList.remove("focus"); tLine(); };
+  $("#tout").onclick = () => { if (!String(getSelection())) inp.focus(); };
+  if (T.pc && T.sid === dj.cur && T.saved) {                  // back from another tab: the terminal is where you left it
+    $("#tlog").innerHTML = T.saved; djPicker(); djPanel(); tLine(); tScroll();
+  } else djStart(dj.cur || SC[0].id, false);
+}
+// Leaving the tab (or switching mode): stop the clock and any output still printing, and keep the screen for later.
+function djStop() {
+  if ($("#tlog")) T.saved = $("#tlog").innerHTML;
+  if (T.busy) { T.gen++; T.busy = false; T.ask = null; }
+  if (R.on) { clearInterval(R.timer); R.on = false; R.ended = false; }
+}
+function djKey(e, k) {
+  if (e.key === "Enter" && e.target.closest?.("button, a, summary")) return;   // Enter on a focused button presses it
+  if (dj.mode === "rush") {
+    if (e.key === "Enter") { e.preventDefault(); if (R.on) $("#rin")?.focus(); else rushStart(); }
+    return;
+  }
+  if (e.key === "Enter") { e.preventDefault(); $("#tin")?.focus(); }
+  else if ("1234".includes(e.key) && e.key) djChoose(+e.key - 1);
+  else if (k === "h") djHint();
+}
+
 // ---- Phone remote: the page waits for presses (long-poll) and acts on them ----
 let listening = false;
 async function listen() {
@@ -753,6 +1794,8 @@ function act(c) {
   if (c.cmd === "scroll") return window.scrollBy({ top: c.value, behavior });
   if (c.cmd === "top") return window.scrollTo({ top: 0, behavior });
   if (view === "aplus") { if (c.cmd === "show") aReveal(); else if (c.cmd === "grade") aGrade(c.value); return; }
+  // In the dojo the phone's Show button gives a hint and its four grade buttons pick answer 1–4 (never yanks you to Review).
+  if (view === "terminal") { if (c.cmd === "show") djHint(); else if (c.cmd === "grade") djChoose(c.value - 1); return; }
   if (view !== "review") { if (c.cmd === "show" || c.cmd === "grade") go("review"); return; }
   if (c.cmd === "said") return heard(c.value, c.text);
   if (c.cmd === "show") reveal();
