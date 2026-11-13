@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.desktop.DesktopServer
 import com.dudlatitat.nextchapter.desktop.PageState
+import com.dudlatitat.nextchapter.speech.Mark
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.theme.Night
@@ -346,14 +347,13 @@ private fun RowScope.SayIt(server: DesktopServer, vm: com.dudlatitat.nextchapter
             val a = vm.coach.check(clip, hanzi, pinyin)
             busy = false
             val marks = a.chars
-            val M = com.dudlatitat.nextchapter.speech.Mark
             val v = when {
                 a.tooQuiet -> com.dudlatitat.nextchapter.data.Callouts.Verdict.MISS
                 marks == null -> com.dudlatitat.nextchapter.data.Callouts.Verdict.CLOSE
-                else -> com.dudlatitat.nextchapter.data.Callouts.verdict(marks.count { it.mark == M.RIGHT }, marks.count { it.mark == M.TONE }, marks.count { it.mark == M.MISSED })
+                else -> com.dudlatitat.nextchapter.data.Callouts.verdict(marks.count { it.mark == Mark.RIGHT }, marks.count { it.mark == Mark.TONE }, marks.count { it.mark == Mark.MISSED })
             }
             // R = right, T = tone off, M = missed, one letter per character.
-            val text = marks?.joinToString("") { when (it.mark) { M.RIGHT -> "R"; M.TONE -> "T"; M.MISSED -> "M" } } ?: ""
+            val text = marks?.joinToString("") { when (it.mark) { Mark.RIGHT -> "R"; Mark.TONE -> "T"; Mark.MISSED -> "M" } } ?: ""
             server.send("said", when (v) { com.dudlatitat.nextchapter.data.Callouts.Verdict.GREAT -> 2; com.dudlatitat.nextchapter.data.Callouts.Verdict.CLOSE -> 1; else -> 0 }, if (a.tooQuiet) "quiet" else text)
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             if (v == com.dudlatitat.nextchapter.data.Callouts.Verdict.GREAT) onGreat()
