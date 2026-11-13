@@ -17,6 +17,8 @@ class MainActivity : ComponentActivity() {
     private val openStudy = mutableStateOf(false)
     /** Set when opened from a routine notification: show Today. */
     private val openToday = mutableStateOf(false)
+    /** Set by a launcher shortcut: "review", "add", "drive", "aplus". */
+    private val openGo = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -24,10 +26,11 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             openStudy.value = intent.getBooleanExtra(EXTRA_STUDY, false)
             openToday.value = intent.getBooleanExtra(EXTRA_TODAY, false)
+            openGo.value = intent.getStringExtra(EXTRA_GO)
         }
         setContent {
             NextChapterTheme {
-                NextChapterApp(vm, openStudy.value, onStudyOpened = { openStudy.value = false }, openToday = openToday.value, onTodayOpened = { openToday.value = false })
+                NextChapterApp(vm, openStudy.value, onStudyOpened = { openStudy.value = false }, openToday = openToday.value, onTodayOpened = { openToday.value = false }, openGo = openGo.value, onGoOpened = { openGo.value = null })
             }
         }
     }
@@ -36,10 +39,12 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(EXTRA_STUDY, false)) openStudy.value = true
         if (intent.getBooleanExtra(EXTRA_TODAY, false)) openToday.value = true
+        intent.getStringExtra(EXTRA_GO)?.let { openGo.value = it }
     }
 
     companion object {
         const val EXTRA_STUDY = "study"
         const val EXTRA_TODAY = "today"
+        const val EXTRA_GO = "go"
     }
 }

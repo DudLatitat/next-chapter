@@ -46,7 +46,7 @@ enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened: () -> Unit = {}, openToday: Boolean = false, onTodayOpened: () -> Unit = {}) {
+fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened: () -> Unit = {}, openToday: Boolean = false, onTodayOpened: () -> Unit = {}, openGo: String? = null, onGoOpened: () -> Unit = {}) {
     val state by vm.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
     // Opening a review straight from Today.
@@ -73,6 +73,17 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
 
     LaunchedEffect(openStudy) {
         if (openStudy) { settings = false; startReview = true; tab = Tab.LEARN; onStudyOpened() }
+    }
+    // Launcher shortcuts (long-press the app icon).
+    LaunchedEffect(openGo) {
+        when (openGo) {
+            null -> return@LaunchedEffect
+            "review" -> { startReview = true; tab = Tab.LEARN }
+            "add", "drive", "callouts", "dinner" -> { startTool = openGo; tab = Tab.LEARN }
+            "aplus" -> { startAPlus = true; tab = Tab.LIFE }
+        }
+        settings = false
+        onGoOpened()
     }
     LaunchedEffect(openToday) {
         if (openToday) { settings = false; tab = Tab.TODAY; onTodayOpened() }

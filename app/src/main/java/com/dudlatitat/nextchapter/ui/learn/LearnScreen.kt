@@ -88,7 +88,10 @@ fun LearnScreen(
     var calibrating by rememberSaveable { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
 
-    LaunchedEffect(startTool) { if (startTool != null) { tool = startTool; onReviewStarted() } }
+    LaunchedEffect(startTool) {
+        if (startTool == "add") { adding = true; onReviewStarted() } // shortcut: straight to "add a phrase"
+        else if (startTool != null) { tool = startTool; onReviewStarted() }
+    }
     // Opening a deck from elsewhere (Progress → By deck).
     LaunchedEffect(startDeck) { if (startDeck != null) { openDeck = startDeck; onDeckOpened() } }
     LaunchedEffect(startReview, startRedo) {

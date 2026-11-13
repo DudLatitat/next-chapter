@@ -6,4 +6,12 @@
     <string name="widget_week_name">Weekly routine</string>
     <string name="widget_week_title">This week · 每周</string>
     <string name="widget_week_description">This week\'s evenings and tonight\'s job</string>
+    <string name="sc_review">Review</string>
+    <string name="sc_review_long">Review today\'s phrases</string>
+    <string name="sc_add">Add phrase</string>
+    <string name="sc_add_long">Add a phrase</string>
+    <string name="sc_drive">Drive</string>
+    <string name="sc_drive_long">Drive mode</string>
+    <string name="sc_aplus">A+</string>
+    <string name="sc_aplus_long">A+ review</string>
 </resources>

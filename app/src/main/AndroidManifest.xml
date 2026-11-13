@@ -47,6 +47,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Long-press the app icon: jump straight to the things used most. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Quick add: select text in WeChat → "Add to Next Chapter", or Share → Next Chapter. -->

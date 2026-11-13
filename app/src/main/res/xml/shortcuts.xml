@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon (or drag one to the home screen). Each opens MainActivity with "go". -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="review" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_review" android:shortcutLongLabel="@string/sc_review_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.dudlatitat.nextchapter"
+            android:targetClass="com.dudlatitat.nextchapter.MainActivity">
+            <extra android:name="go" android:value="review" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="add" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_add" android:shortcutLongLabel="@string/sc_add_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.dudlatitat.nextchapter"
+            android:targetClass="com.dudlatitat.nextchapter.MainActivity">
+            <extra android:name="go" android:value="add" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="drive" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_drive" android:shortcutLongLabel="@string/sc_drive_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.dudlatitat.nextchapter"
+            android:targetClass="com.dudlatitat.nextchapter.MainActivity">
+            <extra android:name="go" android:value="drive" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="aplus" android:enabled="true" android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_aplus" android:shortcutLongLabel="@string/sc_aplus_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.dudlatitat.nextchapter"
+            android:targetClass="com.dudlatitat.nextchapter.MainActivity">
+            <extra android:name="go" android:value="aplus" />
+        </intent>
+    </shortcut>
+</shortcuts>
