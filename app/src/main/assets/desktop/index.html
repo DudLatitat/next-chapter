@@ -60,7 +60,12 @@
   .btn:hover { filter: brightness(1.08); } .btn:active { transform: scale(.97); }
   .btn.ghost { background: rgba(255,255,255,.06); color: var(--ink); border: 1px solid var(--line); }
   input { font: inherit; color: var(--ink); background: rgba(9, 14, 36, .65); border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px; padding: 10px 13px; transition: border-color .2s; }
-  input:focus { outline: none; border-color: var(--sun); }
+  input:focus { outline: none; border-color: var(--sun); box-shadow: 0 0 0 3px rgba(255, 207, 122, .16); }
+  /* Keyboard focus: a soft gold ring (mouse clicks don't show it). */
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--sun); outline-offset: 3px; }
+  input:focus-visible { outline: none; }
+  mark { background: rgba(255, 207, 122, .22); color: inherit; border-radius: 4px; box-shadow: 0 0 0 2px rgba(255, 207, 122, .22); }
   kbd { font: 11px ui-monospace, monospace; padding: 1px 6px; border-radius: 6px; background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.25); }
   .t1 { color: var(--coral); } .t2 { color: var(--sun); } .t3 { color: var(--jade); } .t4 { color: var(--violet); } .t5 { color: var(--muted); }
 
@@ -68,7 +73,8 @@
   .phrases { display: grid; grid-template-columns: 250px 1fr; gap: 22px; max-width: 1280px; margin: 0 auto; padding: 22px 28px 60px; }
   aside { position: sticky; top: 84px; align-self: start; max-height: calc(100vh - 100px); overflow: auto; padding: 14px; }
   aside h4 { margin: 4px 8px 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
-  .deck { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; padding: 9px 11px; border-radius: 13px; cursor: pointer; transition: background .15s; }
+  .deck { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; padding: 9px 11px; border-radius: 13px; cursor: pointer; transition: background .15s;
+          width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit; margin: 0; }
   .deck:hover { background: rgba(255,255,255,.05); }
   .deck.on { background: rgba(255, 207, 122, .12); box-shadow: inset 3px 0 0 var(--sun); }
   .deck .name { font-weight: 600; } .deck .zhn { font: 13px var(--zh); color: var(--sun); }
@@ -88,7 +94,16 @@
   .icon { border: 0; background: rgba(255,255,255,.06); color: var(--ink); width: 32px; height: 32px; border-radius: 10px; cursor: pointer; }
   .icon:hover { background: rgba(255,255,255,.12); }
   .known { color: var(--jade); }
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); grid-column: 1 / -1; }
+  .empty .big { font: 44px var(--zh); color: var(--sun); opacity: .8; }
+  .empty h3 { color: var(--ink); margin: 8px 0 4px; }
+  .empty .btn { margin-top: 14px; }
+  /* Loading: soft shimmering placeholder cards */
+  .pc.skel { pointer-events: none; }
+  .skel i { display: block; height: 14px; border-radius: 7px; margin: 9px 0; animation: shimmer 1.4s linear infinite;
+            background: linear-gradient(90deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.05) 100%) 0 0 / 200% 100%; }
+  .skel i:first-child { height: 30px; width: 55%; } .skel i:nth-child(2) { width: 70%; } .skel i:nth-child(3) { width: 85%; }
+  @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
   /* ---- Review ---- */
   .review { max-width: 860px; margin: 0 auto; padding: 34px 28px 60px; }
@@ -112,6 +127,10 @@
   .grades .btn { padding: 14px 10px; }
   .g1 { background: var(--coral); } .g2 { background: var(--sun); } .g3 { background: var(--jade); } .g4 { background: var(--violet); }
   .hint { text-align: center; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .sumgrid { display: grid; grid-template-columns: repeat(3, minmax(110px, 1fr)); gap: 12px; margin: 20px 0 6px; width: min(520px, 100%); }
+  .sumgrid div { padding: 14px 10px; border-radius: 16px; background: rgba(255,255,255,.05); }
+  .sumgrid b { display: block; font-size: 32px; line-height: 1.2; }
+  .sumgrid span { font-size: 13px; color: var(--muted); }
 
   .said { margin-top: 18px; padding: 10px 18px; border-radius: 14px; background: rgba(255,255,255,.05); animation: rise .4s both; }
   .said .chars { font: 30px var(--zh); letter-spacing: 4px; }
@@ -145,6 +164,24 @@
   .dialog .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
   .toast { position: fixed; bottom: 26px; left: 50%; transform: translate(-50%, 20px); background: #222d5e; border: 1px solid var(--line); padding: 11px 20px; border-radius: 14px; opacity: 0; transition: .3s; z-index: 30; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.err { border-color: rgba(255, 107, 107, .55); color: #ffd6d6; }
+  /* Phone not reachable: a calm strip across the top that goes away by itself */
+  .net { position: fixed; top: 0; left: 0; right: 0; z-index: 15; min-height: 40px; display: flex; justify-content: center; align-items: center; gap: 10px;
+         padding: 8px 16px; font-size: 14px; text-align: center; background: rgba(23, 33, 74, .97); border-bottom: 1px solid rgba(255, 207, 122, .25);
+         transform: translateY(-110%); transition: transform .3s; }
+  .net.on { transform: none; }
+  .net .moon { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--sun); box-shadow: 0 0 10px var(--sun); animation: twinkle 1.6s ease-in-out infinite alternate; }
+  .net .muted { font-size: 12px; }
+  body.offline #app { padding-top: 40px; } body.offline header { top: 40px; } body.offline aside { top: 124px; }
+  /* Shortcut help */
+  .help { position: relative; width: 32px; height: 32px; border-radius: 50%; font-weight: 700; color: var(--muted); }
+  .help:hover { color: var(--ink); }
+  .dialog.keys { width: min(640px, 94vw); }
+  .keys .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; }
+  .keys h5 { margin: 14px 0 4px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); grid-column: 1 / -1; }
+  .keys .k { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .keys .k span:last-child { white-space: nowrap; }
+  @media (max-width: 600px) { .keys .cols { grid-template-columns: 1fr; } }
   .pair { max-width: 440px; margin: 14vh auto; text-align: center; padding: 34px; }
   .pair input { font-size: 34px; letter-spacing: 12px; width: 270px; text-align: center; margin: 10px 0; }
 
@@ -153,24 +190,68 @@
     header { flex-wrap: wrap; padding: 12px 16px; } .stats { margin-left: 0; }
     .face { padding: 28px; } .face .hanzi { font-size: 52px; } .grades { grid-template-columns: repeat(2, 1fr); }
   }
+  /* Windows "Show animations" off (or the browser's reduced motion): no flip, rise, twinkle or shimmer. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+    body::before, body::after { opacity: .8; }
+    .pc:hover { transform: none; }
+  }
 </style>
 </head>
 <body>
+<div class="net" id="net" role="status" aria-live="polite"><span class="moon" aria-hidden="true"></span><span>Phone not reachable — is Next Chapter's computer switch on and the phone on Wi-Fi? <span class="muted">Trying again every 5 s…</span></span></div>
 <div id="app"></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 "use strict";
-let token = localStorage.getItem("nc-token") || "";
+// localStorage can throw (private window, blocked site data), so every use goes through here.
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { if (v == null || v === "") localStorage.removeItem(k); else localStorage.setItem(k, v); } catch {} },
+};
+let token = ls.get("nc-token") || "";
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const quiet = (msg) => Object.assign(new Error(msg), { quiet: true });
 
+// ---- Talking to the phone ----
+// If fetch() itself throws, the phone can't be reached (Wi-Fi, switch off, phone asleep): show the banner and keep
+// the pairing. Only a 401 from the phone means "not paired any more". Other errors carry the phone's message.
 async function api(path, body) {
-  const r = await fetch(path, { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", "X-Token": token }, body: body ? JSON.stringify(body) : undefined });
-  if (r.status === 401 && !path.startsWith("/api/pair")) { token = ""; localStorage.removeItem("nc-token"); showPair(); throw new Error("not paired"); }
-  return r.json();
+  let r;
+  try { r = await fetch(path, { method: body ? "POST" : "GET", headers: { "Content-Type": "application/json", "X-Token": token }, body: body ? JSON.stringify(body) : undefined }); }
+  catch { offline(); throw quiet("Phone not reachable"); }
+  backOnline();
+  const pairing = path.startsWith("/api/pair");
+  if (r.status === 401 && !pairing) { token = ""; ls.set("nc-token", null); showPair(); throw quiet("not paired"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok && !pairing) throw new Error(data.message || `The phone answered ${r.status}`);
+  return data;
 }
-function toast(text) { const t = $("#toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800); }
+function toast(text, err) {
+  const t = $("#toast"); t.textContent = text; t.classList.toggle("err", !!err); t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), err ? 4000 : 1800);
+}
+// Anything not handled where it happened: say so quietly instead of failing silently.
+window.addEventListener("unhandledrejection", (e) => { e.preventDefault(); if (!e.reason?.quiet) toast(e.reason?.message || "Something went wrong", true); });
 function play(card) { if (card) new Audio(`/voice/${card.voice}.mp3?t=${encodeURIComponent(token)}`).play().catch(() => {}); }
+
+// ---- Connection banner: retries every 5 s and goes away when the phone answers ----
+let isOffline = false, netTimer = null, stale = false;
+function offline() {
+  if (isOffline) return;
+  isOffline = true; $("#net").classList.add("on"); document.body.classList.add("offline");
+  netTimer = setInterval(() => { fetch("/api/summary", { headers: { "X-Token": token } }).then(backOnline, () => {}); }, 5000);
+}
+function backOnline() {
+  if (!isOffline) return;
+  isOffline = false; clearInterval(netTimer); $("#net").classList.remove("on"); document.body.classList.remove("offline");
+  if (!token) return;
+  if (!$("header")) start();                         // the page opened while the phone was away
+  else if (stale) go(view);                          // what's on screen never loaded: load it now
+  else refreshSummary().catch(() => {});
+}
 
 // Pinyin coloured by tone, like the app (1 coral, 2 gold, 3 jade, 4 violet, neutral grey).
 const MARKS = { 1: "āēīōūǖ", 2: "áéíóúǘ", 3: "ǎěǐǒǔǚ", 4: "àèìòùǜ" };
@@ -178,9 +259,44 @@ function toneOf(syl) { for (const t of [1, 2, 3, 4]) if ([...syl].some((ch) => M
 // Split "yìqǐ" into syllables so each one gets its own colour.
 const V = "aeiouüvāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ";
 const SYL = new RegExp(`(?:[zcs]h|[bpmfdtnlgkhjqxzcsrwy])?[${V}]+(?:ng(?![${V}])|n(?![${V}])|r(?![${V}]))?`, "gi");
-function tonePinyin(p) {
-  return esc(p).replace(SYL, (syl) => `<span class="t${toneOf(syl)}">${syl}</span>`);
+// Where the search text appears (case-insensitive, like the phone's search).
+function ranges(text, q) {
+  const out = []; if (!q) return out;
+  const low = text.toLowerCase(); let i = low.indexOf(q);
+  while (i >= 0) { out.push([i, i + q.length]); i = low.indexOf(q, i + q.length); }
+  return out;
 }
+function hl(text, q) {
+  text = String(text ?? ""); let out = "", at = 0;
+  for (const [a, b] of ranges(text, q)) { out += esc(text.slice(at, a)) + `<mark>${esc(text.slice(a, b))}</mark>`; at = b; }
+  return out + esc(text.slice(at));
+}
+// Each letter gets its syllable's tone colour and, if it's part of the search match, a highlight.
+function tonePinyin(p, q) {
+  p = String(p ?? "");
+  const cls = Array(p.length).fill(""), on = Array(p.length).fill(false);
+  for (const m of p.matchAll(SYL)) for (let i = m.index; i < m.index + m[0].length; i++) cls[i] = "t" + toneOf(m[0]);
+  for (const [a, b] of ranges(p, q)) for (let i = a; i < b; i++) on[i] = true;
+  let out = "";
+  for (let i = 0; i < p.length;) {
+    let j = i; while (j < p.length && cls[j] === cls[i] && on[j] === on[i]) j++;
+    let s = esc(p.slice(i, j)); if (cls[i]) s = `<span class="${cls[i]}">${s}</span>`; if (on[i]) s = `<mark>${s}</mark>`;
+    out += s; i = j;
+  }
+  return out;
+}
+
+// ---- Dialogs: one helper so Esc, clicking outside and focus all work the same ----
+function dialog(html, cls, label) {
+  const opener = document.activeElement;
+  const v = document.createElement("div"); v.className = "veil";
+  v.innerHTML = `<div class="dialog glass ${cls || ""}" role="dialog" aria-modal="true" aria-label="${esc(label)}">${html}</div>`;
+  document.body.appendChild(v);
+  v.close = () => { v.remove(); if (opener && opener.isConnected) opener.focus(); };
+  v.onclick = (e) => { if (e.target === v) v.close(); };
+  return v;
+}
+const topVeil = () => [...document.querySelectorAll(".veil")].pop();
 
 // ---- Pairing ----
 function showPair(message) {
@@ -189,125 +305,242 @@ function showPair(message) {
       <div class="zh" style="font-size:30px;color:var(--sun)">新篇章</div>
       <h2 style="margin:4px 0 6px">Next Chapter</h2>
       <p class="muted">Type the 6-digit code from your phone<br>(Settings → Use on my computer). Only once.</p>
-      <input id="code" inputmode="numeric" maxlength="6" autofocus autocomplete="off">
-      <p style="color:var(--coral);min-height:1.5em">${esc(message || "")}</p>
+      <input id="code" inputmode="numeric" maxlength="6" autofocus autocomplete="off" aria-label="6-digit code from your phone">
+      <p style="color:var(--coral);min-height:1.5em" role="alert">${esc(message || "")}</p>
       <button class="btn" id="go">Connect</button>
     </div>`;
   const go = async () => {
-    const r = await api("/api/pair", { code: $("#code").value });
-    if (r.token) { token = r.token; localStorage.setItem("nc-token", token); start(); } else showPair(r.message);
+    let r; try { r = await api("/api/pair", { code: $("#code").value }); } catch { return; }
+    if (r.token) { token = r.token; ls.set("nc-token", token); start(); } else showPair(r.message);
   };
   $("#go").onclick = go; $("#code").onkeydown = (e) => { if (e.key === "Enter") go(); };
+  $("#code").focus();
 }
 
 // ---- Shell ----
-let view = "phrases", summary = null;
+const VIEWS = ["phrases", "review", "aplus", "sky"];
+let view = VIEWS.includes(ls.get("nc-view")) ? ls.get("nc-view") : "phrases", summary = null;
 const deckName = (id) => (summary?.decks.find((d) => d.id === id) || {}).title || id;
 async function start() {
   try { summary = await api("/api/summary"); } catch { return; }
+  if (deck && !summary.decks.some((d) => d.id === deck)) { deck = ""; ls.set("nc-deck", null); }
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav><button data-v="phrases">Phrases</button><button data-v="review">Review</button><button data-v="aplus">A+</button><button data-v="sky">Sky ✦</button></nav>
-      <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span></div>
+      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button></nav>
+      <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span>
+        <button class="icon help" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button></div>
     </header>
-    <div id="main"></div>`;
+    <main id="main"></main>`;
   document.querySelectorAll("nav button").forEach((b) => b.onclick = () => go(b.dataset.v));
+  $("#help").onclick = toggleHelp;
   go(view);
   listen();
 }
-function go(v) { view = v; document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.v === view)); renderStats(); clearInterval(skyTimer); ({ review: renderReview, aplus: renderAPlus, sky: renderSky }[view] || renderPhrases)(); }
+function go(v) {
+  view = VIEWS.includes(v) ? v : "phrases"; ls.set("nc-view", view);
+  document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
+  renderStats(); clearInterval(skyTimer);
+  // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
+  Promise.resolve(({ review: renderReview, aplus: renderAPlus, sky: renderSky }[view] || renderPhrases)())
+    .then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
+}
 function renderStats() {
   const due = summary.due + summary.fresh;
   $("#stats").innerHTML = `<span class="pill sun">🔥 ${summary.streak}-day streak</span> <span class="pill">${summary.known} known</span> ${due ? `<span class="pill">${due} to review</span>` : ""}`;
 }
-async function refreshSummary() { summary = await api("/api/summary"); renderStats(); }
+async function refreshSummary() { summary = await api("/api/summary"); if ($("#stats")) renderStats(); }
 
 // Tell the phone remote what's on screen.
 function report(card, shown, left) {
   api("/api/state", { view, english: card?.english || "", hanzi: card?.hanzi || "", pinyin: card?.pinyin || "", shown: !!shown, left: left || 0 }).catch(() => {});
 }
 
+// ---- Keyboard: shortcuts everywhere, never while typing ----
+const KEYS = [
+  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Review and A+", [["Show the answer", "Space"], ["Again · Hard", "1 · 2"], ["Good · Easy", "3 · 4"], ["Play the phrase", "P"]]],
+];
+function toggleHelp() {
+  const open = $(".dialog.keys"); if (open) return open.parentElement.close();
+  const kb = (s) => s.split(" ").map((k) => k === "·" ? " " : `<kbd>${esc(k)}</kbd>`).join(" ");
+  const v = dialog(`
+    <h3>Keyboard shortcuts</h3>
+    <div class="cols">${KEYS.map(([h, list]) => `<h5>${h}</h5>${list.map(([what, k]) => `<div class="k"><span>${what}</span><span>${kb(k)}</span></div>`).join("")}`).join("")}</div>
+    <p class="tag" style="margin-top:14px">G then a letter: press G, let go, then the letter. Shortcuts pause while you're typing in a box.</p>
+    <div class="row"><button class="btn" id="kclose">Got it</button></div>`, "keys", "Keyboard shortcuts");
+  v.querySelector("#kclose").onclick = v.close; v.querySelector("#kclose").focus();
+}
+function focusSearch() { if (view !== "phrases") go("phrases"); const q = $("#q"); if (q) { q.focus(); q.select(); } }
+let chord = 0;
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target, typing = t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+  const veil = topVeil();
+  if (e.key === "Escape") {
+    if (veil) { e.preventDefault(); veil.close(); }
+    else if (typing) t.blur();
+    return;
+  }
+  if (typing || !$("header")) return;                 // typing, or still on the pairing screen
+  if (e.key === "?") { e.preventDefault(); toggleHelp(); return; }
+  if (veil) return;
+  const k = e.key.toLowerCase();
+  if (chord && Date.now() - chord < 1500) {
+    chord = 0;
+    const to = { p: "phrases", r: "review", a: "aplus", s: "sky" }[k];
+    if (to) { e.preventDefault(); go(to); return; }
+  }
+  chord = 0;
+  if (k === "g") { chord = Date.now(); return; }
+  if (e.key === "/") { e.preventDefault(); focusSearch(); return; }
+  if (k === "n") { e.preventDefault(); editor(null); return; }
+  if (view === "aplus" && aq.length) {
+    if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
+    return;
+  }
+  if (view !== "review" || !queue.length) return;
+  if (e.code === "Space") { e.preventDefault(); reveal(); }
+  else if ("1234".includes(e.key)) grade(+e.key);
+  else if (k === "p") play(queue[0]);
+});
+
 // ---- Phrases ----
-let deck = "", search = "", cards = [];
+let deck = ls.get("nc-deck") || "", search = "", cards = [];
 function renderPhrases() {
   const decks = summary.decks, total = decks.reduce((a, d) => a + d.count, 0);
   $("#main").innerHTML = `
     <div class="phrases">
-      <aside class="glass">
+      <aside class="glass" aria-label="Decks">
         <h4>Decks</h4>
-        <div class="deck ${deck === "" ? "on" : ""}" data-d=""><span class="name">All phrases</span><span class="num">${total}</span></div>
+        <button class="deck ${deck === "" ? "on" : ""}" data-d="" aria-pressed="${deck === ""}"><span class="name">All phrases</span><span class="num">${total}</span></button>
         ${decks.map((d) => `
-          <div class="deck ${deck === d.id ? "on" : ""}" data-d="${esc(d.id)}">
+          <button class="deck ${deck === d.id ? "on" : ""}" data-d="${esc(d.id)}" aria-pressed="${deck === d.id}" aria-label="${esc(d.title)}, ${d.started} of ${d.count} started">
             <span><span class="name">${esc(d.title)}</span> <span class="zhn">${esc(d.hanzi)}</span></span><span class="num">${d.started}/${d.count}</span>
             <span class="bar"><i style="width:${Math.round(100 * d.started / d.count)}%"></i></span>
-          </div>`).join("")}
+          </button>`).join("")}
       </aside>
       <section>
         <div class="toolbar">
-          <input id="q" placeholder="Search Chinese, pinyin or English…" value="${esc(search)}">
-          <span class="tag" id="count"></span>
-          <button class="btn" id="add">＋ Add a phrase</button>
+          <input id="q" type="search" placeholder="Search Chinese, pinyin or English…  ( / )" aria-label="Search phrases" value="${esc(search)}">
+          <span class="tag" id="count" aria-live="polite"></span>
+          <button class="btn" id="add" title="Add a phrase (N)">＋ Add a phrase</button>
         </div>
         <div class="cards" id="list"></div>
       </section>
     </div>`;
-  document.querySelectorAll(".deck").forEach((el) => el.onclick = () => { deck = el.dataset.d; renderPhrases(); });
+  document.querySelectorAll(".deck").forEach((el) => el.onclick = () => { deck = el.dataset.d; ls.set("nc-deck", deck); renderPhrases(); });
   let timer; $("#q").oninput = () => { clearTimeout(timer); timer = setTimeout(() => { search = $("#q").value; loadList(); }, 200); };
   $("#add").onclick = () => editor(null);
   report(null, false, 0);
-  loadList();
+  return loadList();
 }
-async function loadList() {
-  cards = await api(`/api/cards?deck=${encodeURIComponent(deck)}&q=${encodeURIComponent(search)}`);
+const skeleton = () => Array.from({ length: 6 }, () => `<div class="pc skel" aria-hidden="true"><i></i><i></i><i></i></div>`).join("");
+// keep: reload quietly in place (after an edit), without the shimmer and without losing the scroll position.
+async function loadList(keep) {
+  const my = loadList.n = (loadList.n || 0) + 1;
+  if (!keep) { $("#list").innerHTML = skeleton(); $("#list").setAttribute("aria-busy", "true"); $("#count").textContent = "Loading…"; }
+  const y = window.scrollY;
+  const got = await api(`/api/cards?deck=${encodeURIComponent(deck)}&q=${encodeURIComponent(search)}`);
+  if (my !== loadList.n || view !== "phrases" || !$("#list")) return; // a newer search or another tab won
+  cards = got;
+  const q = search.trim().toLowerCase();
   $("#count").textContent = `${cards.length} phrase${cards.length === 1 ? "" : "s"}`;
+  $("#list").removeAttribute("aria-busy");
   $("#list").innerHTML = cards.length ? cards.map((c, i) => `
     <div class="pc">
-      <div class="h">${esc(c.hanzi)}</div>
-      <div class="p">${tonePinyin(c.pinyin)}</div>
-      <div class="e">${esc(c.english)}</div>
+      <div class="h zh" lang="zh-CN">${hl(c.hanzi, q)}</div>
+      <div class="p">${tonePinyin(c.pinyin, q)}</div>
+      <div class="e">${hl(c.english, q)}</div>
       <div class="foot">
         <span class="tag">${esc(deckName(c.deck))}${c.known ? ` · <span class="known">known ✓</span>` : c.isNew ? " · new" : ""}</span>
-        <button class="icon" data-play="${i}" title="Play">🔊</button><button class="icon" data-edit="${i}" title="Edit">✎</button>
+        <button class="icon" data-play="${i}" title="Play" aria-label="Play ${esc(c.hanzi)}">🔊</button><button class="icon" data-edit="${i}" data-id="${esc(c.id)}" title="Edit" aria-label="Edit ${esc(c.hanzi)}">✎</button>
       </div>
-    </div>`).join("") : `<div class="empty">Nothing here yet. ${search ? "Try another search." : ""}</div>`;
+    </div>`).join("") : emptyState(q);
   document.querySelectorAll("[data-play]").forEach((b) => b.onclick = () => play(cards[+b.dataset.play]));
   document.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => editor(cards[+b.dataset.edit]));
+  $("#eadd")?.addEventListener("click", () => editor(null));
+  $("#eclear")?.addEventListener("click", () => { search = ""; $("#q").value = ""; loadList(); $("#q").focus(); });
+  if (keep) window.scrollTo(0, y);
+}
+function emptyState(q) {
+  const name = deck ? deckName(deck) : "your phrases";
+  if (q) return `<div class="empty"><div class="big">🔍</div><h3>No match for “${esc(search.trim())}”</h3>
+    <p>Nothing in ${esc(name)} has that in the Chinese, pinyin or English.</p><button class="btn ghost" id="eclear">Clear the search</button></div>`;
+  if (deck === "mine" || !deck) return `<div class="empty"><div class="big">我的</div><h3>Your own phrases live here</h3>
+    <p>Something you heard, or want to say next time? Add it and it's first in line for review.</p><button class="btn" id="eadd">＋ Add a phrase <kbd>N</kbd></button></div>`;
+  return `<div class="empty"><div class="big">✦</div><h3>${esc(name)} is empty</h3><p>Pick another deck on the left.</p></div>`;
 }
 function editor(c) {
-  const v = document.createElement("div"); v.className = "veil";
-  v.innerHTML = `
-    <div class="dialog glass">
-      <h3>${c ? "Edit phrase" : "Add a phrase · 加一句"}</h3>
-      <label>Chinese</label><input id="eh" class="zh" value="${esc(c?.hanzi)}" ${c && !c.custom ? "disabled title='Starter phrases keep their characters'" : ""}>
-      <label>Pinyin <span class="tag">(filled in for you)</span></label><input id="ep" value="${esc(c?.pinyin)}">
-      <label>What it means</label><input id="ee" value="${esc(c?.english)}">
+  const v = dialog(`
+      <h3 id="etitle">${c ? "Edit phrase" : "Add a phrase · 加一句"}</h3>
+      <label for="eh">Chinese</label><input id="eh" class="zh" lang="zh-CN" value="${esc(c?.hanzi)}" ${c && !c.custom ? "disabled title='Starter phrases keep their characters'" : ""}>
+      <label for="ep">Pinyin <span class="tag">(filled in for you)</span></label><input id="ep" value="${esc(c?.pinyin)}">
+      <label for="ee">What it means</label><input id="ee" value="${esc(c?.english)}">
       ${c ? "" : `<p class="tag">It goes into My phrases, first in line for review.</p>`}
       <div class="row">
         ${c?.custom ? `<button class="btn ghost" id="del" style="color:var(--coral);margin-right:auto">Delete</button>` : ""}
-        <button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="save">${c ? "Save" : "Add"}</button>
-      </div>
-    </div>`;
-  document.body.appendChild(v);
-  const close = () => v.remove();
-  v.onclick = (e) => { if (e.target === v) close(); };
-  v.onkeydown = (e) => { if (e.key === "Escape") close(); if (e.key === "Enter") $("#save").click(); };
-  (c && !c.custom ? $("#ep") : $("#eh")).focus();
-  $("#eh").onblur = async () => { if ($("#eh").value && !$("#ep").value) $("#ep").value = (await api(`/api/pinyin?h=${encodeURIComponent($("#eh").value)}`)).pinyin; };
-  $("#cancel").onclick = close;
-  $("#save").onclick = async () => {
-    if (!c && !$("#eh").value.trim()) return toast("Type the Chinese first");
-    await api("/api/card", { id: c?.id ?? null, hanzi: $("#eh").value, pinyin: $("#ep").value, english: $("#ee").value });
-    close(); toast(c ? "Saved" : "Added 💛"); await refreshSummary(); if (c) loadList(); else renderPhrases();
+        <button class="btn ghost" id="cancel">Cancel <kbd>Esc</kbd></button><button class="btn" id="save">${c ? "Save" : "Add"}</button>
+      </div>`, "", c ? "Edit phrase" : "Add a phrase");
+  const f = (s) => v.querySelector(s);
+  v.onkeydown = (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") f("#save").click(); };
+  (c && !c.custom ? f("#ep") : f("#eh")).focus();
+  f("#eh").onblur = async () => {
+    if (!f("#eh").value || f("#ep").value) return;
+    try { const p = (await api(`/api/pinyin?h=${encodeURIComponent(f("#eh").value)}`)).pinyin; if (!f("#ep").value) f("#ep").value = p; } catch {}
   };
-  if (c?.custom) $("#del").onclick = async () => { if (confirm(`Delete ${c.hanzi}?`)) { await api("/api/delete", { id: c.id }); close(); toast("Deleted"); await refreshSummary(); renderPhrases(); } };
+  f("#cancel").onclick = v.close;
+  let saving = false;
+  f("#save").onclick = async () => {
+    if (saving) return;
+    if (!c && !f("#eh").value.trim()) { f("#eh").focus(); return toast("Type the Chinese first"); }
+    saving = true;
+    try { await api("/api/card", { id: c?.id ?? null, hanzi: f("#eh").value, pinyin: f("#ep").value, english: f("#ee").value }); }
+    catch (e) { saving = false; return toast(e.quiet ? "Not saved: the phone isn't reachable. Try again in a moment." : `Not saved: ${e.message}`, true); }
+    v.close(); toast(c ? "Saved" : "Added 💛");
+    refreshSummary().catch(() => {});
+    if (view !== "phrases") return;
+    if (c) { await loadList(true); document.querySelector(`[data-edit][data-id="${CSS.escape(c.id)}"]`)?.focus({ preventScroll: true }); }
+    else renderPhrases();
+  };
+  if (c?.custom) f("#del").onclick = async () => {
+    if (!confirm(`Delete ${c.hanzi}?`)) return;
+    try { await api("/api/delete", { id: c.id }); } catch (e) { return toast(e.quiet ? "Not deleted: the phone isn't reachable." : e.message, true); }
+    v.close(); toast("Deleted"); refreshSummary().then(() => { if (view === "phrases") renderPhrases(); }, () => {});
+  };
 }
 
 // ---- Review: Space shows, 1–4 grade, P plays (or the phone remote) ----
-let queue = [], shown = false, startSize = 0;
-async function renderReview() { said = null; queue = await api("/api/queue"); startSize = queue.length; shown = false; drawCard(); }
+let queue = [], shown = false, startSize = 0, busy = false;
+let sess = null; // this sitting: which cards you graded, how many Agains, when it started
+async function renderReview() {
+  said = null;
+  const q = await api("/api/queue");
+  if (view !== "review") return;
+  queue = q; startSize = queue.length; shown = false;
+  if (!sess || sess.over) sess = { ids: new Set(), again: 0, t0: Date.now(), t1: Date.now() };
+  drawCard();
+}
+function spent(ms) { const s = Math.max(1, Math.round(ms / 1000)); return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ""}`; }
 function drawCard(flip) {
   const c = queue[0];
+  if (!c && sess?.ids.size) {
+    sess.over = true;
+    const n = sess.ids.size;
+    $("#main").innerHTML = `<div class="review"><div class="glass face shown" role="status">
+      <div style="font-size:46px;color:var(--sun)">✦</div>
+      <h2 style="margin:6px 0">Session done · <span class="zh">复习完了</span></h2>
+      <div class="sumgrid">
+        <div><b>${n}</b><span>phrase${n === 1 ? "" : "s"} reviewed</span></div>
+        <div><b class="${sess.again ? "t1" : "t3"}">${sess.again}</b><span>Again</span></div>
+        <div><b>${spent(sess.t1 - sess.t0)}</b><span>time spent</span></div>
+      </div>
+      <p class="muted">${sess.again ? "The ones you missed come back soon. Saying them out loud helps them stick." : "Not a single Again. Lovely."}</p>
+      <button class="btn" id="back">Back to phrases <kbd>G</kbd> <kbd>P</kbd></button>
+    </div></div>`;
+    $("#back").onclick = () => go("phrases"); $("#back").focus();
+    report(null, false, 0); return;
+  }
   if (!c) {
     $("#main").innerHTML = `<div class="review"><div class="glass face" style="text-align:center"><div style="font-size:54px">✓</div>
       <h2 style="margin:6px 0">All caught up · 都复习完了</h2><p class="muted">New phrases arrive tomorrow. Add your own under Phrases.</p></div></div>`;
@@ -317,18 +550,18 @@ function drawCard(flip) {
   $("#main").innerHTML = `
     <div class="review">
       <div style="display:flex;justify-content:space-between"><span class="muted">${queue.length} to go</span><span class="tag">${Math.round(done * 100)}%</span></div>
-      <div class="progress"><i style="width:${Math.round(done * 100)}%"></i></div>
-      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${shown ? "shown" : ""}">
+      <div class="progress" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(done * 100)}"><i style="width:${Math.round(done * 100)}%"></i></div>
+      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${shown ? "shown" : ""}" aria-live="polite">
         <div class="deckline">${c.isNew ? "✦ new · " : ""}${esc(deckName(c.deck))}</div>
         <div class="english">${esc(c.english)}</div>
-        ${shown ? `<div class="hanzi zh">${esc(c.hanzi)}</div><div class="pinyin">${tonePinyin(c.pinyin)}</div>${saidStrip(c)}`
+        ${shown ? `<div class="hanzi zh" lang="zh-CN">${esc(c.hanzi)}</div><div class="pinyin">${tonePinyin(c.pinyin)}</div>${saidStrip(c)}`
                 : `<div class="ask">Say it out loud in Chinese, then show the answer.</div>`}
       </div></div>
       ${shown
         ? `<div class="grades"><button class="btn g1" data-g="1">Again <kbd>1</kbd></button><button class="btn g2" data-g="2">Hard <kbd>2</kbd></button>
-           <button class="btn g3" data-g="3">Good <kbd>3</kbd></button><button class="btn g4" data-g="4">Easy <kbd>4</kbd></button><button class="btn ghost" id="play">🔊 <kbd>P</kbd></button></div>`
+           <button class="btn g3" data-g="3">Good <kbd>3</kbd></button><button class="btn g4" data-g="4">Easy <kbd>4</kbd></button><button class="btn ghost" id="play" aria-label="Play the phrase">🔊 <kbd>P</kbd></button></div>`
         : `<div class="grades" style="grid-template-columns:1fr"><button class="btn" id="show">Show answer <kbd>Space</kbd></button></div>`}
-      <div class="hint">Keyboard: Space · 1–4 · P &nbsp;·&nbsp; or use your phone as a remote</div>
+      <div class="hint">Keyboard: Space · 1–4 · P · <kbd>?</kbd> all shortcuts &nbsp;·&nbsp; or use your phone as a remote</div>
     </div>`;
   if (!shown) $("#show").onclick = reveal;
   else { document.querySelectorAll("[data-g]").forEach((b) => b.onclick = () => grade(+b.dataset.g)); $("#play").onclick = () => play(c); }
@@ -348,34 +581,29 @@ function saidStrip(c) {
   if (!said) return "";
   if (said.marks === "quiet") return `<div class="said miss">Didn't catch that. Try again a little louder.</div>`;
   let k = 0;
-  const chars = [...c.hanzi].map((ch) => /[\u4e00-\u9fff]/.test(ch) ? `<span class="m${said.marks[k++] || "M"}">${esc(ch)}</span>` : esc(ch)).join("");
+  const chars = [...c.hanzi].map((ch) => /[一-鿿]/.test(ch) ? `<span class="m${said.marks[k++] || "M"}">${esc(ch)}</span>` : esc(ch)).join("");
   const label = ["Not quite. Listen and try again", "Close!", "Perfect! Counting it as Good"][said.level];
   return `<div class="said lvl${said.level}"><div class="chars">${chars}</div><div>🎤 ${label}</div></div>`;
 }
 function reveal() { if (shown || !queue.length) return; shown = true; drawCard(true); play(queue[0]); }
+// The card only moves on once the phone has saved the grade; if that fails, it stays so you can grade again.
 async function grade(g) {
-  if (!shown || !queue.length) return;
-  const c = queue.shift(); shown = false; said = null; clearTimeout(autoGrade);
-  await api("/api/grade", { id: c.id, grade: g });
+  if (!shown || !queue.length || busy) return;
+  const c = queue[0]; busy = true; clearTimeout(autoGrade);
+  try { await api("/api/grade", { id: c.id, grade: g }); }
+  catch (e) { toast(e.quiet ? "Not saved: the phone isn't reachable. The card stays; grade it again in a moment." : `Not saved: ${e.message}`, true); return; }
+  finally { busy = false; }
+  if (queue[0] !== c) return;
+  queue.shift(); shown = false; said = null;
+  if (sess) { sess.ids.add(c.id); if (g === 1) sess.again++; sess.t1 = Date.now(); }
   if (g === 1) queue.push(c); // missed: once more before you're done
-  await refreshSummary(); drawCard();
+  if (view === "review") drawCard();
+  refreshSummary().catch(() => {});
 }
-document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT") return;
-  if (view === "aplus" && aq.length) {
-    if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
-    return;
-  }
-  if (view !== "review" || !queue.length) return;
-  if (e.code === "Space") { e.preventDefault(); reveal(); }
-  else if ("1234".includes(e.key)) grade(+e.key);
-  else if (e.key.toLowerCase() === "p") play(queue[0]);
-});
-
 
 // ---- A+ (CompTIA Core 1): the same flip-card review, with how each domain is going ----
-let aq = [], aShown = false, aStart = 0, aInfo = null;
-async function renderAPlus() { aInfo = await api("/api/aplus"); aq = aInfo.queue; aStart = aq.length; aShown = false; drawA(); }
+let aq = [], aShown = false, aStart = 0, aInfo = null, aBusy = false;
+async function renderAPlus() { const info = await api("/api/aplus"); if (view !== "aplus") return; aInfo = info; aq = aInfo.queue; aStart = aq.length; aShown = false; drawA(); }
 function examLine() {
   if (!aInfo.exam) return `<p class="muted">Set your exam date on the phone (Life → A+) to see a countdown.</p>`;
   const days = Math.ceil((new Date(aInfo.exam + "T00:00:00") - new Date(new Date().toDateString())) / 86400000);
@@ -383,7 +611,7 @@ function examLine() {
 }
 function drawA(flip) {
   const c = aq[0];
-  const side = `<aside class="glass" style="padding:20px;align-self:start">
+  const side = `<aside class="glass" style="padding:20px;align-self:start" aria-label="How it's going">
       ${examLine()}
       <h4 style="margin:18px 0 4px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">How it's going</h4>
       ${aInfo.domains.map((d) => `<div class="dom ${aInfo.weakest === d.n ? "weak" : ""}"><div class="top"><span>${esc(d.name)}${aInfo.weakest === d.n ? " · focus" : ""}</span><span class="muted">${Math.round(d.strength * 100)}% · ${d.share}% of exam</span></div><div class="bar"><i style="width:${Math.round(d.strength * 100)}%"></i></div></div>`).join("")}
@@ -398,8 +626,8 @@ function drawA(flip) {
   $("#main").innerHTML = `
     <div class="aplus"><div>
       <div style="display:flex;justify-content:space-between"><span class="muted">${aq.length} to go</span><span class="tag">${Math.round(done * 100)}%</span></div>
-      <div class="progress"><i style="width:${Math.round(done * 100)}%;background:linear-gradient(90deg,var(--violet),#b7bbff)"></i></div>
-      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${aShown ? "shown" : ""}">
+      <div class="progress" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(done * 100)}"><i style="width:${Math.round(done * 100)}%;background:linear-gradient(90deg,var(--violet),#b7bbff)"></i></div>
+      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${aShown ? "shown" : ""}" aria-live="polite">
         <div class="deckline">${c.isNew ? "✦ new · " : ""}${esc(dom)}</div>
         <div class="q">${esc(c.q)}</div>
         ${aShown ? `<div class="a">${esc(c.a)}</div>` : `<div class="ask">Answer it in your head (or out loud), then show it.</div>`}
@@ -415,12 +643,16 @@ function drawA(flip) {
 }
 function aReveal() { if (aShown || !aq.length) return; aShown = true; drawA(true); }
 async function aGrade(g) {
-  if (!aShown || !aq.length) return;
-  const c = aq.shift(); aShown = false;
-  await api("/api/aplus/grade", { id: c.id, grade: g });
+  if (!aShown || !aq.length || aBusy) return;
+  const c = aq[0]; aBusy = true;
+  try { await api("/api/aplus/grade", { id: c.id, grade: g }); }
+  catch (e) { toast(e.quiet ? "Not saved: the phone isn't reachable. The card stays; grade it again in a moment." : `Not saved: ${e.message}`, true); return; }
+  finally { aBusy = false; }
+  if (aq[0] !== c) return;
+  aq.shift(); aShown = false;
   if (g === 1) aq.push(c);
-  const fresh = await api("/api/aplus"); aInfo.domains = fresh.domains; aInfo.weakest = fresh.weakest; aInfo.done = fresh.done;
-  drawA();
+  try { const fresh = await api("/api/aplus"); aInfo.domains = fresh.domains; aInfo.weakest = fresh.weakest; aInfo.done = fresh.done; } catch {}
+  if (view === "aplus") drawA();
 }
 
 // ---- Sky: every phrase you know is a star; a deck you know completely becomes a constellation ----
@@ -429,7 +661,8 @@ function hash(str) { let h = 2166136261; for (const ch of str) { h ^= ch.codePoi
 function rand(seed) { return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; }; }
 async function renderSky() {
   const all = await api("/api/cards");
-  $("#main").innerHTML = `<div class="sky"><canvas id="skyc"></canvas><div class="tip" id="tip"></div>
+  if (view !== "sky") return;
+  $("#main").innerHTML = `<div class="sky"><canvas id="skyc" role="img" aria-label="Your sky: each phrase you've started is a star"></canvas><div class="tip" id="tip"></div>
     <div class="legend" id="legend"></div></div>`;
   const cv = $("#skyc"), ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
   const W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
@@ -478,7 +711,7 @@ async function renderSky() {
     });
   }
   draw();
-  skyTimer = setInterval(() => { t += 0.12; draw(); }, 100); // a calm 10 frames a second
+  if (!calm()) skyTimer = setInterval(() => { t += 0.12; draw(); }, 100); // a calm 10 frames a second (still, with reduced motion)
   const tip = $("#tip");
   cv.onmousemove = (e) => {
     const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
@@ -494,22 +727,27 @@ async function renderSky() {
 }
 
 // ---- Phone remote: the page waits for presses (long-poll) and acts on them ----
+let listening = false;
 async function listen() {
+  if (listening) return; listening = true;
+  const pause = () => new Promise((ok) => setTimeout(ok, 3000));
   let last = -1;
-  try { last = (await api("/api/remote?after=-1")).last; } catch { return; }
-  for (;;) {
+  while (token) { try { last = (await api("/api/remote?after=-1")).last; break; } catch { await pause(); } }
+  while (token) {
     try {
       const r = await api(`/api/remote?after=${last}`);
       last = r.last;
       for (const c of r.cmds) act(c);
-    } catch { await new Promise((ok) => setTimeout(ok, 3000)); }
+    } catch { await pause(); }
   }
+  listening = false;
 }
 function act(c) {
   const dot = $("#rdot"); if (dot) { dot.style.display = "inline-block"; clearTimeout(act.t); act.t = setTimeout(() => dot.style.display = "none", 60000); }
-  if (c.cmd === "tab") return go(["phrases", "review", "aplus", "sky"][c.value] || "phrases");
-  if (c.cmd === "scroll") return window.scrollBy({ top: c.value, behavior: "smooth" });
-  if (c.cmd === "top") return window.scrollTo({ top: 0, behavior: "smooth" });
+  const behavior = calm() ? "auto" : "smooth";
+  if (c.cmd === "tab") return go(VIEWS[c.value] || "phrases");
+  if (c.cmd === "scroll") return window.scrollBy({ top: c.value, behavior });
+  if (c.cmd === "top") return window.scrollTo({ top: 0, behavior });
   if (view === "aplus") { if (c.cmd === "show") aReveal(); else if (c.cmd === "grade") aGrade(c.value); return; }
   if (view !== "review") { if (c.cmd === "show" || c.cmd === "grade") go("review"); return; }
   if (c.cmd === "said") return heard(c.value, c.text);
