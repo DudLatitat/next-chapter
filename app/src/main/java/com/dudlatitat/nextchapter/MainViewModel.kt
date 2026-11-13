@@ -144,6 +144,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun updatePlan(change: (AppState) -> AppState) = store.edit(change)
 
     // ---- Daily rhythm (Today's morning card, evening plan, Sunday review) ----
+    fun saveCalloutScore(score: Int) = store.edit { s -> if (score <= s.calloutBest) s else s.copy(calloutBest = score) }
+    fun saveDinner(scene: String, chopsticks: Int) = store.edit { s ->
+        if (chopsticks <= (s.dinnerBest[scene] ?: 0)) s else s.copy(dinnerBest = s.dinnerBest + (scene to chopsticks))
+    }
     fun markEarlyStart() = store.edit { s -> if (today() in s.wakeDays) s else s.copy(wakeDays = com.dudlatitat.nextchapter.data.Life.addDay(s.wakeDays, today())) }
     fun prayed() = store.edit { s -> s.copy(prayedDays = com.dudlatitat.nextchapter.data.Life.addDay(s.prayedDays, today())) }
     fun setGoal(text: String, day: Long = today()) = store.edit { s ->

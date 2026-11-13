@@ -357,7 +357,8 @@ private fun Ring(label: String, progress: Float, color: Color, center: String, o
     // Unfinished rings breathe in their own color: a soft glow swells behind the ring and fades,
     // slow enough to feel calm, bright enough to notice. Done rings sit still.
     val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe")
-    val breath by pulse.animateFloat(
+    // Read only while drawing (not composing), so breathing redraws the glow without re-laying out the ring.
+    val breath = pulse.animateFloat(
         0f, 1f,
         androidx.compose.animation.core.infiniteRepeatable(
             androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
@@ -365,21 +366,20 @@ private fun Ring(label: String, progress: Float, color: Color, center: String, o
         ),
         label = "breath",
     )
-    val b = if (breathe) breath else 0f
     Column(Modifier.width(72.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         androidx.compose.foundation.layout.Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
             if (breathe) androidx.compose.foundation.Canvas(Modifier.size(64.dp)) {
                 drawCircle(
                     androidx.compose.ui.graphics.Brush.radialGradient(
-                        listOf(color.copy(alpha = 0.15f + 0.40f * b), color.copy(alpha = 0f)),
+                        listOf(color.copy(alpha = 0.15f + 0.40f * breath.value), color.copy(alpha = 0f)),
                         center = this.center, radius = this.size.minDimension / 2,
                     ),
-                    radius = this.size.minDimension / 2 * (0.8f + 0.2f * b),
+                    radius = this.size.minDimension / 2 * (0.8f + 0.2f * breath.value),
                 )
             }
             ProgressRing(
                 progress, 56.dp, color, stroke = 5.dp,
-                modifier = Modifier.graphicsLayer { val sc = 1f + 0.08f * b; scaleX = sc; scaleY = sc },
+                modifier = Modifier.graphicsLayer { val sc = 1f + 0.08f * (if (breathe) breath.value else 0f); scaleX = sc; scaleY = sc },
             ) {
             Text(center, style = MaterialTheme.typography.labelLarge, color = Night.ink)
             }

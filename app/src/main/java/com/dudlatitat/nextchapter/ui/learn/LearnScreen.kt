@@ -110,6 +110,8 @@ fun LearnScreen(
         tool == "culture" -> CultureScreen(vm, onBack = { tool = null })
         tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
         tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
+        tool == "callouts" -> CalloutScreen(state, vm, onBack = { tool = null })
+        tool == "dinner" -> DinnerScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
         else -> Overview(
             state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
@@ -158,6 +160,7 @@ private fun Overview(
         // Practice tools right under the review card (always open), grouped by what you're doing.
         item {
             val groups = listOf(
+                "Play" to listOf(Triple("家宴", "Dinner", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral),
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
                 "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
                 "Write & go" to listOf(Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),

@@ -263,4 +263,9 @@ data class AppState(
     val timerStart: Long? = null,
     val timerSubject: String? = null,
     val tests: List<TestResult> = emptyList(),
+    // ---- Games (1.78) ----
+    /** Best callout drill score. */
+    val calloutBest: Int = 0,
+    /** Family dinner run-through: best 🥢 per scene id. */
+    val dinnerBest: Map<String, Int> = emptyMap(),
 )

@@ -8,9 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -22,7 +19,12 @@ class Store private constructor(context: Context) {
     private val file = File(context.filesDir, "state.json")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val writeLock = Mutex()
+    // One writer, newest state wins (see Saver): declared before _state, which saves while seeding.
+    private val saver = Saver<AppState>(scope) { s ->
+        val tmp = File(file.parentFile, "state.json.tmp")
+        tmp.writeText(json.encodeToString(AppState.serializer(), s))
+        tmp.renameTo(file)
+    }
 
     private val _state = MutableStateFlow(seed(load()))
     val state: StateFlow<AppState> = _state.asStateFlow()
@@ -65,15 +67,7 @@ class Store private constructor(context: Context) {
         return true
     }
 
-    private fun save(s: AppState) {
-        scope.launch {
-            writeLock.withLock {
-                val tmp = File(file.parentFile, "state.json.tmp")
-                tmp.writeText(json.encodeToString(AppState.serializer(), s))
-                tmp.renameTo(file)
-            }
-        }
-    }
+    private fun save(s: AppState) = saver.save(s)
 
     /** The whole state as text, for a manual backup. */
     fun export(): String = json.encodeToString(AppState.serializer(), _state.value)
