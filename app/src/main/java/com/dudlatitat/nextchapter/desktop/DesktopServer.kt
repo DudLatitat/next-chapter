@@ -35,6 +35,11 @@ import java.net.Socket
 @Serializable data class IdIn(val id: String)
 @Serializable data class PinyinOut(val pinyin: String)
 @Serializable data class Msg(val ok: Boolean, val message: String = "")
+/** A press on the phone remote, for the page: show, grade (1–4), play, tab (0 phrases, 1 review), scroll (pixels). */
+@Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0)
+@Serializable data class RemoteOut(val last: Long, val cmds: List<RemoteCmd>)
+/** What the page is showing, so the phone remote can mirror it. */
+@Serializable data class PageState(val view: String = "", val english: String = "", val hanzi: String = "", val pinyin: String = "", val shown: Boolean = false, val left: Int = 0)
 
 /**
  * "Use on my computer": a small web server on the phone, for the desktop page (assets/desktop).
@@ -60,6 +65,33 @@ class DesktopServer(private val context: Context, private val store: Store, val 
     private val _paired = MutableStateFlow(tokens.size)
     /** How many computers are paired (remembered until "Forget my computers"). */
     val paired: StateFlow<Int> = _paired
+
+    // ---- Phone remote ----
+    private val remoteLock = Object()
+    private val cmds = ArrayDeque<RemoteCmd>()
+    private var nextCmd = 1L
+    private val _page = MutableStateFlow<PageState?>(null)
+    /** The card the computer page is on (null until a page reports in). */
+    val page: StateFlow<PageState?> = _page
+
+    /** A button on the phone remote: handed to the page waiting on /api/remote. */
+    fun send(cmd: String, value: Int = 0) = synchronized(remoteLock) {
+        cmds.addLast(RemoteCmd(nextCmd++, cmd, value))
+        while (cmds.size > 50) cmds.removeFirst()
+        remoteLock.notifyAll()
+    }
+
+    /** Commands after [after], waiting up to 20 s for one (long-poll). after < 0: just the newest id. */
+    private fun remoteAfter(after: Long): RemoteOut = synchronized(remoteLock) {
+        if (after < 0) return RemoteOut(nextCmd - 1, emptyList())
+        val deadline = System.currentTimeMillis() + 20_000
+        while (cmds.none { it.id > after }) {
+            val wait = deadline - System.currentTimeMillis()
+            if (wait <= 0) break
+            remoteLock.wait(wait)
+        }
+        RemoteOut(nextCmd - 1, cmds.filter { it.id > after })
+    }
 
     /** Unpairs every computer; they'll need the code again. */
     fun forgetAll() {
@@ -126,7 +158,8 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 if (length > Http.MAX_BODY) { c.getOutputStream().write(Http.response(413, "text/plain", ByteArray(0))); return }
                 val body = ByteArray(length).also { var n = 0; while (n < length) { val r = input.read(it, n, length - n); if (r < 0) break; n += r } }
                 val (path, query) = Http.splitTarget(target)
-                wake.acquire(10 * 60 * 1000L)
+                // The remote's waiting request is always open while the page is: it mustn't keep the phone awake.
+                if (path != "/api/remote") wake.acquire(10 * 60 * 1000L)
                 c.getOutputStream().write(route(method, path, query, headers, String(body, Charsets.UTF_8)))
             } catch (_: Exception) {}
         }
@@ -197,6 +230,11 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 val id = try { json.decodeFromString<IdIn>(body).id } catch (_: Exception) { return bad(400, "Bad id") }
                 val card = s.cards.firstOrNull { it.id == id && it.custom } ?: return bad(403, "Only your own phrases can be deleted")
                 store.edit { CardEdits.delete(it, card.id) }
+                ok(json.encodeToString(Msg(true)))
+            }
+            "GET /api/remote" -> ok(json.encodeToString(remoteAfter(query["after"]?.toLongOrNull() ?: -1)))
+            "POST /api/state" -> {
+                _page.value = try { json.decodeFromString<PageState>(body) } catch (_: Exception) { return bad(400, "Bad state") }
                 ok(json.encodeToString(Msg(true)))
             }
             "GET /api/pinyin" -> ok(json.encodeToString(PinyinOut(Pinyin.fromHanzi(query["h"].orEmpty()) ?: "")))

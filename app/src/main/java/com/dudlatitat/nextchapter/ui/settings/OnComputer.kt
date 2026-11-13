@@ -54,6 +54,8 @@ fun OnComputerScreen(onBack: () -> Unit) {
     val paired = if (pairedLive >= 0) pairedLive else remember(tick) { Desktop.pairedCount(context) }
     val error by (server?.error ?: MutableStateFlow<String?>(null)).collectAsState()
     val addresses = remember(server) { DesktopServer.localAddresses() }
+    var remote by remember { mutableStateOf(false) }
+    if (remote) { RemoteScreen(server) { remote = false }; return }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -94,6 +96,15 @@ fun OnComputerScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium, color = if (paired > 0) Night.jade else Night.muted, modifier = Modifier.weight(1f),
                 )
                 if (paired > 0) TextButton(onClick = { Desktop.forgetAll(context); tick++ }) { Text("Forget my computers", color = Night.coral) }
+            }
+        }
+        if (on && server != null) GlassCard(onClick = { remote = true }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("🎮 Phone remote", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("Review from the couch: show, grade and play from your phone, and swipe to scroll the page.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                Text("Open ›", color = Night.sun)
             }
         }
         GlassCard {
