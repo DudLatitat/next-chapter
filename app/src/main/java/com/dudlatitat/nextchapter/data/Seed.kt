@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 12
+    const val VERSION = 13
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -65,6 +65,36 @@ object Seed {
         c("idv", "打得好！", "dǎ de hǎo!", "Nice play!"),
         c("idv", "你好厉害", "nǐ hǎo lìhai", "You're so good"),
         c("idv", "再来一局？", "zài lái yì jú?", "One more run?"),
+        // Finding each other on the map (撤离点 extraction point and 庄园入口 manor entrance from 17173 /
+        // GameGeeker previews of the mode, Jun 2026; the rest is everyday Mandarin for directions).
+        c("idv", "你在哪里？", "nǐ zài nǎlǐ?", "Where are you?"),
+        c("idv", "我过去找你", "wǒ guòqù zhǎo nǐ", "I'm coming over to you"),
+        c("idv", "站着别动，我来找你", "zhànzhe bié dòng, wǒ lái zhǎo nǐ", "Stay where you are, I'll come to you"),
+        c("idv", "到我这儿来", "dào wǒ zhèr lái", "Come to me"),
+        c("idv", "我马上到", "wǒ mǎshàng dào", "Be right there"),
+        c("idv", "我快到了", "wǒ kuài dào le", "Almost there"),
+        c("idv", "我到了", "wǒ dào le", "I'm here"),
+        c("idv", "我看到你了", "wǒ kàndào nǐ le", "I see you"),
+        c("idv", "我看不到你", "wǒ kàn bu dào nǐ", "I can't see you"),
+        c("idv", "我在你附近", "wǒ zài nǐ fùjìn", "I'm close to you"),
+        c("idv", "你离我多远？", "nǐ lí wǒ duō yuǎn?", "How far away are you?"),
+        c("idv", "我们会合吧", "wǒmen huìhé ba", "Let's meet up"),
+        c("idv", "我迷路了", "wǒ mílù le", "I'm lost"),
+        c("idv", "这边！", "zhèbiān!", "This way!"),
+        c("idv", "往前走", "wǎng qián zǒu", "Keep going forward"),
+        c("idv", "往回走", "wǎng huí zǒu", "Go back"),
+        c("idv", "直走", "zhí zǒu", "Go straight"),
+        c("idv", "左转", "zuǒ zhuǎn", "Turn left"),
+        c("idv", "右转", "yòu zhuǎn", "Turn right"),
+        c("idv", "在你左边", "zài nǐ zuǒbiān", "On your left"),
+        c("idv", "在你右边", "zài nǐ yòubiān", "On your right"),
+        c("idv", "在你前面", "zài nǐ qiánmiàn", "In front of you"),
+        c("idv", "我在楼上", "wǒ zài lóushàng", "I'm upstairs"),
+        c("idv", "我在楼下", "wǒ zài lóuxià", "I'm downstairs"),
+        c("idv", "绕过去", "rào guòqù", "Go around it"),
+        c("idv", "别过来，异象在这儿", "bié guòlái, yìxiàng zài zhèr", "Don't come over, the anomaly's here"),
+        c("idv", "撤离点在哪里？", "chèlí diǎn zài nǎlǐ?", "Where's the extraction point?"),
+        c("idv", "在庄园入口见", "zài zhuāngyuán rùkǒu jiàn", "Meet me at the manor entrance"),
 
         // Gaming together (一起玩): everyday talk for any game with Yuling. Common gaming words: 开黑
         // (team up on voice), 拉我 (invite me), 卡了 (lagging), 掉线 (disconnected), 带飞 (carry), 菜 (bad at it).
