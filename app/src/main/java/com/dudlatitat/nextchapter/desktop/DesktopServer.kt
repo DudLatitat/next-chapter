@@ -1,7 +1,8 @@
 package com.dudlatitat.nextchapter.desktop
 
 import android.content.Context
-import com.dudlatitat.nextchapter.MainViewModel
+import com.dudlatitat.nextchapter.data.CardEdits
+import com.dudlatitat.nextchapter.data.Store
 import com.dudlatitat.nextchapter.data.Card
 import com.dudlatitat.nextchapter.data.Decks
 import com.dudlatitat.nextchapter.data.Grade
@@ -37,23 +38,35 @@ import java.net.Socket
 
 /**
  * "Use on my computer": a small web server on the phone, for the desktop page (assets/desktop).
- * Only answers the home network, needs the 6-digit code once (then a token), and runs only while
- * the Settings screen that started it is open. Every change goes through the ViewModel, so the
- * phone's data is the only copy and nothing needs syncing.
+ * Run by DesktopService. Only answers the home network; a computer pairs once with the 6-digit
+ * code and then keeps its token (saved here too, so it survives restarts until "Forget"). Every
+ * change goes through Store with the same CardEdits the phone uses, so the phone's data is the
+ * only copy and nothing needs syncing.
  */
-class DesktopServer(private val context: Context, private val vm: MainViewModel, val port: Int = 8090) {
+class DesktopServer(private val context: Context, private val store: Store, val port: Int = 8090) {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var scope: CoroutineScope? = null
     private var socket: ServerSocket? = null
-    private val tokens = mutableSetOf<String>()
+    private val prefs = context.getSharedPreferences("desktop", Context.MODE_PRIVATE)
+    private val tokens = (prefs.getStringSet("tokens", emptySet()) ?: emptySet()).toMutableSet()
+    /** Wakes the phone briefly after each request, so a page in use stays quick with the screen off. */
+    private val wake = (context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
+        .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "NextChapter:desktop").apply { setReferenceCounted(false) }
     private var wrongCodes = 0
 
     private val _code = MutableStateFlow(Http.pairingCode())
     /** The code to type on the computer (a new one each start, and after 5 wrong tries). */
     val code: StateFlow<String> = _code
-    private val _paired = MutableStateFlow(0)
-    /** How many browsers have paired since it started. */
+    private val _paired = MutableStateFlow(tokens.size)
+    /** How many computers are paired (remembered until "Forget my computers"). */
     val paired: StateFlow<Int> = _paired
+
+    /** Unpairs every computer; they'll need the code again. */
+    fun forgetAll() {
+        synchronized(tokens) { tokens.clear(); prefs.edit().putStringSet("tokens", emptySet()).apply() }
+        _paired.value = 0
+        _code.value = Http.pairingCode()
+    }
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
@@ -90,7 +103,7 @@ class DesktopServer(private val context: Context, private val vm: MainViewModel,
         try { socket?.close() } catch (_: Exception) {}
         socket = null
         s?.cancel()
-        tokens.clear()
+        if (wake.isHeld) wake.release()
     }
 
     private fun handle(client: Socket) {
@@ -113,6 +126,7 @@ class DesktopServer(private val context: Context, private val vm: MainViewModel,
                 if (length > Http.MAX_BODY) { c.getOutputStream().write(Http.response(413, "text/plain", ByteArray(0))); return }
                 val body = ByteArray(length).also { var n = 0; while (n < length) { val r = input.read(it, n, length - n); if (r < 0) break; n += r } }
                 val (path, query) = Http.splitTarget(target)
+                wake.acquire(10 * 60 * 1000L)
                 c.getOutputStream().write(route(method, path, query, headers, String(body, Charsets.UTF_8)))
             } catch (_: Exception) {}
         }
@@ -136,8 +150,9 @@ class DesktopServer(private val context: Context, private val vm: MainViewModel,
                 return bad(401, "That code doesn't match. Check the phone.")
             }
             wrongCodes = 0
-            val t = Http.token(); synchronized(tokens) { tokens += t }
-            _paired.value = _paired.value + 1
+            val t = Http.token()
+            synchronized(tokens) { tokens += t; prefs.edit().putStringSet("tokens", tokens.toSet()).apply() }
+            _paired.value = tokens.size
             return ok(json.encodeToString(PairOut(t)))
         }
         val token = headers["x-token"] ?: query["t"]
@@ -147,7 +162,7 @@ class DesktopServer(private val context: Context, private val vm: MainViewModel,
             val bytes = try { context.assets.open(asset).use { it.readBytes() } } catch (_: Exception) { return bad(404, "No recording") }
             return Http.response(200, "audio/mpeg", bytes)
         }
-        val s = vm.state.value
+        val s = store.state.value
         return when ("$method $path") {
             "GET /api/summary" -> {
                 val decks = Decks.mapNotNull { d ->
@@ -167,21 +182,21 @@ class DesktopServer(private val context: Context, private val vm: MainViewModel,
                 val g = try { json.decodeFromString<GradeIn>(body) } catch (_: Exception) { return bad(400, "Bad grade") }
                 val card = s.cards.firstOrNull { it.id == g.id } ?: return bad(404, "No such card")
                 val grade = Grade.entries.getOrNull(g.grade - 1) ?: return bad(400, "Grade is 1–4")
-                vm.grade(card, grade)
+                store.edit { CardEdits.grade(it, card.id, grade) }
                 ok(json.encodeToString(Msg(true)))
             }
             "POST /api/card" -> {
                 val c = try { json.decodeFromString<CardIn>(body) } catch (_: Exception) { return bad(400, "Bad card") }
                 if (c.hanzi.isBlank() && c.id == null) return bad(400, "Chinese is needed")
                 val pinyin = c.pinyin.ifBlank { Pinyin.fromHanzi(c.hanzi) ?: "" }
-                if (c.id == null) vm.addCard(c.hanzi.take(60), pinyin.take(120), c.english.take(120))
-                else vm.updateCard(c.id, c.hanzi.take(60), pinyin.take(120), c.english.take(120))
+                if (c.id == null) store.edit { CardEdits.add(it, c.hanzi.take(60), pinyin.take(120), c.english.take(120)) }
+                else store.edit { CardEdits.update(it, c.id, c.hanzi.take(60), pinyin.take(120), c.english.take(120)) }
                 ok(json.encodeToString(Msg(true)))
             }
             "POST /api/delete" -> {
                 val id = try { json.decodeFromString<IdIn>(body).id } catch (_: Exception) { return bad(400, "Bad id") }
                 val card = s.cards.firstOrNull { it.id == id && it.custom } ?: return bad(403, "Only your own phrases can be deleted")
-                vm.deleteCard(card)
+                store.edit { CardEdits.delete(it, card.id) }
                 ok(json.encodeToString(Msg(true)))
             }
             "GET /api/pinyin" -> ok(json.encodeToString(PinyinOut(Pinyin.fromHanzi(query["h"].orEmpty()) ?: "")))

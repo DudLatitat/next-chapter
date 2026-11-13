@@ -6,6 +6,10 @@
     <!-- Drive mode keeps talking with the screen off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Use on my computer: keep the computer page available in the background (Settings switch). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Only for the exchange rate (when you tap Update) and fare alerts. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Speaking practice: recorded on the phone, checked on the phone. -->
@@ -84,6 +88,14 @@
         <receiver android:name=".notify.ReminderReceiver" android:exported="false" />
         <receiver android:name=".notify.EveningReceiver" android:exported="false" />
         <receiver android:name=".notify.DeadlinesReceiver" android:exported="false" />
+        <service
+            android:name=".desktop.DesktopService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Serves the app's own study page to the user's computer on their home Wi-Fi while they choose to keep it available." />
+        </service>
         <receiver android:name=".notify.PlaceReceiver" android:exported="false" />
         <receiver android:name=".notify.BootReceiver" android:exported="false">
             <intent-filter>

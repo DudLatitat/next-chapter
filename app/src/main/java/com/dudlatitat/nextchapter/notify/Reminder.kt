@@ -84,6 +84,7 @@ class BootReceiver : BroadcastReceiver() {
             Evening.schedule(context, Store.get(context).state.value)
             Deadlines.schedule(context, Store.get(context).state.value)
             PlaceWatch.register(context, Store.get(context).state.value)
+            com.dudlatitat.nextchapter.desktop.Desktop.resume(context)
         }
     }
 }

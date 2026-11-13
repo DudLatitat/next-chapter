@@ -33,6 +33,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         com.dudlatitat.nextchapter.notify.Evening.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.Deadlines.schedule(app, store.state.value)
         com.dudlatitat.nextchapter.notify.PlaceWatch.register(app, store.state.value)
+        com.dudlatitat.nextchapter.desktop.Desktop.resume(app)
         com.dudlatitat.nextchapter.notify.FareWatch.schedule(app)
     }
 
@@ -65,9 +66,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (it) Reminder.schedule(getApplication(), store.state.value)
     }
 
-    fun grade(card: Card, grade: Grade) = store.edit { s ->
-        s.copy(cards = s.cards.map { if (it.id == card.id) Srs.grade(it, grade) else it }).logDay { it.copy(reviews = it.reviews + 1) }
-    }
+    fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
 
     /** Adds practice time to today (called when a session ends or closes). */
     fun logSeconds(seconds: Int) {
@@ -75,11 +74,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         store.edit { s -> s.logDay { it.copy(seconds = it.seconds + seconds.coerceAtMost(3600)) } }
     }
 
-    private fun AppState.logDay(change: (DayLog) -> DayLog): AppState {
-        val d = today()
-        val kept = days.filterKeys { it > d - 400 }
-        return copy(days = kept + (d to change(kept[d] ?: DayLog())))
-    }
+    private fun AppState.logDay(change: (DayLog) -> DayLog): AppState =
+        with(com.dudlatitat.nextchapter.data.CardEdits) { this@logDay.logged(change = change) }
 
     /** Remembers one tone attempt, for weak-tone drills and the weekly recap. */
     fun logTone(target: Int, got: Int, spoken: Boolean) {
@@ -129,18 +125,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (d in s.studyDays) s else s.copy(studyDays = (s.studyDays + d).takeLast(800))
     }
 
-    fun addCard(hanzi: String, pinyin: String, english: String) = store.edit { s ->
-        val card = Card(id = "mine:${System.currentTimeMillis()}", hanzi = hanzi.trim(), pinyin = pinyin.trim(), english = english.trim(), deck = "mine", custom = true)
-        s.copy(cards = s.cards + card)
-    }
+    fun addCard(hanzi: String, pinyin: String, english: String) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.add(s, hanzi, pinyin, english) }
 
-    fun deleteCard(card: Card) = store.edit { s -> s.copy(cards = s.cards.filterNot { it.id == card.id }) }
-    /** Edits a card's text (from the desktop page). Starter cards keep their characters (their id and voice depend on them). */
-    fun updateCard(id: String, hanzi: String, pinyin: String, english: String) = store.edit { s ->
-        s.copy(cards = s.cards.map { c ->
-            if (c.id != id) c else c.copy(hanzi = if (c.custom && hanzi.isNotBlank()) hanzi.trim() else c.hanzi, pinyin = pinyin.trim(), english = english.trim())
-        })
-    }
+    fun deleteCard(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.delete(s, card.id) }
 
     fun toggleTask(task: MoveTask) = store.edit { s ->
         // Steps linked to the Life tab (certs, the degree) are updated there and mirrored here.
