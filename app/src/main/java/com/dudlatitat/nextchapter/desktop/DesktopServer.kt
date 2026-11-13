@@ -73,6 +73,9 @@ class DesktopServer(private val context: Context, private val store: Store, val 
     private val _page = MutableStateFlow<PageState?>(null)
     /** The card the computer page is on (null until a page reports in). */
     val page: StateFlow<PageState?> = _page
+    private val _seen = MutableStateFlow(0L)
+    /** When the computer page last checked in (it's always waiting on /api/remote while open). */
+    val seen: StateFlow<Long> = _seen
 
     /** A button on the phone remote: handed to the page waiting on /api/remote. */
     fun send(cmd: String, value: Int = 0) = synchronized(remoteLock) {
@@ -232,7 +235,12 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 store.edit { CardEdits.delete(it, card.id) }
                 ok(json.encodeToString(Msg(true)))
             }
-            "GET /api/remote" -> ok(json.encodeToString(remoteAfter(query["after"]?.toLongOrNull() ?: -1)))
+            "GET /api/remote" -> {
+                _seen.value = System.currentTimeMillis()
+                val out = remoteAfter(query["after"]?.toLongOrNull() ?: -1)
+                _seen.value = System.currentTimeMillis()
+                ok(json.encodeToString(out))
+            }
             "POST /api/state" -> {
                 _page.value = try { json.decodeFromString<PageState>(body) } catch (_: Exception) { return bad(400, "Bad state") }
                 ok(json.encodeToString(Msg(true)))

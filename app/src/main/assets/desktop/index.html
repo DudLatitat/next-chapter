@@ -95,7 +95,14 @@
   .progress { height: 6px; border-radius: 4px; background: rgba(255,255,255,.07); overflow: hidden; margin-bottom: 18px; }
   .progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--sun), var(--rose)); transition: width .4s; }
   .flash { perspective: 1400px; }
-  .face { min-height: 330px; padding: 40px 44px; display: flex; flex-direction: column; justify-content: center; transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+  .face { min-height: 360px; padding: 44px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+          transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .6s, border-color .6s; }
+  .face.shown { border-color: rgba(255, 207, 122, .35); box-shadow: 0 0 0 1px rgba(255, 207, 122, .12), 0 0 70px -10px rgba(255, 207, 122, .35), 0 20px 50px -30px #000a; }
+  .face .deckline { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .face .ask { margin-top: 18px; color: var(--muted); }
+  .face .hanzi, .face .pinyin { animation: rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .face .pinyin { animation-delay: .08s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
   .face.flip { animation: flip .45s cubic-bezier(.2,.8,.2,1); }
   @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(12deg) scale(.98); opacity: .6; } 100% { transform: rotateX(0); } }
   .face .english { font-size: 30px; font-weight: 600; }
@@ -287,12 +294,13 @@ function drawCard(flip) {
   const done = startSize ? Math.min(1, (startSize - queue.length) / startSize) : 0;
   $("#main").innerHTML = `
     <div class="review">
-      <div class="row" style="display:flex;justify-content:space-between" ><span class="muted">${queue.length} to go</span><span class="tag">${c.isNew ? "new" : "review"} · ${esc(deckName(c.deck))}</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="muted">${queue.length} to go</span><span class="tag">${Math.round(done * 100)}%</span></div>
       <div class="progress"><i style="width:${Math.round(done * 100)}%"></i></div>
-      <div class="flash"><div class="glass face ${flip ? "flip" : ""}">
+      <div class="flash"><div class="glass face ${flip ? "flip" : ""} ${shown ? "shown" : ""}">
+        <div class="deckline">${c.isNew ? "✦ new · " : ""}${esc(deckName(c.deck))}</div>
         <div class="english">${esc(c.english)}</div>
         ${shown ? `<div class="hanzi zh">${esc(c.hanzi)}</div><div class="pinyin">${tonePinyin(c.pinyin)}</div>`
-                : `<p class="muted" style="margin-top:14px">Say it out loud in Chinese, then show the answer.</p>`}
+                : `<div class="ask">Say it out loud in Chinese, then show the answer.</div>`}
       </div></div>
       ${shown
         ? `<div class="grades"><button class="btn g1" data-g="1">Again <kbd>1</kbd></button><button class="btn g2" data-g="2">Hard <kbd>2</kbd></button>
