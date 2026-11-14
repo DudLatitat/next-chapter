@@ -477,7 +477,7 @@ function go(v) {
   if (v === "terminal" && view === "terminal" && labOpen) { labOpen = null; ls.set("nc-lab", null); }
   view = VIEWS.includes(v) ? v : "phrases"; ls.set("nc-view", view);
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
-  renderStats(); clearInterval(skyTimer); djStop();
+  renderStats(); clearInterval(skyTimer); djStop(); if (typeof sprintStop === "function") { sprintStop(); if (sp) sp.running = false; }
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
   watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab, talk: renderTalk }[view] || renderPhrases)());
 }
@@ -886,13 +886,16 @@ function typedMatches(t, r) { // same rule as Talk.typedMatches on the phone (Ta
 }
 async function renderTalk() {
   if (!talkScenes) talkScenes = await api("/api/talk");
+  if (!textThreads) textThreads = await api("/api/texts").catch(() => []);
+  if (sprintOn) return sprintDraw();
+  if (textOpen && textThreads.some((t) => t.id === textOpen)) return textDraw();
   const sc = talkScenes.find((x) => x.id === talkOpen);
   if (!sc) return talkList();
   if (!tk || tk.id !== sc.id) { tk = { id: sc.id, at: 0, said: [], pick: null, score: 0, msg: "" }; setTimeout(talkPlayLine, 400); }
   talkDraw();
 }
 function talkList() {
-  talkOpen = null; tk = null;
+  talkOpen = null; tk = null; textOpen = null; tx = null; sprintStop(); sprintOn = false; sp = null;
   const groups = [...new Set(talkScenes.map((s) => s.groupTitle))];
   $("#main").innerHTML = `<div class="talk"><h2 style="margin:6px 0 2px">Talk · 对话</h2>
     <p class="muted" style="margin:0">They speak, you answer. Say it into your phone (🎤 on the remote) or type pinyin or characters.</p>
@@ -900,8 +903,19 @@ function talkList() {
       const best = talkBest(s.id);
       return `<button class="tscene glass" data-s="${esc(s.id)}"><span class="ti">${s.icon}</span><span><div class="tt">${esc(s.title)}</div>
         <div class="tz">${esc(s.hanzi)}</div><div class="tag">${s.beats.length} lines${best ? ` · best ${best}/${s.beats.length * 2}` : ""}</div></span></button>`;
-    }).join("")}</div>`).join("")}</div>`;
-  document.querySelectorAll(".tscene").forEach((b) => b.onclick = () => { talkOpen = b.dataset.s; renderTalk(); window.scrollTo(0, 0); });
+    }).join("")}</div>`).join("")}
+    <div class="tgroup">Texting · 微信</div>
+    <p class="muted" style="margin:0 0 10px;font-size:14px">Reply with a Chinese keyboard. On Windows: Settings → Time &amp; language → Language &amp; region → Add a language → 中文(中华人民共和国), then Win + Space switches keyboards.</p>
+    <div class="tscenes">${(textThreads || []).map((t) => {
+      const best = textBest(t.id);
+      return `<button class="tscene glass" data-th="${esc(t.id)}"><span class="ti">${t.avatar}</span><span><div class="tt">${esc(t.contact)}</div>
+        <div class="tz">${esc(t.title)}</div><div class="tag">${t.turns.length} messages${best ? ` · ★ ${best}/${t.turns.length * 2}` : ""}</div></span></button>`;
+    }).join("")}
+      <button class="tscene glass" id="sprintgo"><span class="ti">⌨️</span><span><div class="tt">Typing sprint</div><div class="tz">打字</div>
+        <div class="tag">60 seconds${sprintBest() ? ` · best ${sprintBest()}/min` : ""}</div></span></button></div></div>`;
+  document.querySelectorAll(".tscene[data-s]").forEach((b) => b.onclick = () => { talkOpen = b.dataset.s; renderTalk(); window.scrollTo(0, 0); });
+  document.querySelectorAll(".tscene[data-th]").forEach((b) => b.onclick = () => { textOpen = b.dataset.th; renderTalk(); window.scrollTo(0, 0); });
+  $("#sprintgo").onclick = () => { sprintOn = true; renderTalk(); window.scrollTo(0, 0); };
   api("/api/state", { view, english: "", hanzi: "", pinyin: "", shown: false, left: 0 }).catch(() => {});
 }
 function talkScene() { return talkScenes.find((x) => x.id === talkOpen); }
@@ -912,9 +926,9 @@ function talkReport() {
 }
 function talkDraw() {
   const sc = talkScene(), b = sc.beats[tk.at], done = !b;
-  const bubble = (who, l) => `<div class="bub"><div class="who">${esc(who)}</div><div class="h" data-v="${l.voice}" title="Play">${esc(l.hanzi)} 🔊</div>
+  const bubble = (who, l) => `<div class="bub"><div class="who">${esc(who)}</div><div class="h" data-voice="${l.voice}" title="Play">${esc(l.hanzi)} 🔊</div>
     <div>${tonePinyin(l.pinyin)}</div>${talkEnglish ? `<div class="e">${esc(l.english)}</div>` : ""}</div>`;
-  const mine = (s) => `<div class="bub me l${s.level}"><div class="h" data-v="${s.reply ? s.reply.voice : ""}">${s.reply ? esc(s.reply.hanzi) : "(skipped)"}</div>
+  const mine = (s) => `<div class="bub me l${s.level}"><div class="h" data-voice="${s.reply ? s.reply.voice : ""}">${s.reply ? esc(s.reply.hanzi) : "(skipped)"}</div>
     <div class="tag">${["try again next time", "🥢 nearly", "🥢🥢 clear"][s.level]}${s.typed ? " · typed" : ""}</div></div>`;
   const chat = sc.beats.slice(0, tk.at).map((x, i) => bubble(x.who, x.line) + mine(tk.said[i])).join("") +
     (b ? bubble(b.who, b.line) + (b.tip ? `<div class="ttip">💡 ${esc(b.tip)}</div>` : "") : "");
@@ -933,7 +947,7 @@ function talkDraw() {
     <span class="tag">${sc.icon} ${esc(sc.title)} · ${esc(sc.hanzi)} · ${Math.min(tk.at + 1, sc.beats.length)}/${sc.beats.length}</span><span class="pill sun" style="margin-left:auto">🥢 ${tk.score}</span></div>
     <div class="tstage"><div class="tchat glass" id="tchat">${chat}</div><div class="tside glass">${side}</div></div></div>`;
   const ch = $("#tchat"); ch.scrollTop = ch.scrollHeight;
-  document.querySelectorAll("[data-v]").forEach((el) => { if (el.dataset.v) el.onclick = () => play({ voice: el.dataset.v }); });
+  $("#main").querySelectorAll("[data-voice]").forEach((el) => { if (el.dataset.voice) el.onclick = () => play({ voice: el.dataset.voice }); });
   $("#tlist").onclick = talkList;
   if (done) {
     if (tk.score > talkBest(sc.id)) { try { localStorage.setItem(`talk:best:${sc.id}`, String(tk.score)); } catch {} }
@@ -964,6 +978,7 @@ function talkAnswer(i, level, typed) {
   talkDraw(); setTimeout(talkPlayLine, 500);
 }
 function talkKey(e, k) {
+  if (textOpen && k === "h") { e.preventDefault(); if (tx) { tx.hint = Math.min(3, tx.hint + 1); textDraw(); } return; }
   if (!tk || !talkScene()) return;
   if (k === "1" || k === "2") { e.preventDefault(); talkPick(+k - 1); }
   else if (k === "e") { talkEnglish = !talkEnglish; talkDraw(); }
@@ -978,6 +993,109 @@ function talkRemote(c) {
   else if (c.cmd === "said" && tk.pick != null) {
     if (c.value >= 1) talkAnswer(tk.pick, c.value, false);
     else { tk.msg = c.text === "quiet" ? "Didn't catch that: a little louder, closer to the phone." : "Not quite yet. Listen to it again and have another go."; talkDraw(); play(talkScene().beats[tk.at].replies[tk.pick]); }
+  }
+}
+
+// ---- Texting 微信: chats answered with a real Chinese keyboard, and typing sprints ----
+// Same rules as Texting.kt on the phone (TextingTest): a reply passes if it has every word of any accepted group.
+let textThreads = null, textOpen = null, tx = null, sprintOn = false, sp = null;
+const textBest = (id) => { try { return +localStorage.getItem(`text:best:${id}`) || 0; } catch { return 0; } };
+const sprintBest = () => { try { return +localStorage.getItem("sprint:best") || 0; } catch { return 0; } };
+const hanOnly = (x) => [...x].filter((c) => /[\u4e00-\u9fff]/.test(c)).join("");
+function textAccepts(turn, typed) { const t = hanOnly(typed); return !!t && turn.accept.some((g) => g.every((w) => t.includes(hanOnly(w)))); }
+function textThread() { return textThreads.find((t) => t.id === textOpen); }
+function textDraw() {
+  const th = textThread();
+  if (!tx || tx.id !== th.id) { tx = { id: th.id, turn: 0, lines: [], hint: 0, score: 0, nudge: "", shown: 0 }; textArrive(); return; }
+  const t = th.turns[tx.turn], max = th.turns.length * 2;
+  const bub = (l) => l.mine
+    ? `<div class="bub me l2" style="background:#95ec69;color:#111;border:none"><div class="h" style="font-size:20px">${esc(l.text)}</div>${l.hinted ? `<div class="tag" style="color:#335522">with a hint</div>` : ""}</div>`
+    : `<div class="bub"><div class="who">${th.avatar} ${esc(th.contact)}</div>${l.voice && !l.open ? `<div class="h voicemsg" data-i="${l.i}" style="font-size:18px">🔊 ))) 0:0${Math.min(9, Math.max(1, Math.round(l.text.length / 3)))}″</div>`
+        : `<div class="h" data-voice="${l.v}" style="font-size:22px">${esc(l.text)}</div><div class="e">${tonePinyin(l.pinyin)} · ${esc(l.english)}</div>`}</div>`;
+  const side = !t
+    ? `<div style="text-align:center"><div style="font-size:44px">${tx.score >= max ? "💬✨" : "💬"}</div><h2 style="margin:4px 0">★ ${tx.score} / ${max}</h2>
+        <p class="muted">${tx.score >= max ? "No hints needed. Real texting." : "Again without hints for full stars."}</p>
+        <button class="btn" id="xagain">Again · 再来</button> <button class="btn ghost" id="xback">Other chats</button></div>`
+    : `<div class="tag">Reply in Chinese, then Enter · your own words are fine</div>
+       <input id="xin" class="ttype" placeholder="用中文回复…" autocomplete="off" aria-label="Your reply" style="font-size:20px">
+       <p style="color:var(--coral);font-size:13px;margin:6px 0 0;min-height:1em">${esc(tx.nudge)}</p>
+       ${tx.hint >= 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${t.words.map((w) => `<button class="chipf xw">${esc(w)}</button>`).join("")}</div>` : ""}
+       ${tx.hint >= 2 ? `<div style="margin-top:8px">${tonePinyin(t.examples[0].pinyin)}</div>` : ""}
+       ${tx.hint >= 3 ? `<div class="muted" style="margin-top:4px">${esc(t.examples[0].hanzi)} · ${esc(t.examples[0].english)}</div>` : ""}
+       ${tx.hint >= 1 && t.tip ? `<div class="ttip" style="margin-top:8px">💡 ${esc(t.tip)}</div>` : ""}
+       <button class="btn ghost" id="xhint" style="margin-top:10px">💡 Hint <kbd>H</kbd></button>`;
+  $("#main").innerHTML = `<div class="talk"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button>
+    <span class="tag">${th.avatar} ${esc(th.contact)} · ${esc(th.title)}${tx.typing ? " · 对方正在输入…" : ""}</span><span class="pill sun" style="margin-left:auto">★ ${tx.score}</span></div>
+    <div class="tstage"><div class="tchat glass" id="tchat">${tx.lines.map(bub).join("")}${tx.typing ? `<div class="bub"><div class="h">…</div></div>` : ""}</div><div class="tside glass">${side}</div></div></div>`;
+  const ch = $("#tchat"); ch.scrollTop = ch.scrollHeight;
+  $("#tlist").onclick = talkList;
+  $("#main").querySelectorAll("[data-voice]").forEach((el) => { if (el.dataset.voice) el.onclick = () => play({ voice: el.dataset.voice }); });
+  document.querySelectorAll(".voicemsg").forEach((el) => el.onclick = () => { const l = tx.lines[+el.dataset.i]; l.open = true; play({ voice: l.v }); textDraw(); });
+  if (!t) {
+    if (tx.score > textBest(th.id)) { try { localStorage.setItem(`text:best:${th.id}`, String(tx.score)); } catch {} }
+    $("#xagain").onclick = () => { tx = null; textDraw(); }; $("#xback").onclick = talkList; return;
+  }
+  const inp = $("#xin"); inp.focus();
+  inp.onkeydown = (e) => {
+    if (e.key !== "Enter" || e.isComposing) return; // Enter while the pinyin keyboard is still choosing characters isn't "send"
+    const v = inp.value;
+    if (!v.trim()) return;
+    if (textAccepts(t, v)) {
+      tx.lines.push({ mine: true, text: v.trim(), hinted: tx.hint > 0 }); tx.score += tx.hint ? 1 : 2; tx.turn++; tx.hint = 0; tx.nudge = "";
+      textArrive();
+    } else { tx.nudge = hanOnly(v) ? `Close! Try using: ${t.words[0]}` : "Switch your keyboard to Chinese and pick the characters."; textDraw(); }
+  };
+  document.querySelectorAll(".xw").forEach((b) => b.onclick = () => { inp.value += b.textContent; inp.focus(); });
+  $("#xhint").onclick = () => { tx.hint = Math.min(3, tx.hint + 1); textDraw(); };
+}
+async function textArrive() { // their messages, one by one, with "typing…" in between
+  const th = textThread(), t = th.turns[tx.turn], me = tx;
+  if (!t) return textDraw();
+  for (const m of t.them) {
+    me.typing = true; textDraw(); await new Promise((ok) => setTimeout(ok, me.lines.length ? 900 : 400));
+    if (tx !== me) return;
+    me.typing = false; me.lines.push({ mine: false, text: m.hanzi, pinyin: m.pinyin, english: m.english, voice: m.voice, v: m.v, i: me.lines.length });
+    if (m.voice) play({ voice: m.v });
+  }
+  textDraw();
+}
+// Typing sprint: English shows, type it in Chinese; it moves on as soon as it's right.
+function sprintStop() { if (sp) clearInterval(sp.timer); }
+async function sprintDraw() {
+  if (!sp || sp.done === undefined) sp = { pool: await api("/api/sprint"), i: 0, chars: 0, lines: 0, left: 60, running: false, done: false, py: false };
+  const c = sp.pool[sp.i % Math.max(1, sp.pool.length)];
+  const cpm = Math.round(sp.chars * 60 / 60);
+  $("#main").innerHTML = `<div class="talk" style="max-width:760px"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button>
+    <span class="tag">⌨️ Typing sprint · 打字</span>${sp.running ? `<span class="pill ${sp.left <= 10 ? "" : "sun"}" style="margin-left:auto">${sp.left}s</span>` : ""}</div>
+    <div class="glass" style="padding:30px;text-align:center">${sp.running && c ? `
+      <div style="font-size:28px;font-weight:600">${esc(c.english)}</div><div class="tag" style="margin:6px 0 16px">${sp.lines} lines · ${sp.chars} characters</div>
+      <input id="spin" class="ttype" style="font-size:26px;text-align:center" placeholder="Type it in Chinese" autocomplete="off" aria-label="Type it in Chinese">
+      <div style="margin-top:10px"><button class="btn ghost" id="spskip">Skip ›</button> <button class="btn ghost" id="sppy">${sp.py ? "Hide pinyin" : "Pinyin"}</button> <button class="btn ghost" id="sphear">🔊</button></div>
+      ${sp.py ? `<div style="margin-top:10px">${tonePinyin(c.pinyin)}</div>` : ""}`
+    : sp.done ? `<div style="font-size:48px">${cpm > sp.bestBefore && sp.bestBefore ? "🏆" : "⌨️"}</div><h2>${cpm} characters a minute</h2>
+      <p class="muted">${sp.lines} lines typed right${cpm > sp.bestBefore && sp.bestBefore ? " · new best!" : ""}</p><button class="btn" id="spgo">Again · 再来</button>`
+    : `<div style="font-size:48px">⌨️</div><p>English shows up; type it in Chinese with your pinyin keyboard. It moves on as soon as it's right. 60 seconds.</p>
+      ${sprintBest() ? `<p class="tag">Best: ${sprintBest()} characters a minute</p>` : ""}<button class="btn" id="spgo">Start · 开始</button>`}</div></div>`;
+  $("#tlist").onclick = talkList;
+  if ($("#spgo")) $("#spgo").onclick = () => {
+    sp = { pool: sp.pool.sort(() => Math.random() - 0.5), i: 0, chars: 0, lines: 0, left: 60, running: true, done: false, py: false, bestBefore: sprintBest() };
+    sp.timer = setInterval(() => {
+      sp.left--; const pill = document.querySelector(".crumb .pill"); if (pill) pill.textContent = `${sp.left}s`;
+      if (sp.left <= 0) { sprintStop(); sp.running = false; sp.done = true; const v = sp.chars;
+        if (v > sprintBest()) { try { localStorage.setItem("sprint:best", String(v)); } catch {} }
+        if (view === "talk" && sprintOn) sprintDraw(); }
+    }, 1000);
+    sprintDraw();
+  };
+  const inp = $("#spin");
+  if (inp) {
+    inp.focus();
+    inp.oninput = () => {
+      if (hanOnly(inp.value) && hanOnly(inp.value) === hanOnly(c.hanzi)) { sp.chars += hanOnly(c.hanzi).length; sp.lines++; sp.i++; sp.py = false; sprintDraw(); }
+    };
+    $("#spskip").onclick = () => { sp.i++; sp.py = false; sprintDraw(); };
+    $("#sppy").onclick = () => { sp.py = !sp.py; sprintDraw(); };
+    $("#sphear").onclick = () => play(c);
   }
 }
 

@@ -43,6 +43,7 @@ val Decks = listOf(
     Deck("yuling", "With Yuling", "我们", "Sweet and everyday lines for you two"),
     Deck("idv", "Identity V", "第五人格", "Cryptic Notes callouts for playing with Yuling"),
     Deck("games", "Gaming together", "一起玩", "Teaming up, cheering each other on, calling it a night"),
+    Deck("text", "WeChat texting", "微信聊天", "What people actually type: openers, replies, chat habits"),
     Deck("trip", "Trip prep", "出发", "Airport, taxi, hotel, dinner with her family · opens 60 days before a trip"),
     Deck("sweet", "Sweet talk", "甜言蜜语", "Compliments and flirting, said like you mean it"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
@@ -281,4 +282,7 @@ data class AppState(
     val numbersBest: Int = 0,
     /** Prayer ladder: how many hint levels you've climbed per prayer id (0 = full text shown). */
     val prayerSteps: Map<String, Int> = emptyMap(),
+    /** Texting: best typing sprint (characters per minute) and best per chat thread. */
+    val sprintBest: Int = 0,
+    val textBest: Map<String, Int> = emptyMap(),
 )

@@ -132,6 +132,12 @@ tools/
   - PC **Talk 对话** tab (G then C; remote tab 5) via `/api/talk`: a chat; pick reply 1/2, then say it on the phone remote (🎤 → `said`) or type it. 🥢 scoring, best per scene in localStorage (`talk:best:<id>`).
   - Phone remote: a 💬 tab, 1/2, Say it, their line, English.
   - Phone Practice → Play → 对话 Talk (was Dinner) lists every scene, grouped; best per scene in `dinnerBest`.
+- **1.96 (texting):**
+  - New **WeChat texting** deck `text` (24 lines; Seed v14).
+  - `data/Texting.kt`: 6 chat threads (her ×3, her mom, DiDi, delivery). A reply passes if it has the key words of any accepted group, `accepts` (`TextingTest`: every example passes its own turn). Voice bubbles. Sprint pool + `typedRight` + `cpm`.
+  - Phone: Practice → Texting → 微信 Texts (WeChat-style chat with the real keyboard, typing indicator, hints words → pinyin → answer; `textBest`) and 打字 Sprint (60 s, `sprintBest`).
+  - PC: Talk tab → Texting section (`/api/texts`, `/api/sprint`). Enter is ignored while the IME is still composing; best scores in localStorage.
+  - **Fix:** bubble voice attributes are now `data-voice`, scoped to `#main`. A page-wide `[data-v]` selector had been replacing the nav buttons' handlers after a Talk scene, so the tabs stopped switching (since 1.95).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

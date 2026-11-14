@@ -120,6 +120,8 @@ fun LearnScreen(
         tool == "numbers" -> NumbersScreen(state, vm, onBack = { tool = null })
         tool == "family" -> FamilyScreen(state, vm, onBack = { tool = null })
         tool == "prayer" -> LadderScreen(state, vm, onBack = { tool = null })
+        tool == "texts" -> TextingScreen(state, vm, onBack = { tool = null })
+        tool == "sprint" -> SprintScreen(state, vm, onBack = { tool = null })
         openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
         else -> Overview(
             state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
@@ -177,6 +179,7 @@ private fun Overview(
         item {
             val groups = listOf(
                 "Play" to listOf(Triple("对话", "Talk", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
+                "Texting" to listOf(Triple("微信", "Texts", "texts") to Night.jade, Triple("打字", "Sprint", "sprint") to Night.sun),
                 "Family & faith" to listOf(Triple("家谱", "Her family", "family") to Night.rose, Triple("祷告", "Prayer", "prayer") to Night.violet),
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
                 "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),

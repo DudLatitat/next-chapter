@@ -63,6 +63,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
+    fun saveSprint(cpm: Int) = store.edit { s -> if (cpm <= s.sprintBest) s else s.copy(sprintBest = cpm) }
+    fun saveTextThread(id: String, score: Int) = store.edit { s -> if (score <= (s.textBest[id] ?: 0)) s else s.copy(textBest = s.textBest + (id to score)) }
     fun saveNumbersScore(score: Int) = store.edit { s -> if (score <= s.numbersBest) s else s.copy(numbersBest = score) }
     fun setFamilyName(id: String, name: String) = store.edit { s ->
         val n = name.trim().take(30)

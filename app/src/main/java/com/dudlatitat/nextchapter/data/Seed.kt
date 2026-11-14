@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 13
+    const val VERSION = 14
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -98,6 +98,34 @@ object Seed {
 
         // Gaming together (一起玩): everyday talk for any game with Yuling. Common gaming words: 开黑
         // (team up on voice), 拉我 (invite me), 卡了 (lagging), 掉线 (disconnected), 带飞 (carry), 菜 (bad at it).
+        // WeChat texting: what people actually type. 在吗 and 嗯嗯 (warmer than a bare 嗯, which can read
+        // as cold) checked against Yoyo Chinese / That's Mandarin / Go East texting guides, Nov 2026.
+        // 好哒 (playful 好的) and 上号 (gaming: get on your account) are everyday slang, marked as such.
+        c("text", "在吗？", "zài ma?", "You there? (a chat opener; better to just say what you want)"),
+        c("text", "在的", "zài de", "I'm here"),
+        c("text", "收到", "shōudào", "Got it"),
+        c("text", "好哒", "hǎo da", "Okay! (playful)"),
+        c("text", "嗯嗯", "èn èn", "Mm-hm, yep (warmer than a single 嗯)"),
+        c("text", "哈哈哈", "hāhāhā", "Hahaha (lol)"),
+        c("text", "稍等", "shāoděng", "One moment"),
+        c("text", "怎么了？", "zěnme le?", "What's up? / What's wrong?"),
+        c("text", "辛苦啦", "xīnkǔ la", "Thanks for all your hard work"),
+        c("text", "下班了吗？", "xiàbān le ma?", "Off work yet?"),
+        c("text", "到家了吗？", "dào jiā le ma?", "Home yet?"),
+        c("text", "吃了没？", "chī le méi?", "Eaten yet?"),
+        c("text", "想你了", "xiǎng nǐ le", "Missing you"),
+        c("text", "抱抱", "bàobào", "Hugs"),
+        c("text", "哈喽", "hālóu", "Hello (from English)"),
+        c("text", "方便语音吗？", "fāngbiàn yǔyīn ma?", "Free for a voice call?"),
+        c("text", "视频吗？", "shìpín ma?", "Video call?"),
+        c("text", "发个定位", "fā ge dìngwèi", "Send me your location"),
+        c("text", "发红包", "fā hóngbāo", "Send a red envelope (a money gift)"),
+        c("text", "谢谢老板", "xièxie lǎobǎn", "Thanks, boss! (joking thanks for a red envelope)"),
+        c("text", "上号", "shàng hào", "Get on (the game) (gaming slang)"),
+        c("text", "好吧", "hǎo ba", "Okay then (a little reluctant)"),
+        c("text", "没事", "méi shì", "It's fine / no worries"),
+        c("text", "早呀", "zǎo ya", "Morning!"),
+
         c("games", "一起玩游戏吗？", "yìqǐ wán yóuxì ma?", "Want to play a game together?"),
         c("games", "来开黑吗？", "lái kāihēi ma?", "Want to team up (on voice chat)?"),
         c("games", "拉我一下", "lā wǒ yíxià", "Invite me in (to your team)"),

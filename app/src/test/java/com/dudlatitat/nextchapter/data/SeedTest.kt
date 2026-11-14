@@ -42,5 +42,6 @@ class SeedTest {
         assertEquals(25, Seed.cards.count { it.deck == "sweet" })
         assertEquals(27, Seed.cards.count { it.deck == "trip" })
         assertEquals(48, Seed.cards.count { it.deck == "idv" })
+        assertEquals(24, Seed.cards.count { it.deck == "text" })
     }
 }

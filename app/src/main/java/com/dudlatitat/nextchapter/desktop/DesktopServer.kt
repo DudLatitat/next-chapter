@@ -44,6 +44,10 @@ import java.net.Socket
 @Serializable data class DLine(val hanzi: String, val pinyin: String, val english: String, val voice: String)
 @Serializable data class DBeat(val who: String, val line: DLine, val replies: List<DLine>, val tip: String)
 @Serializable data class DScene(val id: String, val group: String, val groupTitle: String, val icon: String, val title: String, val hanzi: String, val beats: List<DBeat>)
+@Serializable data class DTMsg(val hanzi: String, val pinyin: String, val english: String, val voice: Boolean, val v: String)
+@Serializable data class DTTurn(val them: List<DTMsg>, val accept: List<List<String>>, val examples: List<DLine>, val words: List<String>, val tip: String)
+@Serializable data class DThread(val id: String, val contact: String, val avatar: String, val title: String, val turns: List<DTTurn>)
+@Serializable data class DSprint(val hanzi: String, val pinyin: String, val english: String, val voice: String)
 @Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0, val text: String = "")
 @Serializable data class RemoteOut(val last: Long, val cmds: List<RemoteCmd>)
 /** What the page is showing, so the phone remote can mirror it. */
@@ -268,6 +272,18 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 store.edit { CardEdits.delete(it, card.id) }
                 ok(json.encodeToString(Msg(true)))
             }
+            "GET /api/texts" -> {
+                fun v(h: String) = com.dudlatitat.nextchapter.Speaker.md5(h.trim())
+                val T = com.dudlatitat.nextchapter.data.Texting
+                ok(json.encodeToString(T.threads.map { th ->
+                    DThread(th.id, th.contact, th.avatar, th.title, th.turns.map { t ->
+                        DTTurn(t.them.map { DTMsg(it.hanzi, it.pinyin, it.english, it.voice, v(it.hanzi)) }, t.accept,
+                            t.examples.map { DLine(it.hanzi, it.pinyin, it.english, v(it.hanzi)) }, t.words, t.tip)
+                    })
+                }))
+            }
+            "GET /api/sprint" -> ok(json.encodeToString(com.dudlatitat.nextchapter.data.Texting.sprintPool(s).shuffled().take(80)
+                .map { DSprint(it.hanzi, it.pinyin, it.english, com.dudlatitat.nextchapter.Speaker.md5(it.hanzi.trim())) }))
             "GET /api/talk" -> {
                 // Conversation scenes for the computer's Talk tab; voice = the recording's name.
                 fun v(h: String) = com.dudlatitat.nextchapter.Speaker.md5(h.trim())
