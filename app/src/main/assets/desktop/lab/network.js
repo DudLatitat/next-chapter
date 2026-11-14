@@ -652,8 +652,8 @@
     { id: "office", title: "Small office", sub: "Ceiling APs, door cameras",
       brief: "A small office. Fiber comes in at the closet. Two access points go on the ceiling and two cameras watch the doors: none of those spots has a power outlet. Place every device, then cable it so it all works and nothing is exposed.",
       rooms: [[10, 10, 210, 230, "Network closet"], [220, 10, 380, 300, "Lobby & front desk"], [600, 10, 290, 250, "Office A"], [600, 260, 290, 250, "Office B"], [10, 240, 210, 270, "Break room"], [220, 310, 380, 200, "Hallway"]],
-      slots: [["demarc", 38, 120, "ISP line in", ["ont"], true], ["r1", 95, 60, "Rack", ["router", "switch", "poe", "nas"], true], ["r2", 170, 60, "Rack", ["router", "switch", "poe", "nas"], true],
-        ["r3", 95, 165, "Rack", ["router", "switch", "poe", "nas"], true], ["r4", 170, 165, "Rack", ["router", "switch", "poe", "nas"], true],
+      slots: [["demarc", 42, 125, "ISP line in", ["ont"], true], ["r1", 115, 55, "Rack", ["router", "switch", "poe", "nas"], true], ["r2", 182, 55, "Rack", ["router", "switch", "poe", "nas"], true],
+        ["r3", 115, 160, "Rack", ["router", "switch", "poe", "nas"], true], ["r4", 182, 160, "Rack", ["router", "switch", "poe", "nas"], true],
         ["desk", 330, 215, "Front desk", ["pc", "printer"], true], ["deskp", 450, 215, "Front desk", ["pc", "printer"], true],
         ["ceil1", 410, 90, "Lobby ceiling", ["ap"], false], ["ceil2", 410, 420, "Hall ceiling", ["ap"], false],
         ["camf", 560, 280, "Front door", ["cam"], false], ["camb", 60, 470, "Back door", ["cam"], false],
@@ -1160,11 +1160,11 @@
   }
   function chart(r, mine, good) {
     const W = 860, H = 230, base = 190, L = 40, R = 20;
-    const hFor = (dbm) => Math.max(14, Math.min(150, (dbm + 95) / 55 * 150));
+    const hFor = (dbm) => Math.max(14, Math.min(125, (dbm + 95) / 55 * 125));
     let h = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wi-Fi channel chart">`;
     let xOf, half;
     if (r.band === 24) {
-      const step = (W - L - R) / 14; xOf = (c) => L + c * step; half = 2 * step;
+      const step = (W - L - R) / 16; xOf = (c) => L + (c + 1) * step; half = 2 * step;
       h += `<line class="ax" x1="${L}" y1="${base}" x2="${W - R}" y2="${base}"/>`;
       for (let c = 1; c <= 13; c++) h += `<text class="tk ${c > 11 ? "off" : ""}" x="${xOf(c)}" y="${base + 18}" text-anchor="middle">${c}</text>`;
       h += `<text class="tk off" x="${xOf(12.5)}" y="${base + 34}" text-anchor="middle">not used in the US</text><text class="tk" x="${L}" y="${base + 34}">2.4 GHz channel</text>`;
@@ -1179,10 +1179,12 @@
       const x0 = xOf(c) - half, x1 = xOf(c) + half, top = base - hh, w = x1 - x0;
       return `<path class="nw-hump ${cls}" d="M${x0} ${base} C${x0 + w * .3} ${top}, ${x1 - w * .3} ${top}, ${x1} ${base} Z"/>` + (lbl ? `<text class="hl" x="${xOf(c)}" y="${top + 12}" text-anchor="middle">${lbl}</text>` : "");
     };
-    const stack = {};
+    // Labels for every neighbour on a channel stack above that channel's tallest hump.
+    const stack = {}, tallest = {};
+    r.nets.forEach(([c, dbm]) => { tallest[c] = Math.max(tallest[c] || 0, hFor(dbm)); });
     r.nets.forEach(([c, dbm, name]) => {
       const k = stack[c] = (stack[c] || 0) + 1;
-      h += hump(c, hFor(dbm), "", "") + `<text class="hl" x="${xOf(c)}" y="${base - hFor(dbm) - 4 - (k - 1) * 13}" text-anchor="middle">${esc(name)} ${dbm}</text>`;
+      h += hump(c, hFor(dbm), "", "") + `<text class="hl" x="${xOf(c)}" y="${base - tallest[c] - 6 - (k - 1) * 14}" text-anchor="middle">${esc(name)} ${dbm}</text>`;
     });
     (mine || []).forEach((c) => { h += hump(c, 120, good ? "mine good" : "mine", ""); h += `<text class="hl" x="${xOf(c)}" y="${base - 126}" text-anchor="middle" style="fill:var(--sun)">you</text>`; });
     return h + `</svg>`;
