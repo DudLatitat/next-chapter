@@ -48,6 +48,8 @@
   .hw-opt small { display: block; color: var(--muted); font-size: 11.5px; }
   .hw-opt.on { border-color: rgba(255, 207, 122, .65); background: rgba(255, 207, 122, .12); }
   .hw-opt.bad { border-color: rgba(255, 107, 107, .7); background: rgba(255, 107, 107, .1); }
+  .hw-sticky { position: sticky; top: 84px; }
+  @media (max-width: 900px) { .hw-sticky { position: static; } }
   .hw-board { border-radius: 16px; background: var(--hwbg); border: 1px solid var(--line); }
   .hw-board svg { width: 100%; height: auto; display: block; }
   .hw-board .hwb-bad rect, .hw-board .hwb-bad circle { stroke: #ff6b6b; stroke-width: 3px; }
@@ -62,7 +64,7 @@
   .hw-screen .why2 { font-family: "Segoe UI", system-ui, sans-serif; font-size: 13.5px; color: var(--ink); margin: 4px 0 6px 18px; }
   /* raid */
   .hw-disks { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 16px 8px 8px; }
-  .hw-disk { width: 72px; padding: 8px 6px; border-radius: 12px; background: #151c3d; border: 1px solid rgba(255, 255, 255, .14); cursor: pointer; color: var(--ink); font: inherit;
+  .hw-disk { width: 86px; padding: 8px 6px; border-radius: 12px; background: #151c3d; border: 1px solid rgba(255, 255, 255, .14); cursor: pointer; color: var(--ink); font: inherit;
              transition: transform .2s, opacity .4s, border-color .3s; position: relative; }
   .hw-disk:hover { transform: translateY(-2px); }
   .hw-disk .dl { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
@@ -562,7 +564,7 @@
           ${job.slots.map((sl) => `<div class="hw-slot"><div class="hw-slabel">${SLOTNAME[sl]}</div><div class="hw-opts">${PARTS[sl].map((p) =>
             `<button class="hw-opt ${BS.pick[sl] === p.id ? (BS.bad === sl ? "on bad" : "on") : ""}" data-s="${sl}" data-v="${p.id}">${esc(p.name)}${p.d ? `<small>${esc(p.d)}</small>` : ""}</button>`).join("")}</div></div>`).join("")}
         </div>
-        <div class="glass hw-card">
+        <div class="glass hw-card hw-sticky">
           <div class="hw-board">${boardSvg(job)}</div>
           <div class="hw-row"><button class="btn" id="hw-power">⏻ Power on <kbd>Enter</kbd></button><button class="btn ghost" id="hw-hintb">Hint <kbd>H</kbd></button><button class="btn ghost" id="hw-clear">Start over</button></div>
           ${BS.hint ? `<div class="hw-hint">💡 ${esc(job.hint)}</div>` : ""}
@@ -633,7 +635,7 @@
     { t: "Busy database", d: "A database server with 4 × 1 TB SSDs needs fast writes and must survive a drive failure.", n: 4, s: 1, opts: [0, 5, 6, 10], a: 10, fail: [3],
       why: "RAID 10 is a stripe of mirrors: fast like RAID 0, safe like RAID 1, with no parity to work out on every write. Usable: half, so 2 TB. It needs at least 4 drives." },
   ];
-  const RS = { ctx: null, i: 0, picked: null, wrong: new Set(), view: null, dead: new Set(), hint: false };
+  const RS = { ctx: null, gen: 0, i: 0, picked: null, wrong: new Set(), view: null, dead: new Set(), hint: false };
   function blocks(l, n) {
     // 3 stripes (A, B, C). d = data, p = parity, c = mirror copy.
     return range(n).map((disk) => range(3).map((r) => {
@@ -681,13 +683,14 @@
         </div>
       </div>`);
     root.querySelectorAll(".ch").forEach((b) => b.onclick = () => raidPick(+b.dataset.k));
-    root.querySelectorAll(".seg button[data-v]").forEach((b) => b.onclick = () => { RS.view = +b.dataset.v; RS.dead = new Set(); raidRender(false); });
-    root.querySelectorAll(".hw-disk[data-d]").forEach((b) => b.onclick = () => { const d = +b.dataset.d; RS.dead.has(d) ? RS.dead.delete(d) : RS.dead.add(d); raidRender(false); });
+    root.querySelectorAll(".seg button[data-v]").forEach((b) => b.onclick = () => { RS.gen++; RS.view = +b.dataset.v; RS.dead = new Set(); raidRender(false); });
+    root.querySelectorAll(".hw-disk[data-d]").forEach((b) => b.onclick = () => { RS.gen++; const d = +b.dataset.d; RS.dead.has(d) ? RS.dead.delete(d) : RS.dead.add(d); raidRender(false); });
     const nx = root.querySelector("#hw-next"); if (nx) { nx.onclick = raidNext; nx.focus({ preventScroll: true }); }
     const hb = root.querySelector("#hw-hintb"); if (hb) hb.onclick = () => { RS.hint = true; raidRender(false); };
     if (animate) {
       // Fail the scenario's drives one at a time so you can watch the verdict change.
-      sc.fail.forEach((d, i) => later(ctx, 700 + i * 900, () => { if (RS.picked != null) { RS.dead.add(d); raidRender(false); } }));
+      const gen = ++RS.gen;   // a newer scenario or a click cancels these
+      sc.fail.forEach((d, i) => later(ctx, 700 + i * 900, () => { if (gen === RS.gen && RS.picked != null) { RS.dead.add(d); raidRender(false); } }));
     }
   }
   function raidPick(k) {
@@ -703,13 +706,13 @@
     if (!RS.wrong.size) { const r = ctx.store.get("right", {}); r[RS.i] = 1; ctx.store.set("right", r); }
     raidRender(true);
   }
-  function raidNext() { RS.i = (RS.i + 1) % RSC.length; RS.picked = null; RS.wrong = new Set(); RS.dead = new Set(); RS.hint = false; raidRender(false); RS.ctx.report(`RAID chooser: ${RSC[RS.i].t}`); }
+  function raidNext() { RS.gen++; RS.i = (RS.i + 1) % RSC.length; RS.picked = null; RS.wrong = new Set(); RS.dead = new Set(); RS.hint = false; raidRender(false); RS.ctx.report(`RAID chooser: ${RSC[RS.i].t}`); }
 
   Lab.register({
     id: "hw-raid", title: "RAID chooser", icon: "💽", exams: ["a1"],
     blurb: "Six jobs, five RAID levels. Pick one, then fail drives and see if the data lives. Capacity math included.",
     progress: (ctx) => { const n = Object.keys(ctx.store.get("right", {})).length; return n ? `${n}/${RSC.length} right` : ""; },
-    render(ctx) { addCss(); RS.ctx = ctx; RS.picked = null; RS.wrong = new Set(); RS.dead = new Set(); RS.hint = false; raidRender(false); ctx.report(`RAID chooser: ${RSC[RS.i].t}`); },
+    render(ctx) { addCss(); RS.ctx = ctx; RS.gen++; RS.picked = null; RS.wrong = new Set(); RS.dead = new Set(); RS.hint = false; raidRender(false); ctx.report(`RAID chooser: ${RSC[RS.i].t}`); },
     key(e) {
       if (!live(RS.ctx) || onButton(e)) return;
       if (e.key && "1234".includes(e.key)) { e.preventDefault(); raidPick(+e.key - 1); }
@@ -750,7 +753,7 @@
   const OS = { ctx: null, s: 0, pool: [], slots: [], lock: [], tries: 0, done: false, dragFrom: null, miss: [] };
   function ordStart(i) {
     OS.s = i; const n = SEQ[i].steps.length;
-    OS.pool = shuffle(range(n)); OS.slots = Array(n).fill(null); OS.lock = Array(n).fill(false); OS.tries = 0; OS.done = false; OS.miss = [];
+    OS.pool = shuffle(range(n)); OS.slots = Array(n).fill(null); OS.lock = Array(n).fill(false); OS.tries = 0; OS.hints = 0; OS.done = false; OS.miss = [];
     ordRender(); OS.ctx.report(`Put it in order: ${SEQ[i].title}`);
   }
   function ordPlace(item, at) {
@@ -769,18 +772,22 @@
     if (OS.slots.some((x) => x == null)) { OS.ctx.toast("Fill every step first", true); return; }
     OS.tries++; OS.miss = [];
     OS.slots.forEach((x, k) => { if (x === k) OS.lock[k] = true; else { OS.miss.push(k); OS.pool.push(x); OS.slots[k] = null; } });
-    if (OS.lock.every(Boolean)) {
-      OS.done = true;
-      const best = OS.ctx.store.get("best", {}), id = SEQ[OS.s].id;
-      if (!best[id] || OS.tries < best[id]) { best[id] = OS.tries; OS.ctx.store.set("best", best); }
-      OS.ctx.toast(OS.tries === 1 ? "Perfect order, first try!" : `In order after ${OS.tries} checks`);
-    } else OS.ctx.toast(`${OS.lock.filter(Boolean).length} of ${OS.lock.length} in the right place: the rest went back`);
+    if (!ordFinish()) OS.ctx.toast(`${OS.lock.filter(Boolean).length} of ${OS.lock.length} in the right place: the rest went back`);
     ordRender();
+  }
+  // Every slot locked: done. Each hint counts like a check, so "first try" means no help.
+  function ordFinish() {
+    if (!OS.lock.every(Boolean)) return false;
+    OS.done = true; OS.tries = Math.max(1, OS.tries + OS.hints);
+    const best = OS.ctx.store.get("best", {}), id = SEQ[OS.s].id;
+    if (!best[id] || OS.tries < best[id]) { best[id] = OS.tries; OS.ctx.store.set("best", best); }
+    OS.ctx.toast(OS.tries === 1 ? "Perfect order, first try!" : `In order after ${OS.tries} checks`);
+    return true;
   }
   function ordHint() {
     if (OS.done) return;
     const k = OS.lock.findIndex((x) => !x); if (k < 0) return;
-    ordPlace(k, k); OS.lock[k] = true; ordRender();
+    ordPlace(k, k); OS.lock[k] = true; OS.hints++; ordFinish(); ordRender();
   }
   function drumSvg(steps) {
     // The drum with the stages around it, in the order they happen to one spot on the drum.
