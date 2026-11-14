@@ -69,6 +69,7 @@ Tips from working with me so far, so you don't have to learn them the hard way:
   - Give me exact steps for settings on my phone or on websites, with direct links that open in the browser (the GitHub Android app can't do things like secrets).
   - Say plainly when something isn't possible (like a phone limitation) and offer the best workaround.
   - For layout changes I may point you at the Layout Studio artifact (link in `HANDOFF.md`): read my edits and notes there before building.
+  - Don't use subagents: do the work yourself in the main session (my call, Nov 2026).
 
 ## Chinese content
 
