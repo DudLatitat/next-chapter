@@ -176,7 +176,7 @@ private fun Overview(
         // Practice tools right under the review card (always open), grouped by what you're doing.
         item {
             val groups = listOf(
-                "Play" to listOf(Triple("家宴", "Dinner", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
+                "Play" to listOf(Triple("对话", "Talk", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
                 "Family & faith" to listOf(Triple("家谱", "Her family", "family") to Night.rose, Triple("祷告", "Prayer", "prayer") to Night.violet),
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
                 "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),

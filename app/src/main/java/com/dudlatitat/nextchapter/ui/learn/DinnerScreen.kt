@@ -87,31 +87,36 @@ private fun ScenePicker(state: AppState, onBack: () -> Unit, onPick: (Dinner.Sce
             Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Column {
-                    Text("Family dinner", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
-                    Text("家宴 · a run-through before the real one", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    Text("Conversations", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
+                    Text("对话 · run through real moments before they happen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                 }
             }
         }
         item {
             Text(
-                "Her family talks; you answer out loud. Pick either reply: each clean answer earns 🥢🥢. Tips on what's polite come along the way.",
+                "They talk; you answer out loud. Pick either reply: each clean answer earns 🥢🥢. Tips on what's polite come along the way. On the computer, the Talk tab has the same scenes.",
                 style = MaterialTheme.typography.bodyMedium, color = Night.muted,
             )
         }
-        val icons = mapOf("arrive" to "🚪", "meal" to "🍲", "after" to "🍵")
-        Dinner.scenes.forEachIndexed { n, s ->
-            item(key = s.id) {
-                val best = state.dinnerBest[s.id] ?: 0
-                GlassCard(onClick = { onPick(s) }, highlight = best == 0 && Dinner.scenes.take(n).all { (state.dinnerBest[it.id] ?: 0) > 0 }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(icons[s.id] ?: "🍽️", fontSize = 34.sp)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("${n + 1}. ${s.title} · ${s.hanzi}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                            Text("${s.beats.size} lines", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        // Every conversation, grouped: her family first, then daily life, calls with her, gaming.
+        com.dudlatitat.nextchapter.data.Talk.Group.entries.forEach { g ->
+            val inGroup = com.dudlatitat.nextchapter.data.Talk.scenes.filter { it.group == g }
+            item(key = "g-${g.name}") { Text("${g.title} · ${g.hanzi}", style = MaterialTheme.typography.labelLarge, color = Night.muted, modifier = Modifier.padding(top = 6.dp)) }
+            inGroup.forEachIndexed { n, t ->
+                val s = Dinner.Scene(t.id, t.title, t.hanzi, t.beats)
+                item(key = s.id) {
+                    val best = state.dinnerBest[s.id] ?: 0
+                    GlassCard(onClick = { onPick(s) }, highlight = best == 0 && inGroup.take(n).all { (state.dinnerBest[it.id] ?: 0) > 0 }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(t.icon, fontSize = 34.sp)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("${s.title} · ${s.hanzi}", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                                Text("${s.beats.size} lines", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                            }
+                            if (best > 0) Text("🥢 $best/${Dinner.most(s)}", style = MaterialTheme.typography.labelLarge, color = Night.sun)
+                            else Text("Start ›", color = Night.sun)
                         }
-                        if (best > 0) Text("🥢 $best/${Dinner.most(s)}", style = MaterialTheme.typography.labelLarge, color = Night.sun)
-                        else Text("Start ›", color = Night.sun)
                     }
                 }
             }

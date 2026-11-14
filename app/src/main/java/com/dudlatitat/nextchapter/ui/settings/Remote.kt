@@ -175,6 +175,21 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                         Text("Open the page on your computer", color = Night.ink, textAlign = TextAlign.Center)
                         Text("It shows up here as soon as it's open.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
+                    s.view == "talk" && s.english.isNotEmpty() -> {
+                        Text("They say", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        Text(s.english, style = MaterialTheme.typography.titleMedium, color = Night.ink, textAlign = TextAlign.Center)
+                        if (s.shown) {
+                            Spacer(Modifier.height(6.dp))
+                            Text("You say", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                            Text(s.hanzi, fontSize = 30.sp, color = Night.sun, textAlign = TextAlign.Center)
+                            PinyinText(s.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+                        } else Text("Pick a reply: 1 or 2", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    }
+                    s.view == "talk" -> {
+                        Text("💬", fontSize = 30.sp)
+                        Text("Talk · 对话", color = Night.ink)
+                        Text("Pick a scene on the computer.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                    }
                     s.view == "terminal" -> {
                         Text("💻", fontSize = 30.sp)
                         Text("IT Lab", color = Night.ink)
@@ -218,10 +233,11 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .05f)).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Segment("Phrases", !review && p?.view != "sky" && p?.view != "terminal") { press("tab", 0) }
+        Segment("Phrases", !review && p?.view != "sky" && p?.view != "terminal" && p?.view != "talk") { press("tab", 0) }
         Segment("Review", review && !aplus) { press("tab", 1) }
         Segment("A+", aplus) { press("tab", 2) }
         Segment("Sky", p?.view == "sky") { press("tab", 3) }
+        Segment("💬", p?.view == "talk") { press("tab", 5) }
         Segment("💻", p?.view == "terminal") { press("tab", 4) }
     }
 
@@ -243,6 +259,19 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                 Pad("Easy", "简单", Night.violet, tall = true) { combo++; press("grade", 4) }
             }
             if (!aplus) Row { Pad("🔊  Play again", null, Night.ink, fill = { 0.06f }) { press("play", 0) } }
+        }
+    }
+
+    // Talk: pick reply 1 or 2, say it here (checked on the phone, coloured on the computer).
+    if (p?.view == "talk" && p.english.isNotEmpty()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pad("1", null, Night.violet, tall = true) { press("grade", 1) }
+            Pad("2", null, Night.violet, tall = true) { press("grade", 2) }
+            if (p.shown) SayIt(server, vm, p) { combo++ }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pad("🔊  Their line", null, Night.ink, fill = { 0.06f }) { press("play", 0) }
+            Pad("English", null, Night.ink, fill = { 0.06f }) { press("show", 0) }
         }
     }
 

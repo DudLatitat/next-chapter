@@ -154,6 +154,30 @@
   .sky .tip { position: fixed; pointer-events: none; padding: 8px 12px; border-radius: 12px; background: rgba(15, 22, 52, .95); border: 1px solid var(--line); display: none; z-index: 10; }
   .sky .tip .h { font: 24px var(--zh); }
   .sky .legend { display: flex; gap: 18px; align-items: center; margin: 12px 4px 0; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  /* ---- Talk ---- */
+  .talk { max-width: 1180px; margin: 0 auto; padding: 22px 28px 60px; }
+  .tgroup { margin: 22px 0 10px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  .tscenes { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .tscene { text-align: left; cursor: pointer; padding: 16px 18px; color: var(--ink); font: inherit; display: flex; gap: 14px; align-items: center; }
+  .tscene:hover { border-color: rgba(255,207,122,.4); }
+  .tscene .ti { font-size: 30px; } .tscene .tt { font-weight: 600; } .tscene .tz { font: 14px var(--zh); color: var(--sun); }
+  .tstage { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+  .tchat { padding: 20px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .bub { max-width: 78%; padding: 10px 14px; border-radius: 4px 18px 18px 18px; background: rgba(255,255,255,.07); animation: rise .35s both; }
+  .bub .who { font-size: 12px; color: var(--rose); margin-bottom: 2px; }
+  .bub .h { font: 26px var(--zh); cursor: pointer; } .bub .e { font-size: 14px; color: var(--muted); }
+  .bub.me { align-self: flex-end; border-radius: 18px 4px 18px 18px; text-align: right; }
+  .bub.me.l2 { background: rgba(79,179,169,.18); border: 1px solid rgba(79,179,169,.5); }
+  .bub.me.l1 { background: rgba(255,207,122,.14); border: 1px solid rgba(255,207,122,.45); }
+  .bub.me.l0 { background: rgba(255,107,107,.12); border: 1px solid rgba(255,107,107,.4); }
+  .ttip { font-size: 13px; color: var(--violet); padding: 0 4px; }
+  .tside { padding: 18px; align-self: start; position: sticky; top: 84px; }
+  .treply { display: block; width: 100%; text-align: left; margin: 8px 0; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font: inherit; }
+  .treply.on { border-color: var(--sun); background: rgba(255,207,122,.10); }
+  .treply .h { font: 22px var(--zh); } .treply .p { font-size: 14px; }
+  .ttype { width: 100%; margin-top: 10px; }
+  .tsaid { font: 28px var(--zh); letter-spacing: 3px; }
+  @media (max-width: 900px) { .tstage { grid-template-columns: 1fr; } .tside { position: static; } }
   /* ---- IT Lab hub ---- */
   .labwrap { max-width: 1180px; margin: 0 auto; padding: 22px 28px 60px; }
   .crumb { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
@@ -429,7 +453,7 @@ function showPair(message) {
 }
 
 // ---- Shell ----
-const VIEWS = ["phrases", "review", "aplus", "sky", "terminal"]; // the phone remote sends a tab as its index here
+const VIEWS = ["phrases", "review", "aplus", "sky", "terminal", "talk"]; // the phone remote sends a tab as its index here
 let view = VIEWS.includes(ls.get("nc-view")) ? ls.get("nc-view") : "phrases", summary = null;
 const deckName = (id) => (summary?.decks.find((d) => d.id === id) || {}).title || id;
 async function start() {
@@ -438,7 +462,7 @@ async function start() {
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="terminal" title="G then T">IT Lab</button></nav>
+      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="talk" title="G then C">Talk 对话</button><button data-v="terminal" title="G then T">IT Lab</button></nav>
       <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span>
         <button class="icon help" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button></div>
     </header>
@@ -455,7 +479,7 @@ function go(v) {
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
   renderStats(); clearInterval(skyTimer); djStop();
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
-  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab }[view] || renderPhrases)());
+  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab, talk: renderTalk }[view] || renderPhrases)());
 }
 function watch(p) {
   return Promise.resolve(p).then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
@@ -473,7 +497,7 @@ function report(card, shown, left) {
 
 // ---- Keyboard: shortcuts everywhere, never while typing ----
 const KEYS = [
-  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["IT Lab", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Talk", "G C"], ["IT Lab", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
   ["Review and A+", [["Show the answer", "Space"], ["Again · Hard", "1 · 2"], ["Good · Easy", "3 · 4"], ["Play the phrase", "P"]]],
   ["Terminal dojo", [["Start typing in the terminal", "Enter"], ["Leave the terminal (shortcuts work again)", "Esc"], ["Earlier commands", "↑ ↓"], ["Answer the ticket question", "1 2 3 4"],
     ["Show a hint", "H"], ["Port Rush: start · skip one", "Enter"]]],
@@ -505,7 +529,7 @@ document.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (chord && Date.now() - chord < 1500) {
     chord = 0;
-    const to = { p: "phrases", r: "review", a: "aplus", s: "sky", t: "terminal" }[k];
+    const to = { p: "phrases", r: "review", a: "aplus", s: "sky", t: "terminal", c: "talk" }[k];
     if (to) { e.preventDefault(); go(to); return; }
   }
   chord = 0;
@@ -513,6 +537,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "/") { e.preventDefault(); focusSearch(); return; }
   if (k === "n") { e.preventDefault(); editor(null); return; }
   if (view === "terminal") { if (labOpen === "terminal") djKey(e, k); else if (curLab()?.key) curLab().key(e); return; }
+  if (view === "talk") { talkKey(e, k); return; }
   if (view === "aplus" && aq.length) {
     if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
     return;
@@ -844,6 +869,116 @@ async function renderSky() {
   cv.onmouseleave = () => tip.style.display = "none";
   cv.onclick = (e) => { const r = cv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; const s = stars.find((s) => (s.x - x) ** 2 + (s.y - y) ** 2 < 144); if (s) play(s.c); };
   report(null, false, 0);
+}
+
+// ---- Talk 对话: conversations from real life. Someone speaks (their line plays); you answer by saying
+// it into the phone remote (checked offline on the phone, sent back as "said") or by typing pinyin/汉字.
+let talkScenes = null, talkOpen = null, tk = null, talkEnglish = false;
+const talkBest = (id) => { try { return +localStorage.getItem(`talk:best:${id}`) || 0; } catch { return 0; } };
+function plainPy(s) {
+  const m = { ā: "a", á: "a", ǎ: "a", à: "a", ē: "e", é: "e", ě: "e", è: "e", ī: "i", í: "i", ǐ: "i", ì: "i", ō: "o", ó: "o", ǒ: "o", ò: "o", ū: "u", ú: "u", ǔ: "u", ù: "u", ǖ: "v", ǘ: "v", ǚ: "v", ǜ: "v", ü: "v" };
+  return [...s.toLowerCase()].map((c) => m[c] || c).filter((c) => c >= "a" && c <= "z").join("");
+}
+function typedMatches(t, r) { // same rule as Talk.typedMatches on the phone (TalkTest)
+  t = t.trim(); if (!t) return false;
+  const han = (x) => [...x].filter((c) => /[\u4e00-\u9fff]/.test(c)).join("");
+  return han(t) ? han(t) === han(r.hanzi) : plainPy(t) === plainPy(r.pinyin);
+}
+async function renderTalk() {
+  if (!talkScenes) talkScenes = await api("/api/talk");
+  const sc = talkScenes.find((x) => x.id === talkOpen);
+  if (!sc) return talkList();
+  if (!tk || tk.id !== sc.id) { tk = { id: sc.id, at: 0, said: [], pick: null, score: 0, msg: "" }; setTimeout(talkPlayLine, 400); }
+  talkDraw();
+}
+function talkList() {
+  talkOpen = null; tk = null;
+  const groups = [...new Set(talkScenes.map((s) => s.groupTitle))];
+  $("#main").innerHTML = `<div class="talk"><h2 style="margin:6px 0 2px">Talk · 对话</h2>
+    <p class="muted" style="margin:0">They speak, you answer. Say it into your phone (🎤 on the remote) or type pinyin or characters.</p>
+    ${groups.map((g) => `<div class="tgroup">${esc(g)}</div><div class="tscenes">${talkScenes.filter((s) => s.groupTitle === g).map((s) => {
+      const best = talkBest(s.id);
+      return `<button class="tscene glass" data-s="${esc(s.id)}"><span class="ti">${s.icon}</span><span><div class="tt">${esc(s.title)}</div>
+        <div class="tz">${esc(s.hanzi)}</div><div class="tag">${s.beats.length} lines${best ? ` · best ${best}/${s.beats.length * 2}` : ""}</div></span></button>`;
+    }).join("")}</div>`).join("")}</div>`;
+  document.querySelectorAll(".tscene").forEach((b) => b.onclick = () => { talkOpen = b.dataset.s; renderTalk(); window.scrollTo(0, 0); });
+  api("/api/state", { view, english: "", hanzi: "", pinyin: "", shown: false, left: 0 }).catch(() => {});
+}
+function talkScene() { return talkScenes.find((x) => x.id === talkOpen); }
+function talkReport() {
+  const sc = talkScene(), b = sc?.beats[tk.at], r = b && tk.pick != null ? b.replies[tk.pick] : null;
+  api("/api/state", { view, english: b ? `${b.line.hanzi}  ·  ${b.line.english}` : "", hanzi: r ? r.hanzi : "", pinyin: r ? r.pinyin : "",
+    shown: !!r, left: sc ? sc.beats.length - tk.at : 0 }).catch(() => {});
+}
+function talkDraw() {
+  const sc = talkScene(), b = sc.beats[tk.at], done = !b;
+  const bubble = (who, l) => `<div class="bub"><div class="who">${esc(who)}</div><div class="h" data-v="${l.voice}" title="Play">${esc(l.hanzi)} 🔊</div>
+    <div>${tonePinyin(l.pinyin)}</div>${talkEnglish ? `<div class="e">${esc(l.english)}</div>` : ""}</div>`;
+  const mine = (s) => `<div class="bub me l${s.level}"><div class="h" data-v="${s.reply ? s.reply.voice : ""}">${s.reply ? esc(s.reply.hanzi) : "(skipped)"}</div>
+    <div class="tag">${["try again next time", "🥢 nearly", "🥢🥢 clear"][s.level]}${s.typed ? " · typed" : ""}</div></div>`;
+  const chat = sc.beats.slice(0, tk.at).map((x, i) => bubble(x.who, x.line) + mine(tk.said[i])).join("") +
+    (b ? bubble(b.who, b.line) + (b.tip ? `<div class="ttip">💡 ${esc(b.tip)}</div>` : "") : "");
+  const max = sc.beats.length * 2;
+  const side = done
+    ? `<div style="text-align:center"><div style="font-size:48px">${tk.score >= max * 0.85 ? "🏮" : tk.score >= max * 0.6 ? "🥟" : "🌱"}</div>
+       <h2 style="margin:4px 0">🥢 ${tk.score} / ${max}</h2><p class="muted">${tk.score > talkBest(sc.id) ? "New best!" : "Run it again: it gets easier fast."}</p>
+       <button class="btn" id="tagain">Again · 再来</button> <button class="btn ghost" id="tback">Other scenes</button></div>`
+    : `<div class="tag">Your answer · pick one, then say it on your phone or type it</div>
+       ${b.replies.map((r, i) => `<button class="treply ${tk.pick === i ? "on" : ""}" data-r="${i}"><div class="h">${esc(r.hanzi)}</div>
+         <div class="p">${tonePinyin(r.pinyin)}</div>${talkEnglish || tk.pick === i ? `<div class="tag">${esc(r.english)}</div>` : ""}<kbd>${i + 1}</kbd></button>`).join("")}
+       <input id="ttype" class="ttype" placeholder="Type it: pinyin or 汉字, then Enter" autocomplete="off" aria-label="Type your answer">
+       <p class="muted" style="font-size:13px;margin:8px 0 0">${esc(tk.msg) || "🎤 Or press Say it on your phone remote."}</p>
+       <div style="display:flex;gap:8px;margin-top:10px"><button class="btn ghost" id="teng">${talkEnglish ? "Hide" : "Show"} English <kbd>E</kbd></button><button class="btn ghost" id="tskip">Skip</button></div>`;
+  $("#main").innerHTML = `<div class="talk"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Scenes</button>
+    <span class="tag">${sc.icon} ${esc(sc.title)} · ${esc(sc.hanzi)} · ${Math.min(tk.at + 1, sc.beats.length)}/${sc.beats.length}</span><span class="pill sun" style="margin-left:auto">🥢 ${tk.score}</span></div>
+    <div class="tstage"><div class="tchat glass" id="tchat">${chat}</div><div class="tside glass">${side}</div></div></div>`;
+  const ch = $("#tchat"); ch.scrollTop = ch.scrollHeight;
+  document.querySelectorAll("[data-v]").forEach((el) => { if (el.dataset.v) el.onclick = () => play({ voice: el.dataset.v }); });
+  $("#tlist").onclick = talkList;
+  if (done) {
+    if (tk.score > talkBest(sc.id)) { try { localStorage.setItem(`talk:best:${sc.id}`, String(tk.score)); } catch {} }
+    $("#tagain").onclick = () => { tk = null; renderTalk(); }; $("#tback").onclick = talkList;
+  } else {
+    document.querySelectorAll(".treply").forEach((x) => x.onclick = () => talkPick(+x.dataset.r));
+    $("#teng").onclick = () => { talkEnglish = !talkEnglish; talkDraw(); };
+    $("#tskip").onclick = () => talkAnswer(null, 0, false);
+    const inp = $("#ttype");
+    inp.onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      const hit = b.replies.findIndex((r) => typedMatches(inp.value, r));
+      if (hit >= 0) talkAnswer(hit, 2, true);
+      else { tk.msg = "Not quite: check the reply and try again (tones are optional)."; talkDraw(); $("#ttype").focus(); }
+    };
+  }
+  talkReport();
+}
+function talkPlayLine() { const b = talkScene()?.beats[tk.at]; if (b) play(b.line); }
+function talkPick(i) {
+  const b = talkScene()?.beats[tk.at]; if (!b || !b.replies[i]) return;
+  tk.pick = i; tk.msg = "Now say it into your phone (🎤 Say it), or type it."; talkDraw(); play(b.replies[i]);
+}
+function talkAnswer(i, level, typed) {
+  const b = talkScene()?.beats[tk.at]; if (!b) return;
+  tk.said.push({ reply: i == null ? null : b.replies[i], level, typed });
+  tk.score += level; tk.at++; tk.pick = null; tk.msg = "";
+  talkDraw(); setTimeout(talkPlayLine, 500);
+}
+function talkKey(e, k) {
+  if (!tk || !talkScene()) return;
+  if (k === "1" || k === "2") { e.preventDefault(); talkPick(+k - 1); }
+  else if (k === "e") { talkEnglish = !talkEnglish; talkDraw(); }
+  else if (k === "p") talkPlayLine();
+  else if (e.key === "Enter" && !talkScene().beats[tk.at]) { tk = null; renderTalk(); }
+}
+function talkRemote(c) {
+  if (!tk || !talkScene()?.beats[tk.at]) return;
+  if (c.cmd === "grade" && (c.value === 1 || c.value === 2)) talkPick(c.value - 1);
+  else if (c.cmd === "show") { talkEnglish = !talkEnglish; talkDraw(); }
+  else if (c.cmd === "play") talkPlayLine();
+  else if (c.cmd === "said" && tk.pick != null) {
+    if (c.value >= 1) talkAnswer(tk.pick, c.value, false);
+    else { tk.msg = c.text === "quiet" ? "Didn't catch that: a little louder, closer to the phone." : "Not quite yet. Listen to it again and have another go."; talkDraw(); play(talkScene().beats[tk.at].replies[tk.pick]); }
+  }
 }
 
 // ---- IT Lab: hands-on CompTIA practice from real situations. Each lab lives in /lab/<file>.js
@@ -1887,6 +2022,7 @@ function act(c) {
     else curLab()?.remote?.(c.cmd, c.value);
     return;
   }
+  if (view === "talk") { talkRemote(c); return; }
   if (view !== "review") { if (c.cmd === "show" || c.cmd === "grade") go("review"); return; }
   if (c.cmd === "said") return heard(c.value, c.text);
   if (c.cmd === "show") reveal();

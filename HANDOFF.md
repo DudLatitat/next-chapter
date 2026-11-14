@@ -128,6 +128,10 @@ tools/
   - `windows.js`: right tool for the job with mock windows, and NTFS vs share permissions.
   - `security.js`: phish or legit (`.example`/`.test` domains only), log detective, malware removal order.
   - Progress for each lab is kept in the browser's localStorage (`lab:<id>:*`).
+- **1.95 (Talk):** `data/Talk.kt`: conversation scenes in 4 groups. The 3 dinner scenes are reused, plus 9 new ones: a video call with her mom, a restaurant, a DiDi ride, a pharmacy, a market, "how was your day", goodnight, and a gaming night. `Talk.typedMatches` accepts hanzi, or pinyin with or without tones (`TalkTest`). The lines are recorded in CI (`make_voice.py` includes Talk.kt).
+  - PC **Talk 对话** tab (G then C; remote tab 5) via `/api/talk`: a chat; pick reply 1/2, then say it on the phone remote (🎤 → `said`) or type it. 🥢 scoring, best per scene in localStorage (`talk:best:<id>`).
+  - Phone remote: a 💬 tab, 1/2, Say it, their line, English.
+  - Phone Practice → Play → 对话 Talk (was Dinner) lists every scene, grouped; best per scene in `dinnerBest`.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

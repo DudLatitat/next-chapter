@@ -41,6 +41,9 @@ import java.net.Socket
 @Serializable data class DAQ(val id: String, val domain: Int, val q: String, val a: String, val isNew: Boolean)
 @Serializable data class DDomain(val n: Int, val name: String, val share: Int, val strength: Float)
 @Serializable data class DAPlus(val exam: String?, val done: Int, val domains: List<DDomain>, val weakest: Int?, val queue: List<DAQ>)
+@Serializable data class DLine(val hanzi: String, val pinyin: String, val english: String, val voice: String)
+@Serializable data class DBeat(val who: String, val line: DLine, val replies: List<DLine>, val tip: String)
+@Serializable data class DScene(val id: String, val group: String, val groupTitle: String, val icon: String, val title: String, val hanzi: String, val beats: List<DBeat>)
 @Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0, val text: String = "")
 @Serializable data class RemoteOut(val last: Long, val cmds: List<RemoteCmd>)
 /** What the page is showing, so the phone remote can mirror it. */
@@ -264,6 +267,16 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 val card = s.cards.firstOrNull { it.id == id && it.custom } ?: return bad(403, "Only your own phrases can be deleted")
                 store.edit { CardEdits.delete(it, card.id) }
                 ok(json.encodeToString(Msg(true)))
+            }
+            "GET /api/talk" -> {
+                // Conversation scenes for the computer's Talk tab; voice = the recording's name.
+                fun v(h: String) = com.dudlatitat.nextchapter.Speaker.md5(h.trim())
+                val scenes = com.dudlatitat.nextchapter.data.Talk.scenes.map { sc ->
+                    DScene(sc.id, sc.group.name.lowercase(), "${sc.group.title} · ${sc.group.hanzi}", sc.icon, sc.title, sc.hanzi, sc.beats.map { b ->
+                        DBeat(b.who, DLine(b.hanzi, b.pinyin, b.english, v(b.hanzi)), b.replies.map { r -> DLine(r.hanzi, r.pinyin, r.english, v(r.hanzi)) }, b.tip)
+                    })
+                }
+                ok(json.encodeToString(scenes))
             }
             "GET /api/aplus" -> {
                 val strength = APlus.strength(s)
