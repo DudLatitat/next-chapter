@@ -121,6 +121,13 @@ tools/
   - `speech/Verdicts.kt`: the shared `Attempt.verdict()`.
   - A new Practice group, "Family & faith".
 - **1.88 (Terminal dojo + gold stars):** PC page **Terminal** tab (G then T; remote tab 4): a fake admin Command Prompt with 10 A+ tickets (APIPA, DNS, gateway, subnet, sfc, chkdsk, taskkill, gpupdate, net use, netstat). Each has steps, a "what's wrong?" pick, then Why + an exam tip; progress is in localStorage. Port Rush is a 60 s ports game with the best score saved. Remote: a 💻 tab, answers 1–4 and Hint. The Sky draws phrases with `real > 0` as bigger gold stars, with "★ said for real ×N" in the tooltip.
+- **1.92+ (IT Lab):** The PC page's Terminal tab became **IT Lab**, a hub filtered by exam (A+ Core 1/Core 2, Network+, Security+). Each lab is its own file in `assets/desktop/lab/*.js`, served by `/lab/<name>.js` (`Http.labAsset`, lowercase names only, no token, `HttpTest`), and registers with `Lab.register({ id, title, icon, exams, blurb, render(ctx), progress, key, remote })` (contract comment in index.html).
+  - `helpdesk.js`: 12 chat tickets using the 6-step method, with scoring.
+  - `hardware.js`: connector ID (SVG), build to spec with a POST check, RAID chooser, put it in order.
+  - `network.js`: SOHO router admin sim, network map, subnetting trainer (unit-checked), Wi-Fi survey.
+  - `windows.js`: right tool for the job with mock windows, and NTFS vs share permissions.
+  - `security.js`: phish or legit (`.example`/`.test` domains only), log detective, malware removal order.
+  - Progress for each lab is kept in the browser's localStorage (`lab:<id>:*`).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful
