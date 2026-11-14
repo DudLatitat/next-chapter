@@ -177,8 +177,8 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                     }
                     s.view == "terminal" -> {
                         Text("💻", fontSize = 30.sp)
-                        Text("Terminal practice", color = Night.ink)
-                        Text("Type on the computer; pick answers 1–4 or get a hint here.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
+                        Text("IT Lab", color = Night.ink)
+                        Text("Practise on the computer; pick answers 1–4 or get a hint here.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
                     s.view == "sky" -> {
                         Text("✦", fontSize = 30.sp, color = Night.sun)

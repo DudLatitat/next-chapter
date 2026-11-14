@@ -56,6 +56,13 @@ object Http {
         a != null && b != null && MessageDigest.isEqual(a.toByteArray(), b.toByteArray())
 
     /** Asset path for a voice recording request: only "<32 hex>.mp3" is allowed (no ../ tricks). */
+    /**
+     * "/lab/network.js" → "desktop/lab/network.js": the IT Lab's practice files. Only lowercase
+     * names, letters, digits and dashes, so no path can climb out of that folder ("../").
+     */
+    fun labAsset(path: String): String? =
+        Regex("^/lab/([a-z0-9-]{1,40})\\.js$").find(path)?.let { "desktop/lab/${it.groupValues[1]}.js" }
+
     fun voiceAsset(path: String): String? =
         Regex("^/voice/([0-9a-f]{32})\\.mp3$").find(path)?.let { "voice/${it.groupValues[1]}.mp3" }
 }

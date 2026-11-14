@@ -154,6 +154,18 @@
   .sky .tip { position: fixed; pointer-events: none; padding: 8px 12px; border-radius: 12px; background: rgba(15, 22, 52, .95); border: 1px solid var(--line); display: none; z-index: 10; }
   .sky .tip .h { font: 24px var(--zh); }
   .sky .legend { display: flex; gap: 18px; align-items: center; margin: 12px 4px 0; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  /* ---- IT Lab hub ---- */
+  .labwrap { max-width: 1180px; margin: 0 auto; padding: 22px 28px 60px; }
+  .crumb { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
+  .labwrap .crumb, main > .crumb { max-width: 1180px; margin-left: auto; margin-right: auto; padding: 14px 28px 0; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chipf { border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--muted); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+  .chipf.on { background: var(--sun); color: #1a1f3d; border-color: transparent; }
+  .labgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .labcard { text-align: left; cursor: pointer; padding: 20px; color: var(--ink); font: inherit; transition: transform .15s, border-color .2s; }
+  .labcard:hover { transform: translateY(-2px); border-color: rgba(255,207,122,.4); }
+  .labcard .licon { font-size: 34px; } .labcard .ltitle { font-size: 18px; font-weight: 600; margin-top: 6px; }
+  .labcard .lblurb { font-size: 14px; margin: 6px 0 12px; } .labcard .ltags { display: flex; gap: 6px; flex-wrap: wrap; }
   /* ---- Terminal dojo ---- */
   .dojo { max-width: 1320px; margin: 0 auto; padding: 20px 28px 50px; }
   .dtop { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -426,7 +438,7 @@ async function start() {
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="terminal" title="G then T">Terminal</button></nav>
+      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="terminal" title="G then T">IT Lab</button></nav>
       <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span>
         <button class="icon help" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button></div>
     </header>
@@ -437,11 +449,13 @@ async function start() {
   listen();
 }
 function go(v) {
+  // Clicking IT Lab while already in a lab goes back to the lab list.
+  if (v === "terminal" && view === "terminal" && labOpen) { labOpen = null; ls.set("nc-lab", null); }
   view = VIEWS.includes(v) ? v : "phrases"; ls.set("nc-view", view);
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
   renderStats(); clearInterval(skyTimer); djStop();
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
-  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderDojo }[view] || renderPhrases)());
+  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab }[view] || renderPhrases)());
 }
 function watch(p) {
   return Promise.resolve(p).then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
@@ -459,7 +473,7 @@ function report(card, shown, left) {
 
 // ---- Keyboard: shortcuts everywhere, never while typing ----
 const KEYS = [
-  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Terminal dojo", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["IT Lab", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
   ["Review and A+", [["Show the answer", "Space"], ["Again · Hard", "1 · 2"], ["Good · Easy", "3 · 4"], ["Play the phrase", "P"]]],
   ["Terminal dojo", [["Start typing in the terminal", "Enter"], ["Leave the terminal (shortcuts work again)", "Esc"], ["Earlier commands", "↑ ↓"], ["Answer the ticket question", "1 2 3 4"],
     ["Show a hint", "H"], ["Port Rush: start · skip one", "Enter"]]],
@@ -498,7 +512,7 @@ document.addEventListener("keydown", (e) => {
   if (k === "g") { chord = Date.now(); return; }
   if (e.key === "/") { e.preventDefault(); focusSearch(); return; }
   if (k === "n") { e.preventDefault(); editor(null); return; }
-  if (view === "terminal") { djKey(e, k); return; }
+  if (view === "terminal") { if (labOpen === "terminal") djKey(e, k); else if (curLab()?.key) curLab().key(e); return; }
   if (view === "aplus" && aq.length) {
     if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
     return;
@@ -829,6 +843,74 @@ async function renderSky() {
   };
   cv.onmouseleave = () => tip.style.display = "none";
   cv.onclick = (e) => { const r = cv.getBoundingClientRect(); const x = e.clientX - r.left, y = e.clientY - r.top; const s = stars.find((s) => (s.x - x) ** 2 + (s.y - y) ** 2 < 144); if (s) play(s.c); };
+  report(null, false, 0);
+}
+
+// ---- IT Lab: hands-on CompTIA practice from real situations. Each lab lives in /lab/<file>.js
+// (served by the phone like this page, nothing from the internet) and calls Lab.register({...}):
+//   id, title, icon, exams: ["a1","a2","net","sec"], blurb, render(ctx), optional progress(ctx) → text,
+//   key(e) for keyboard, remote(cmd, value) for the phone remote ("show" = hint, "grade" 1–4 = pick answer).
+// ctx = { el, store: {get(key, default), set(key, value)}, toast(msg, bad), esc, back(), report(text), calm }.
+const LAB_FILES = ["helpdesk", "hardware", "network", "windows", "security"];
+const EXAMS = { a1: "A+ Core 1", a2: "A+ Core 2", net: "Network+", sec: "Security+" };
+window.Lab = { list: [], register(l) { if (l && l.id && !this.list.some((x) => x.id === l.id)) this.list.push(l); } };
+let labOpen = ls.get("nc-lab") || null, labFilter = ls.get("nc-labf") || "all", labsLoaded = null;
+const TERMINAL_LAB = { id: "terminal", title: "Command line tickets", icon: "💻", exams: ["a1", "a2", "net"],
+  blurb: "Fix real help-desk tickets on a pretend Windows PC: ipconfig, ping, sfc, chkdsk… plus Port Rush." };
+function loadLabs() {
+  if (!labsLoaded) labsLoaded = Promise.all(LAB_FILES.map((f) => new Promise((ok) => {
+    const sc = document.createElement("script"); sc.src = `/lab/${f}.js`; sc.onload = sc.onerror = ok; document.head.appendChild(sc);
+  })));
+  return labsLoaded;
+}
+function labStore(id) {
+  return {
+    get(k, d) { try { const v = localStorage.getItem(`lab:${id}:${k}`); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(`lab:${id}:${k}`, JSON.stringify(v)); } catch {} },
+  };
+}
+function curLab() { return Lab.list.find((l) => l.id === labOpen) || null; }
+function labCtx(lab, el) {
+  return { el, store: labStore(lab.id), toast, esc, calm: calm(), back: () => openLab(null),
+    report: (text) => api("/api/state", { view, english: text || "", hanzi: "", pinyin: "", shown: false, left: 0 }).catch(() => {}) };
+}
+function openLab(id) { djStop(); labOpen = id; ls.set("nc-lab", id); renderLab(); window.scrollTo(0, 0); }
+async function renderLab() {
+  await loadLabs();
+  if (labOpen === "terminal") {
+    renderDojo();
+    $("#main").insertAdjacentHTML("afterbegin", `<div class="crumb"><button class="btn ghost" id="labback">← IT Lab</button></div>`);
+    $("#labback").onclick = () => openLab(null);
+    return;
+  }
+  const lab = curLab();
+  if (lab) {
+    $("#main").innerHTML = `<div class="labwrap"><div class="crumb"><button class="btn ghost" id="labback">← IT Lab</button>
+      <span class="tag">${lab.exams.map((x) => EXAMS[x]).join(" · ")}</span></div><div id="labroot"></div></div>`;
+    $("#labback").onclick = () => openLab(null);
+    try { lab.render(labCtx(lab, $("#labroot"))); } catch (e) { $("#labroot").innerHTML = `<div class="empty">This lab hit a problem: ${esc(e.message)}</div>`; }
+    report(null, false, 0);
+    return;
+  }
+  labOpen = null;
+  const labs = [TERMINAL_LAB, ...Lab.list];
+  const shown = labs.filter((l) => labFilter === "all" || l.exams.includes(labFilter));
+  $("#main").innerHTML = `
+    <div class="labwrap">
+      <h2 style="margin:6px 0 2px">IT Lab</h2>
+      <p class="muted" style="margin:0 0 14px">Real situations from the job, the way the CompTIA exams test them. Pick a lab.</p>
+      <div class="chips">${[["all", "All"], ...Object.entries(EXAMS)].map(([k, v]) => `<button class="chipf ${labFilter === k ? "on" : ""}" data-f="${k}">${v}</button>`).join("")}</div>
+      <div class="labgrid">${shown.map((l) => {
+        let prog = ""; try { prog = l.progress ? l.progress(labCtx(l, null)) || "" : ""; } catch {}
+        return `<button class="labcard glass" data-lab="${esc(l.id)}">
+          <div class="licon">${l.icon || "🧪"}</div><div class="ltitle">${esc(l.title)}</div>
+          <div class="muted lblurb">${esc(l.blurb || "")}</div>
+          <div class="ltags">${l.exams.map((x) => `<span class="pill">${EXAMS[x] || x}</span>`).join("")}${prog ? `<span class="pill sun">${esc(prog)}</span>` : ""}</div>
+        </button>`;
+      }).join("")}</div>
+    </div>`;
+  document.querySelectorAll(".chipf").forEach((b) => b.onclick = () => { labFilter = b.dataset.f; ls.set("nc-labf", labFilter); renderLab(); });
+  document.querySelectorAll(".labcard").forEach((b) => b.onclick = () => openLab(b.dataset.lab));
   report(null, false, 0);
 }
 
@@ -1800,7 +1882,11 @@ function act(c) {
   if (c.cmd === "top") return window.scrollTo({ top: 0, behavior });
   if (view === "aplus") { if (c.cmd === "show") aReveal(); else if (c.cmd === "grade") aGrade(c.value); return; }
   // In the dojo the phone's Show button gives a hint and its four grade buttons pick answer 1–4 (never yanks you to Review).
-  if (view === "terminal") { if (c.cmd === "show") djHint(); else if (c.cmd === "grade") djChoose(c.value - 1); return; }
+  if (view === "terminal") {
+    if (labOpen === "terminal") { if (c.cmd === "show") djHint(); else if (c.cmd === "grade") djChoose(c.value - 1); }
+    else curLab()?.remote?.(c.cmd, c.value);
+    return;
+  }
   if (view !== "review") { if (c.cmd === "show" || c.cmd === "grade") go("review"); return; }
   if (c.cmd === "said") return heard(c.value, c.text);
   if (c.cmd === "show") reveal();

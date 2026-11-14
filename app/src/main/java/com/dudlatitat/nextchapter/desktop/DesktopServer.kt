@@ -193,6 +193,12 @@ class DesktopServer(private val context: Context, private val store: Store, val 
             val page = context.assets.open("desktop/index.html").use { it.readBytes() }
             return Http.response(200, "text/html; charset=utf-8", page)
         }
+        // IT Lab practice files: public study material (no personal data), so like the page itself
+        // they load without the pairing token (a script tag can't send one).
+        if (method == "GET") Http.labAsset(path)?.let { asset ->
+            val bytes = try { context.assets.open(asset).use { it.readBytes() } } catch (_: Exception) { return bad(404, "No such lab") }
+            return Http.response(200, "application/javascript; charset=utf-8", bytes)
+        }
         if (method == "POST" && path == "/api/pair") {
             when (val c = gate.check(System.currentTimeMillis())) {
                 PairGate.Closed -> return bad(403, "On your phone, open Settings → Use on my computer, then try the code.")

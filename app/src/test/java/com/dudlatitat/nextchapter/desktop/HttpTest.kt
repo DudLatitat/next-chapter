@@ -47,4 +47,14 @@ class HttpTest {
         val r = String(Http.response(200, "text/plain", "hi".toByteArray()))
         assertTrue(r.startsWith("HTTP/1.1 200 OK\r\n")); assertTrue("Content-Length: 2" in r); assertTrue(r.endsWith("\r\n\r\nhi"))
     }
+
+    @Test fun labFilesStayInTheLabFolder() {
+        assertEquals("desktop/lab/network.js", Http.labAsset("/lab/network.js"))
+        assertEquals("desktop/lab/help-desk2.js", Http.labAsset("/lab/help-desk2.js"))
+        assertNull(Http.labAsset("/lab/../index.html"))
+        assertNull(Http.labAsset("/lab/..%2Fstate.js"))
+        assertNull(Http.labAsset("/lab/Network.js"))
+        assertNull(Http.labAsset("/lab/a/b.js"))
+        assertNull(Http.labAsset("/lab/x.json"))
+    }
 }
