@@ -249,7 +249,8 @@
   .ptable span b { display: inline-block; min-width: 64px; color: var(--ink); }
   details.peek { margin-top: 16px; color: var(--muted); } details.peek summary { cursor: pointer; }
   @media (max-width: 1000px) { .dwork { grid-template-columns: 1fr; } .picker { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 600px) { .picker { grid-template-columns: repeat(2, 1fr); } .dojo { padding: 14px 16px 40px; } .ptable { grid-template-columns: 1fr 1fr; } .term { height: 420px; } }
+  @media (max-width: 600px) { .picker { grid-template-columns: repeat(2, 1fr); } .dojo { padding: 14px 16px 40px; } .ptable { grid-template-columns: 1fr 1fr; } .term { height: 420px; }
+    nav { max-width: 100%; overflow-x: auto; } nav button { padding: 7px 11px; } }
   /* The browser's own blue clear button doesn't fit the night theme. */
   input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
   /* ---- Dialog, toast ---- */
@@ -792,7 +793,7 @@ async function renderSky() {
     g.path = path;
   });
   const known = stars.filter((s) => s.known).length;
-  $("#legend").innerHTML = `<span style="color:var(--sun)">✦ ${known} star${known === 1 ? "" : "s"} in your sky</span><span>bright = known · faint = still learning</span>
+  $("#legend").innerHTML = `<span style="color:var(--sun)">✦ ${known} star${known === 1 ? "" : "s"} in your sky</span><span>bright = known · faint = still learning · <span style="color:#ffc85a">gold = said for real ★</span></span>
     <span>${groups.filter((g) => g.complete).length} constellation${groups.filter((g) => g.complete).length === 1 ? "" : "s"} (decks you know completely)</span><span>Hover a star to see its phrase</span>`;
   let t = 0;
   function draw() {
@@ -806,10 +807,12 @@ async function renderSky() {
       ctx.font = "11px Segoe UI, sans-serif"; ctx.fillText(`${g.known}/${g.total}`, g.cx, ly + 15);
     });
     stars.forEach((s) => {
-      const tw = s.known ? 0.65 + 0.35 * Math.sin(t + s.phase) : 0.35;
-      const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.size * 4);
-      grd.addColorStop(0, `rgba(255,240,210,${tw})`); grd.addColorStop(1, "rgba(255,240,210,0)");
-      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(s.x, s.y, s.size * 4, 0, 6.29); ctx.fill();
+      const tw = s.known || s.c.real ? 0.65 + 0.35 * Math.sin(t + s.phase) : 0.35;
+      // Said it for real ★: a phrase you actually used with her family glows gold, bigger.
+      const rgb = s.c.real ? "255,200,90" : "255,240,210", halo = s.size * (s.c.real ? 6 : 4);
+      const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, halo);
+      grd.addColorStop(0, `rgba(${rgb},${tw})`); grd.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(s.x, s.y, halo, 0, 6.29); ctx.fill();
       ctx.fillStyle = `rgba(255,255,255,${tw})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.size * 0.7, 0, 6.29); ctx.fill();
     });
   }
@@ -821,7 +824,7 @@ async function renderSky() {
     let best = null, bd = 144;
     stars.forEach((s) => { const d = (s.x - x) ** 2 + (s.y - y) ** 2; if (d < bd) { bd = d; best = s; } });
     if (!best) { tip.style.display = "none"; return; }
-    tip.innerHTML = `<div class="h">${esc(best.c.hanzi)}</div><div>${tonePinyin(best.c.pinyin)}</div><div class="muted">${esc(best.c.english)}</div>`;
+    tip.innerHTML = `<div class="h">${esc(best.c.hanzi)}</div><div>${tonePinyin(best.c.pinyin)}</div><div class="muted">${esc(best.c.english)}</div>${best.c.real ? `<div style="color:var(--sun)">★ said for real ×${best.c.real}</div>` : ""}`;
     tip.style.display = "block"; tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 14) + "px";
   };
   cv.onmouseleave = () => tip.style.display = "none";
@@ -1615,6 +1618,7 @@ function djChoose(k) {
   djPicker(); djPanel();
   toast(first ? "Ticket closed ✓" : "Closed again ✓");
   $("#dnext")?.focus({ preventScroll: true });
+  $(".why")?.scrollIntoView({ block: "nearest", behavior: calm() ? "auto" : "smooth" });
 }
 
 // ---- Port Rush: 60 seconds, a protocol flashes, type its port ----
@@ -1627,11 +1631,11 @@ const PORTS = [
 ];
 const portText = (p) => p[3] || p[2].join(" / ");
 const ROUND = 60000;
-const R = { on: false, t0: 0, score: 0, combo: 0, maxCombo: 0, right: 0, seen: 0, cur: null, last: [], back: [], miss: [], timer: null, lock: false, ended: false, newBest: false };
+const R = { on: false, t0: 0, score: 0, combo: 0, maxCombo: 0, right: 0, wrong: 0, seen: 0, cur: null, last: [], back: [], miss: [], timer: null, lock: false, ended: false, newBest: false };
 const rushBest = () => +(ls.get(RUSH_KEY) || 0);
 const mult = () => Math.min(5, 1 + Math.floor(R.combo / 3));
 function rushStart() {
-  Object.assign(R, { on: true, t0: Date.now(), score: 0, combo: 0, maxCombo: 0, right: 0, seen: 0, cur: null, last: [], back: [], miss: [], lock: false, ended: false, newBest: false });
+  Object.assign(R, { on: true, t0: Date.now(), score: 0, combo: 0, maxCombo: 0, right: 0, wrong: 0, seen: 0, cur: null, last: [], back: [], miss: [], lock: false, ended: false, newBest: false });
   djBody(); rushNext();
   clearInterval(R.timer); R.timer = setInterval(rushTick, 100);
   report(null, false, 0);
@@ -1663,7 +1667,7 @@ function rushAnswer(val, skip) {
     card?.classList.remove("bad"); card?.classList.add("good"); setTimeout(() => card?.classList.remove("good"), 260);
     rushHud(); rushNext(); return;
   }
-  R.combo = 0; R.lock = true;
+  R.combo = 0; R.lock = true; R.wrong++;
   if (!R.miss.includes(p)) R.miss.push(p);
   R.back.push({ p, at: R.seen + 3 });
   rushFeedback(`${skip ? "Skipped" : "✗ Not " + esc(nums.join(", ") || val)}: ${esc(p[0])} is <b>${esc(portText(p))}</b>`, "n");
@@ -1695,7 +1699,7 @@ function rushScreen() {
       <div class="rfb" id="rfb" aria-live="polite"></div>
       <p class="tag">A right answer counts the moment it's complete. Enter on an empty box skips. Every 3 in a row raises the multiplier.</p></div>`;
   if (R.ended) {
-    const acc = R.seen ? Math.round(100 * R.right / Math.max(1, R.right + R.miss.length)) : 0;
+    const acc = Math.round(100 * R.right / Math.max(1, R.right + R.wrong));
     return `<div class="rush glass" role="status">
       <div class="tag" style="letter-spacing:1.5px;text-transform:uppercase">Time!</div>
       <div class="bigscore">${R.score}</div>${R.newBest ? `<div class="best">New best ✦</div>` : `<div class="muted">Best: ${best}</div>`}
@@ -1728,6 +1732,7 @@ function djBody() {
   if (dj.mode === "rush") {
     body.innerHTML = rushScreen(); djPicker();
     $("#rgo")?.addEventListener("click", rushStart);
+    $("#rgo")?.focus({ preventScroll: true });            // so Enter starts (or replays) right away
     const inp = $("#rin");
     if (inp) {
       inp.oninput = () => { const v = inp.value.trim(); if (/^\d+$/.test(v) && R.cur?.[2].includes(+v)) rushAnswer(v); };

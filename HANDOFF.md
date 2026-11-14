@@ -120,6 +120,7 @@ tools/
   - **Prayer ladder** (`data/Ladder.kt`, `ui/learn/LadderScreen.kt`): rungs mask characters and never change the text (`LadderTest`), saved in `prayerSteps`. Linked from Today's prayer sheet.
   - `speech/Verdicts.kt`: the shared `Attempt.verdict()`.
   - A new Practice group, "Family & faith".
+- **1.88 (Terminal dojo + gold stars):** PC page **Terminal** tab (G then T; remote tab 4): a fake admin Command Prompt with 10 A+ tickets (APIPA, DNS, gateway, subnet, sfc, chkdsk, taskkill, gpupdate, net use, netstat). Each has steps, a "what's wrong?" pick, then Why + an exam tip; progress is in localStorage. Port Rush is a 60 s ports game with the best score saved. Remote: a 💻 tab, answers 1–4 and Hint. The Sky draws phrases with `real > 0` as bigger gold stars, with "★ said for real ×N" in the tooltip.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

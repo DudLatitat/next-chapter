@@ -175,6 +175,11 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                         Text("Open the page on your computer", color = Night.ink, textAlign = TextAlign.Center)
                         Text("It shows up here as soon as it's open.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
+                    s.view == "terminal" -> {
+                        Text("💻", fontSize = 30.sp)
+                        Text("Terminal practice", color = Night.ink)
+                        Text("Type on the computer; pick answers 1–4 or get a hint here.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
+                    }
                     s.view == "sky" -> {
                         Text("✦", fontSize = 30.sp, color = Night.sun)
                         Text("Your sky", color = Night.ink)
@@ -213,10 +218,11 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
         Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .05f)).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Segment("Phrases", !review && p?.view != "sky") { press("tab", 0) }
+        Segment("Phrases", !review && p?.view != "sky" && p?.view != "terminal") { press("tab", 0) }
         Segment("Review", review && !aplus) { press("tab", 1) }
         Segment("A+", aplus) { press("tab", 2) }
         Segment("Sky", p?.view == "sky") { press("tab", 3) }
+        Segment("💻", p?.view == "terminal") { press("tab", 4) }
     }
 
     // Review buttons.
@@ -237,6 +243,14 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                 Pad("Easy", "简单", Night.violet, tall = true) { combo++; press("grade", 4) }
             }
             if (!aplus) Row { Pad("🔊  Play again", null, Night.ink, fill = { 0.06f }) { press("play", 0) } }
+        }
+    }
+
+    // Terminal tickets: answer the "what's wrong?" question from the couch.
+    if (p?.view == "terminal") {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            (1..4).forEach { n -> Pad("$n", null, Night.violet) { press("grade", n) } }
+            Pad("Hint", null, Night.sun) { press("show", 0) }
         }
     }
 
