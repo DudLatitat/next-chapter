@@ -137,6 +137,9 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
     var hint by remember(th.id, turn) { mutableIntStateOf(0) } // 0 none, 1 words, 2 pinyin, 3 example
     var nudge by remember(th.id, turn) { mutableStateOf("") }
     var score by remember(th.id) { mutableIntStateOf(0) }
+    // Pinyin and English under their messages: on by default; switch off for a challenge.
+    var help by rememberSaveable { mutableStateOf(true) }
+    var lookup by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
     val focus = remember { FocusRequester() }
     val t = th.turns.getOrNull(turn)
@@ -166,6 +169,8 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
         }
     }
 
+    if (lookup) HowSaySheet(state, vm, onDismiss = { lookup = false }, onUse = { input += it; nudge = "" })
+
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().background(Night.cardHigh).padding(top = 28.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
@@ -173,12 +178,13 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
                 Text(th.contact, style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Text(if (typing) "对方正在输入… (typing)" else th.title, style = MaterialTheme.typography.labelSmall, color = Night.muted)
             }
+            TextButton(onClick = { help = !help }) { Text(if (help) "拼音 on" else "拼音 off", color = if (help) Night.sun else Night.muted) }
             val shown by animateIntAsState(score, tween(400), label = "score")
             Text("★ $shown", color = Night.sun, modifier = Modifier.padding(end = 16.dp))
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Spacer(Modifier.height(8.dp)) }
-            items(lines) { l -> Bubble(l, th.avatar, onPlay = { vm.speaker.say(l.text) }) }
+            items(lines) { l -> Bubble(l, th.avatar, help, onPlay = { vm.speaker.say(l.text) }) }
             if (typing) item { Text("   …", color = Night.muted, fontSize = 22.sp) }
             if (done) item {
                 GlassCard(highlight = true) {
@@ -211,6 +217,7 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
                 }
             }
             Row(Modifier.fillMaxWidth().background(Night.cardHigh).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { lookup = true }) { Text("🔍", fontSize = 20.sp) }
                 TextButton(onClick = { if (hint < 3) hint++ }) { Text(if (hint < 3) "💡" else "✓", fontSize = 20.sp) }
                 OutlinedTextField(
                     input, { input = it; nudge = "" }, modifier = Modifier.weight(1f).focusRequester(focus),
@@ -225,7 +232,7 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
 }
 
 @Composable
-private fun Bubble(l: Line, avatar: String, onPlay: () -> Unit) {
+private fun Bubble(l: Line, avatar: String, help: Boolean, onPlay: () -> Unit) {
     var showMeaning by remember { mutableStateOf(false) }
     var revealed by remember { mutableStateOf(!l.voice) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (l.mine) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Top) {
@@ -240,7 +247,7 @@ private fun Bubble(l: Line, avatar: String, onPlay: () -> Unit) {
                 if (l.voice && !revealed) Text("🔊 )))   0:0${(l.text.length / 3).coerceIn(1, 9)}″", color = Night.ink)
                 else {
                     Text(l.text, fontSize = 18.sp, color = if (l.mine) Color(0xFF111111) else Night.ink)
-                    if (!l.mine && (showMeaning || l.voice)) {
+                    if (!l.mine && (help != showMeaning || l.voice)) { // tapping a bubble flips it either way
                         PinyinText(l.pinyin, style = MaterialTheme.typography.bodySmall)
                         Text(l.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }

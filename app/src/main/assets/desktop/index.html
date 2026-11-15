@@ -911,11 +911,17 @@ function talkList() {
       return `<button class="tscene glass" data-th="${esc(t.id)}"><span class="ti">${t.avatar}</span><span><div class="tt">${esc(t.contact)}</div>
         <div class="tz">${esc(t.title)}</div><div class="tag">${t.turns.length} messages${best ? ` · ★ ${best}/${t.turns.length * 2}` : ""}</div></span></button>`;
     }).join("")}
+      <button class="tscene glass" id="lookgo"><span class="ti">🔍</span><span><div class="tt">How do I say…</div><div class="tz">查</div>
+        <div class="tag">English in, Chinese to type out · offline</div></span></button>
       <button class="tscene glass" id="sprintgo"><span class="ti">⌨️</span><span><div class="tt">Typing sprint</div><div class="tz">打字</div>
         <div class="tag">60 seconds${sprintBest() ? ` · best ${sprintBest()}/min` : ""}</div></span></button></div></div>`;
   document.querySelectorAll(".tscene[data-s]").forEach((b) => b.onclick = () => { talkOpen = b.dataset.s; renderTalk(); window.scrollTo(0, 0); });
   document.querySelectorAll(".tscene[data-th]").forEach((b) => b.onclick = () => { textOpen = b.dataset.th; renderTalk(); window.scrollTo(0, 0); });
   $("#sprintgo").onclick = () => { sprintOn = true; renderTalk(); window.scrollTo(0, 0); };
+  $("#lookgo").onclick = () => {
+    $("#main").innerHTML = `<div class="talk" style="max-width:760px"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button><span class="tag">🔍 How do I say… · 查</span></div><div id="lookbox"></div></div>`;
+    $("#tlist").onclick = talkList; lookupPanel($("#lookbox"), null);
+  };
   api("/api/state", { view, english: "", hanzi: "", pinyin: "", shown: false, left: 0 }).catch(() => {});
 }
 function talkScene() { return talkScenes.find((x) => x.id === talkOpen); }
@@ -1023,7 +1029,9 @@ function textDraw() {
        ${tx.hint >= 2 ? `<div style="margin-top:8px">${tonePinyin(t.examples[0].pinyin)}</div>` : ""}
        ${tx.hint >= 3 ? `<div class="muted" style="margin-top:4px">${esc(t.examples[0].hanzi)} · ${esc(t.examples[0].english)}</div>` : ""}
        ${tx.hint >= 1 && t.tip ? `<div class="ttip" style="margin-top:8px">💡 ${esc(t.tip)}</div>` : ""}
-       <button class="btn ghost" id="xhint" style="margin-top:10px">💡 Hint <kbd>H</kbd></button>`;
+       <button class="btn ghost" id="xhint" style="margin-top:10px">💡 Hint <kbd>H</kbd></button>
+       <button class="btn ghost" id="xlook" style="margin-top:10px">🔍 How do I say…</button>
+       <div id="lookbox"></div>`;
   $("#main").innerHTML = `<div class="talk"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button>
     <span class="tag">${th.avatar} ${esc(th.contact)} · ${esc(th.title)}${tx.typing ? " · 对方正在输入…" : ""}</span><span class="pill sun" style="margin-left:auto">★ ${tx.score}</span></div>
     <div class="tstage"><div class="tchat glass" id="tchat">${tx.lines.map(bub).join("")}${tx.typing ? `<div class="bub"><div class="h">…</div></div>` : ""}</div><div class="tside glass">${side}</div></div></div>`;
@@ -1047,6 +1055,7 @@ function textDraw() {
   };
   document.querySelectorAll(".xw").forEach((b) => b.onclick = () => { inp.value += b.textContent; inp.focus(); });
   $("#xhint").onclick = () => { tx.hint = Math.min(3, tx.hint + 1); textDraw(); };
+  $("#xlook").onclick = () => lookupPanel($("#lookbox"), (h) => { const i = $("#xin"); i.value += h; i.focus(); });
 }
 async function textArrive() { // their messages, one by one, with "typing…" in between
   const th = textThread(), t = th.turns[tx.turn], me = tx;
@@ -1059,6 +1068,28 @@ async function textArrive() { // their messages, one by one, with "typing…" in
   }
   textDraw();
 }
+// 🔍 How do I say…: English (or pinyin) in, the app's own phrases and dictionary words out (/api/lookup,
+// the same search as the phone). onUse puts the characters into a reply box.
+function lookupPanel(box, onUse) {
+  box.innerHTML = `<div class="glass" style="padding:12px;margin-top:10px"><input id="lq" class="ttype" placeholder="Type English, e.g. are you home yet" autocomplete="off" aria-label="How do I say">
+    <div id="lres" style="margin-top:8px"></div><div class="tag" style="margin-top:6px">Words: CC-CEDICT (mdbg.net), CC BY-SA 4.0</div></div>`;
+  const q = $("#lq"); q.focus();
+  let t = 0;
+  q.oninput = () => { clearTimeout(t); t = setTimeout(async () => {
+    const v = q.value.trim(); if (!v) { $("#lres").innerHTML = ""; return; }
+    const r = await api(`/api/lookup?q=${encodeURIComponent(v)}`).catch(() => null); if (!r || q.value.trim() !== v) return;
+    const row = (x) => `<div class="treply" style="cursor:default"><div class="h">${esc(x.hanzi)}</div><div class="p">${tonePinyin(x.pinyin)}</div>
+      <div class="tag" style="color:var(--sun)">⌨️ type: ${esc(x.keys)}</div><div class="tag">${esc(x.english)}</div>
+      <button class="btn ghost lplay" data-voice="${x.voice}">🔊</button>${onUse ? ` <button class="btn ghost luse" data-h="${esc(x.hanzi)}">Use it</button>` : ""}</div>`;
+    $("#lres").innerHTML = (r.phrases.length ? `<div class="tag">Phrases · checked sentences</div>${r.phrases.map(row).join("")}` : "") +
+      (r.words.length ? `<div class="tag" style="margin-top:6px">Words · dictionary</div>${r.words.map(row).join("")}` : "") +
+      (!r.phrases.length && !r.words.length ? `<p class="muted">Nothing found. Try fewer words, or one key word.</p>` : "") +
+      (!r.hasDict ? `<p class="tag">(The word dictionary isn't in this build; phrases still work.)</p>` : "");
+    box.querySelectorAll(".lplay").forEach((b) => b.onclick = () => play({ voice: b.dataset.voice }));
+    box.querySelectorAll(".luse").forEach((b) => b.onclick = () => onUse(b.dataset.h));
+  }, 250); };
+}
+
 // Typing sprint: English shows, type it in Chinese; it moves on as soon as it's right.
 function sprintStop() { if (sp) clearInterval(sp.timer); }
 async function sprintDraw() {

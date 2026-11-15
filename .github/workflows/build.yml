@@ -39,6 +39,20 @@ jobs:
         run: |
           mkdir -p /tmp/hw && cd /tmp/hw && npm pack hanzi-writer-data@2.0.1 --silent && tar xzf hanzi-writer-data-*.tgz
           cd "$GITHUB_WORKSPACE" && python3 tools/make_strokes.py /tmp/hw/package
+      # Offline English <-> Chinese dictionary for "How do I say…" (CC-CEDICT, CC BY-SA 4.0). It's
+      # updated often, so it's refreshed monthly; if the site is down the build still ships, just
+      # without the word list (the phrase finder works regardless).
+      - uses: actions/cache@v4
+        with:
+          path: ~/cedict
+          key: cedict-${{ hashFiles('tools/make_cedict.py') }}-2026-11
+      - name: Dictionary
+        run: |
+          mkdir -p ~/cedict
+          if [ ! -s ~/cedict/cedict.txt.gz ]; then
+            curl -fsSL --retry 3 -o ~/cedict/cedict.txt.gz https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.txt.gz || echo "::warning::Couldn't download CC-CEDICT; building without the dictionary"
+          fi
+          if [ -s ~/cedict/cedict.txt.gz ]; then python3 tools/make_cedict.py ~/cedict/cedict.txt.gz app/src/main/assets/cedict.tsv; fi
       # Offline Chinese recognizer model (Vosk small-cn 0.22, Apache 2.0), bundled in the APK so
       # it works with no internet and nothing to download in China. Downloaded once, then cached.
       - uses: actions/cache@v4

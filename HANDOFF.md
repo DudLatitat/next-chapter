@@ -138,6 +138,13 @@ tools/
   - Phone: Practice → Texting → 微信 Texts (WeChat-style chat with the real keyboard, typing indicator, hints words → pinyin → answer; `textBest`) and 打字 Sprint (60 s, `sprintBest`).
   - PC: Talk tab → Texting section (`/api/texts`, `/api/sprint`). Enter is ignored while the IME is still composing; best scores in localStorage.
   - **Fix:** bubble voice attributes are now `data-voice`, scoped to `#main`. A page-wide `[data-v]` selector had been replacing the nav buttons' handlers after a Talk scene, so the tabs stopped switching (since 1.95).
+- **1.97 (How do I say…):**
+  - `data/Finder.kt`: `Finder.phrases` searches every sentence the app has (cards, Talk, Texting) by English words (light stemming), pinyin or characters. `Finder.typeKeys` gives the keys to press.
+  - `Dict`: CC-CEDICT search with exact > starts > contains, rare/old/Tw/bound-form senses sink (a first-sense marker counts for the whole entry), and words found in the app's phrases rise (`Finder.common`). `FinderTest`.
+  - `tools/make_cedict.py` builds `assets/cedict.tsv` (gitignored, about 99k entries, about 2.5 MB compressed) in CI's "Dictionary" step. If the download fails the build ships without it.
+  - `lookup/Lookup.kt` loads it once in the background.
+  - Phone: `ui/learn/HowSay.kt` sheet (🔍 in chats, and the 查 Look up tile). Chat bubbles show pinyin + English by default (拼音 on/off toggle).
+  - PC: `/api/lookup` and a lookup panel in chats, plus a "How do I say…" card in Talk.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

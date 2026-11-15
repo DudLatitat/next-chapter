@@ -20,6 +20,7 @@ This app exists to make my life better in every way, not only my Chinese. Learni
   - The money screen can fetch today's exchange rate (open.er-api.com).
   - Flight cards open Google Flights / Skyscanner links in the browser (links only, nothing loaded in the app).
   - Voice recordings are made in CI with edge-tts.
+  - The offline word dictionary (CC-CEDICT, CC BY-SA 4.0) is downloaded from mdbg.net in CI and bundled; the app itself never goes online for it.
   - The speaking check is fully offline (Vosk on the phone).
   - Work & home (Settings) can search an address with OpenStreetMap's Nominatim and show OpenStreetMap map tiles, only while the spot picker is open. Noticing arrivals uses the phone's own location (no Google) and stays offline.
   - Ask me before adding any *new* online dependency.

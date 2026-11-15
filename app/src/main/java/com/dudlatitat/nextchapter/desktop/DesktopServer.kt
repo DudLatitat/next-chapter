@@ -48,6 +48,8 @@ import java.net.Socket
 @Serializable data class DTTurn(val them: List<DTMsg>, val accept: List<List<String>>, val examples: List<DLine>, val words: List<String>, val tip: String)
 @Serializable data class DThread(val id: String, val contact: String, val avatar: String, val title: String, val turns: List<DTTurn>)
 @Serializable data class DSprint(val hanzi: String, val pinyin: String, val english: String, val voice: String)
+@Serializable data class DFound(val hanzi: String, val pinyin: String, val english: String, val keys: String, val voice: String)
+@Serializable data class DLookup(val phrases: List<DFound>, val words: List<DFound>, val hasDict: Boolean)
 @Serializable data class RemoteCmd(val id: Long, val cmd: String, val value: Int = 0, val text: String = "")
 @Serializable data class RemoteOut(val last: Long, val cmds: List<RemoteCmd>)
 /** What the page is showing, so the phone remote can mirror it. */
@@ -271,6 +273,13 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 val card = s.cards.firstOrNull { it.id == id && it.custom } ?: return bad(403, "Only your own phrases can be deleted")
                 store.edit { CardEdits.delete(it, card.id) }
                 ok(json.encodeToString(Msg(true)))
+            }
+            "GET /api/lookup" -> {
+                // "How do I say…": the same search as the phone (app phrases, then dictionary words).
+                val q = query["q"].orEmpty().take(80)
+                val r = kotlinx.coroutines.runBlocking { com.dudlatitat.nextchapter.lookup.Lookup.search(context, s, q) }
+                fun f(h: String, p: String, e: String) = DFound(h, p, e, com.dudlatitat.nextchapter.data.Finder.typeKeys(p), com.dudlatitat.nextchapter.Speaker.md5(h.trim()))
+                ok(json.encodeToString(DLookup(r.phrases.map { f(it.hanzi, it.pinyin, it.english) }, r.words.map { f(it.hanzi, it.pinyin, it.meanings.take(3).joinToString("; ")) }, r.hasDict)))
             }
             "GET /api/texts" -> {
                 fun v(h: String) = com.dudlatitat.nextchapter.Speaker.md5(h.trim())

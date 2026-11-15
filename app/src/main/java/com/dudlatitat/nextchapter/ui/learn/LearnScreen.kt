@@ -129,6 +129,8 @@ fun LearnScreen(
         )
     }
 
+    // 🔍 How do I say… opens over the Chinese tab (it's a quick look-up, not a screen).
+    if (tool == "lookup") HowSaySheet(state, vm, onDismiss = { tool = null })
     if (adding) AddPhraseDialog(onDismiss = { adding = false }) { h, p, e -> vm.addCard(h, p, e); adding = false }
 }
 
@@ -179,7 +181,7 @@ private fun Overview(
         item {
             val groups = listOf(
                 "Play" to listOf(Triple("对话", "Talk", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
-                "Texting" to listOf(Triple("微信", "Texts", "texts") to Night.jade, Triple("打字", "Sprint", "sprint") to Night.sun),
+                "Texting" to listOf(Triple("微信", "Texts", "texts") to Night.jade, Triple("打字", "Sprint", "sprint") to Night.sun, Triple("查", "Look up", "lookup") to Night.violet),
                 "Family & faith" to listOf(Triple("家谱", "Her family", "family") to Night.rose, Triple("祷告", "Prayer", "prayer") to Night.violet),
                 "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
                 "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
