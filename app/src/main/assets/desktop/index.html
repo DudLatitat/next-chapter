@@ -1137,6 +1137,7 @@ async function gameSetup() {
       <p class="muted" style="margin:0 0 14px">Start it, then switch to your game. Lines play through your headset; when you hear the beep, <b>hold the big talk button on your phone remote</b> (💬 tab) and answer. The game keeps your keyboard, so pause and skip are on the phone too.</p>
       <label style="display:block;margin:8px 0"><input type="checkbox" id="gconv" ${o.conv ? "checked" : ""}> 💬 Conversations (her, her family, daily life, a CS teammate)</label>
       <label style="display:block;margin:8px 0"><input type="checkbox" id="gcalls" ${o.calls ? "checked" : ""}> 🔫 CS callouts in Chinese (an English cue, you call it out)</label>
+      <label style="display:block;margin:8px 0"><input type="checkbox" id="gfn" ${o.fn ? "checked" : ""}> 🪂 Fortnite callouts in Chinese</label>
       <label style="display:block;margin:8px 0"><input type="checkbox" id="geng" ${o.english ? "checked" : ""}> 🗣️ Say the English cue out loud (your PC's own voice)</label>
       <label style="display:block;margin:12px 0 4px">Time to answer: <b id="gwv">${o.wait}</b> s</label>
       <input type="range" id="gwait" min="4" max="12" value="${o.wait}" style="width:100%">
@@ -1145,12 +1146,13 @@ async function gameSetup() {
   $("#tlist").onclick = talkList;
   $("#gwait").oninput = () => { $("#gwv").textContent = $("#gwait").value; };
   $("#gstart").onclick = async () => {
-    gmOpts = { conv: $("#gconv").checked, calls: $("#gcalls").checked, english: $("#geng").checked, wait: +$("#gwait").value };
+    gmOpts = { conv: $("#gconv").checked, calls: $("#gcalls").checked, fn: $("#gfn").checked, english: $("#geng").checked, wait: +$("#gwait").value };
     try { localStorage.setItem("game:opts", JSON.stringify(gmOpts)); } catch {}
-    if (!gmOpts.conv && !gmOpts.calls) return toast("Pick conversations, callouts or both", true);
+    if (!gmOpts.conv && !gmOpts.calls && !gmOpts.fn) return toast("Pick conversations or callouts", true);
     const items = [];
     if (gmOpts.conv) (talkScenes || await api("/api/talk")).forEach((sc) => sc.beats.forEach((b) => items.push({ kind: "conv", who: b.who, line: b.line, answer: b.replies[0], scene: sc.title })));
-    if (gmOpts.calls) { const calls = await api("/api/callouts"); for (let k = 0; k < 2; k++) calls.forEach((c) => items.push({ kind: "call", cue: c.english, answer: c })); }
+    if (gmOpts.calls) { const calls = await api("/api/callouts"); for (let k = 0; k < 2; k++) calls.forEach((c) => items.push({ kind: "call", game: "🔫", cue: c.english, answer: c })); }
+    if (gmOpts.fn) { const calls = await api("/api/callouts?game=fortnite"); for (let k = 0; k < 2; k++) calls.forEach((c) => items.push({ kind: "call", game: "🪂", cue: c.english, answer: c })); }
     items.sort(() => Math.random() - 0.5);
     gm = { items, i: 0, running: true, paused: false, right: 0, done: 0, stage: "cue", heard: null, left: 0 };
     gameDraw(); gameLoop(gm);
@@ -1158,7 +1160,7 @@ async function gameSetup() {
 }
 function gameReport() {
   const it = gm && gm.items[gm.i % gm.items.length]; if (!it) return;
-  const cue = it.kind === "conv" ? `${it.who}: ${it.line.hanzi} · ${it.line.english}` : `🔫 ${it.cue}`;
+  const cue = it.kind === "conv" ? `${it.who}: ${it.line.hanzi} · ${it.line.english}` : `${it.game || "🔫"} ${it.cue}`;
   api("/api/state", { view: "game", english: gm.paused ? `⏸ ${cue}` : cue, hanzi: it.answer.hanzi, pinyin: it.answer.pinyin, shown: gm.stage === "answer", left: gm.left }).catch(() => {});
 }
 function gameDraw() {
@@ -1170,7 +1172,7 @@ function gameDraw() {
     <div class="glass" style="padding:40px;text-align:center">
       ${it.kind === "conv" ? `<div class="tag">${esc(it.scene)} · ${esc(it.who)}</div><div style="font:44px var(--zh);margin:10px 0">${esc(it.line.hanzi)}</div>
         <div>${tonePinyin(it.line.pinyin)}</div><div class="muted">${esc(it.line.english)}</div>`
-      : `<div class="tag">🔫 Call it out in Chinese</div><div style="font-size:40px;font-weight:600;margin:14px 0">${esc(it.cue)}</div>`}
+      : `<div class="tag">${it.game || "🔫"} Call it out in Chinese</div><div style="font-size:40px;font-weight:600;margin:14px 0">${esc(it.cue)}</div>`}
       <div style="margin-top:24px;font-size:22px;color:${gm.stage === "answer" ? "var(--sun)" : "var(--muted)"}">${gm.paused ? "⏸ Paused" : gm.stage === "answer" ? `🎤 Your turn · ${gm.left}s` : gm.stage === "model" ? "🔊 Listen" : "…"}</div>
       ${gm.heard ? `<div style="margin-top:8px;color:${gm.heard.level === 2 ? "var(--jade)" : gm.heard.level === 1 ? "var(--sun)" : "var(--coral)"}">${res}</div>` : ""}
       ${gm.stage === "model" ? `<div style="font:30px var(--zh);margin-top:14px;color:var(--sun)">${esc(it.answer.hanzi)}</div><div>${tonePinyin(it.answer.pinyin)}</div><div class="tag">${esc(it.kind === "conv" ? it.answer.english : it.cue)}</div>` : ""}

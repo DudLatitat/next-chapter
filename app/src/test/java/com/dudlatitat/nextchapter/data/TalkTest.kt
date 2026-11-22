@@ -42,5 +42,7 @@ class TalkTest {
         assertEquals(Talk.csCallouts.size, Talk.csCallouts.map { it.hanzi }.toSet().size)
         Talk.csCallouts.forEach { assertTrue(it.pinyin.isNotBlank() && it.english.isNotBlank()) }
         assertTrue(Talk.byId("csmatch")!!.group == Talk.Group.GAMES)
+        assertTrue(Talk.fortniteCallouts.size >= 12)
+        assertEquals(Talk.fortniteCallouts.size, Talk.fortniteCallouts.map { it.hanzi }.toSet().size)
     }
 }

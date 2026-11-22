@@ -293,7 +293,7 @@ class DesktopServer(private val context: Context, private val store: Store, val 
             }
             "GET /api/sprint" -> ok(json.encodeToString(com.dudlatitat.nextchapter.data.Texting.sprintPool(s).shuffled().take(80)
                 .map { DSprint(it.hanzi, it.pinyin, it.english, com.dudlatitat.nextchapter.Speaker.md5(it.hanzi.trim())) }))
-            "GET /api/callouts" -> ok(json.encodeToString(com.dudlatitat.nextchapter.data.Talk.csCallouts.map {
+            "GET /api/callouts" -> ok(json.encodeToString((if (query["game"] == "fortnite") com.dudlatitat.nextchapter.data.Talk.fortniteCallouts else com.dudlatitat.nextchapter.data.Talk.csCallouts).map {
                 DLine(it.hanzi, it.pinyin, it.english, com.dudlatitat.nextchapter.Speaker.md5(it.hanzi.trim()))
             }))
             "GET /api/talk" -> {

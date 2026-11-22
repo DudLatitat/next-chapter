@@ -150,6 +150,7 @@ tools/
   - PC Talk tab → 🎮 Game mode: background loop. A conversation line plays, or an English cue for a callout (the PC's local `speechSynthesis` voice); a beep marks your turn; wait N s for the phone's `said` (pause doesn't count down); then the native answer plays. Options are in localStorage `game:opts`.
   - Timing runs on a Web Worker clock (`gclock`): Chrome throttles a hidden page's timers to about once a minute after ~5 min, which would stall the loop while a fullscreen game covers it.
   - Remote: view "game" card plus `HoldToTalk` (press records, release sends; offline check → `said`), Pause (`show`), Again (`play`), Skip (`grade` 4).
+- **1.99 (Fortnite callouts):** `Talk.fortniteCallouts` (15; battle-royale terms shared with PUBG 毒圈/舔包/倒地 from GamerSky/TapTap, otherwise plain Mandarin; 残血 flagged). `/api/callouts?game=fortnite`; Game mode has a 🪂 checkbox (`game:opts.fn`).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

@@ -284,6 +284,30 @@ object Talk {
         r("守住这里", "shǒu zhù zhèlǐ", "Hold here"),
     )
 
+    /**
+     * Fortnite callouts for Game mode. No Chinese Fortnite-specific source was found, so these use the
+     * battle-royale words Chinese players share from PUBG (毒圈 the closing zone, 舔包 loot a box,
+     * 倒地 downed: GamerSky / TapTap guides, Nov 2026) and plain Mandarin for the rest (建墙, 护盾,
+     * 空投, 扶). 残血 flagged as for CS.
+     */
+    val fortniteCallouts: List<Reply> = listOf(
+        r("跳哪儿？", "tiào nǎr?", "Where are we dropping?"),
+        r("跳这里", "tiào zhèlǐ", "Drop here"),
+        r("楼顶有人！", "lóudǐng yǒu rén!", "Enemy on the roof!"),
+        r("那边有一队", "nàbiān yǒu yí duì", "A squad over there"),
+        r("又来一队", "yòu lái yí duì", "Another squad's coming"),
+        r("我倒地了，扶我！", "wǒ dǎo dì le, fú wǒ!", "I'm down, revive me!"),
+        r("快建墙！", "kuài jiàn qiáng!", "Build a wall, quick!"),
+        r("我要护盾", "wǒ yào hùdùn", "I need shields"),
+        r("先补血", "xiān bǔ xuè", "Heal up first"),
+        r("毒圈来了，快跑！", "dúquān lái le, kuài pǎo!", "Storm's coming, move!"),
+        r("去舔包", "qù tiǎn bāo", "Go loot him"),
+        r("有空投！", "yǒu kōngtóu!", "Supply drop!"),
+        r("他残血，冲！", "tā cán xuè, chōng!", "He's low, push him!"),
+        r("上高处", "shàng gāochù", "Get to high ground"),
+        r("我们赢了！", "wǒmen yíng le!", "We won!"),
+    )
+
     fun byId(id: String) = scenes.firstOrNull { it.id == id }
 
     /**
