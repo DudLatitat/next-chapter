@@ -477,7 +477,7 @@ function go(v) {
   if (v === "terminal" && view === "terminal" && labOpen) { labOpen = null; ls.set("nc-lab", null); }
   view = VIEWS.includes(v) ? v : "phrases"; ls.set("nc-view", view);
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
-  renderStats(); clearInterval(skyTimer); djStop(); if (typeof sprintStop === "function") { sprintStop(); if (sp) sp.running = false; }
+  renderStats(); clearInterval(skyTimer); djStop(); if (typeof sprintStop === "function") { sprintStop(); if (sp) sp.running = false; gameStop(); }
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
   watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab, talk: renderTalk }[view] || renderPhrases)());
 }
@@ -895,7 +895,7 @@ async function renderTalk() {
   talkDraw();
 }
 function talkList() {
-  talkOpen = null; tk = null; textOpen = null; tx = null; sprintStop(); sprintOn = false; sp = null;
+  talkOpen = null; tk = null; textOpen = null; tx = null; sprintStop(); sprintOn = false; sp = null; gameStop();
   const groups = [...new Set(talkScenes.map((s) => s.groupTitle))];
   $("#main").innerHTML = `<div class="talk"><h2 style="margin:6px 0 2px">Talk · 对话</h2>
     <p class="muted" style="margin:0">They speak, you answer. Say it into your phone (🎤 on the remote) or type pinyin or characters.</p>
@@ -911,6 +911,8 @@ function talkList() {
       return `<button class="tscene glass" data-th="${esc(t.id)}"><span class="ti">${t.avatar}</span><span><div class="tt">${esc(t.contact)}</div>
         <div class="tz">${esc(t.title)}</div><div class="tag">${t.turns.length} messages${best ? ` · ★ ${best}/${t.turns.length * 2}` : ""}</div></span></button>`;
     }).join("")}
+      <button class="tscene glass" id="gamego"><span class="ti">🎮</span><span><div class="tt">Game mode</div><div class="tz">边玩边练</div>
+        <div class="tag">Plays in the background while you game · answer with hold-to-talk on your phone</div></span></button>
       <button class="tscene glass" id="lookgo"><span class="ti">🔍</span><span><div class="tt">How do I say…</div><div class="tz">查</div>
         <div class="tag">English in, Chinese to type out · offline</div></span></button>
       <button class="tscene glass" id="sprintgo"><span class="ti">⌨️</span><span><div class="tt">Typing sprint</div><div class="tz">打字</div>
@@ -918,6 +920,7 @@ function talkList() {
   document.querySelectorAll(".tscene[data-s]").forEach((b) => b.onclick = () => { talkOpen = b.dataset.s; renderTalk(); window.scrollTo(0, 0); });
   document.querySelectorAll(".tscene[data-th]").forEach((b) => b.onclick = () => { textOpen = b.dataset.th; renderTalk(); window.scrollTo(0, 0); });
   $("#sprintgo").onclick = () => { sprintOn = true; renderTalk(); window.scrollTo(0, 0); };
+  $("#gamego").onclick = () => gameSetup();
   $("#lookgo").onclick = () => {
     $("#main").innerHTML = `<div class="talk" style="max-width:760px"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button><span class="tag">🔍 How do I say… · 查</span></div><div id="lookbox"></div></div>`;
     $("#tlist").onclick = talkList; lookupPanel($("#lookbox"), null);
@@ -992,6 +995,7 @@ function talkKey(e, k) {
   else if (e.key === "Enter" && !talkScene().beats[tk.at]) { tk = null; renderTalk(); }
 }
 function talkRemote(c) {
+  if (gm && gm.running) { gameRemote(c); return; }
   if (!tk || !talkScene()?.beats[tk.at]) return;
   if (c.cmd === "grade" && (c.value === 1 || c.value === 2)) talkPick(c.value - 1);
   else if (c.cmd === "show") { talkEnglish = !talkEnglish; talkDraw(); }
@@ -1088,6 +1092,125 @@ function lookupPanel(box, onUse) {
     box.querySelectorAll(".lplay").forEach((b) => b.onclick = () => play({ voice: b.dataset.voice }));
     box.querySelectorAll(".luse").forEach((b) => b.onclick = () => onUse(b.dataset.h));
   }, 250); };
+}
+
+// ---- 🎮 Game mode: runs in the background while you play. A line plays (or an English cue for a CS
+// callout), a beep says "your turn", you hold the phone remote's talk button and answer, then the native
+// answer plays and it moves on. The game keeps the keyboard, so all control is on the phone.
+let gm = null, gmOpts = (() => { try { return JSON.parse(localStorage.getItem("game:opts")) || null; } catch { return null; } })() || { conv: true, calls: true, wait: 7, english: true };
+// A clock in a Web Worker: Chrome slows a hidden page's own timers to about once a minute after ~5 min
+// (your game covers the page), but not a worker's, so Game mode keeps its rhythm mid-match.
+const gclock = (() => {
+  try {
+    const w = new Worker(URL.createObjectURL(new Blob(["setInterval(() => postMessage(0), 250)"], { type: "text/javascript" })));
+    const subs = new Set(); w.onmessage = () => subs.forEach((f) => f());
+    return { every(f) { subs.add(f); return () => subs.delete(f); } };
+  } catch { return { every(f) { const t = setInterval(f, 250); return () => clearInterval(t); } }; }
+})();
+const sleep = (ms) => new Promise((ok) => { let left = ms; const off = gclock.every(() => { left -= 250; if (left <= 0) { off(); ok(); } }); });
+function gameStop() { if (gm) { gm.running = false; gm.onSaid?.(null); } gm = null; try { speechSynthesis.cancel(); } catch {} }
+function playWait(voice) {
+  return new Promise((ok) => {
+    const a = new Audio(`/voice/${voice}.mp3?t=${encodeURIComponent(token)}`);
+    const t = setTimeout(ok, 9000); const done = () => { clearTimeout(t); ok(); };
+    a.onended = done; a.onerror = done; a.play().catch(done);
+  });
+}
+function speakEn(text) { // the computer's own (offline) English voice, for CS cues
+  return new Promise((ok) => {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      const v = speechSynthesis.getVoices().find((x) => x.lang.startsWith("en") && x.localService);
+      if (v) u.voice = v; u.lang = "en-US"; u.rate = 1.05;
+      const t = setTimeout(ok, 6000); u.onend = () => { clearTimeout(t); ok(); }; u.onerror = u.onend;
+      speechSynthesis.speak(u);
+    } catch { ok(); }
+  });
+}
+function beep() { try { const c = new AudioContext(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = 0.06; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.12); } catch {} }
+async function gameSetup() {
+  gameStop();
+  const o = gmOpts;
+  $("#main").innerHTML = `<div class="talk" style="max-width:760px"><div class="crumb" style="padding:0"><button class="btn ghost" id="tlist">← Talk</button><span class="tag">🎮 Game mode · 边玩边练</span></div>
+    <div class="glass" style="padding:24px">
+      <h2 style="margin:0 0 6px">Practise while you play</h2>
+      <p class="muted" style="margin:0 0 14px">Start it, then switch to your game. Lines play through your headset; when you hear the beep, <b>hold the big talk button on your phone remote</b> (💬 tab) and answer. The game keeps your keyboard, so pause and skip are on the phone too.</p>
+      <label style="display:block;margin:8px 0"><input type="checkbox" id="gconv" ${o.conv ? "checked" : ""}> 💬 Conversations (her, her family, daily life, a CS teammate)</label>
+      <label style="display:block;margin:8px 0"><input type="checkbox" id="gcalls" ${o.calls ? "checked" : ""}> 🔫 CS callouts in Chinese (an English cue, you call it out)</label>
+      <label style="display:block;margin:8px 0"><input type="checkbox" id="geng" ${o.english ? "checked" : ""}> 🗣️ Say the English cue out loud (your PC's own voice)</label>
+      <label style="display:block;margin:12px 0 4px">Time to answer: <b id="gwv">${o.wait}</b> s</label>
+      <input type="range" id="gwait" min="4" max="12" value="${o.wait}" style="width:100%">
+      <div style="margin-top:16px"><button class="btn" id="gstart">▶ Start</button></div>
+    </div></div>`;
+  $("#tlist").onclick = talkList;
+  $("#gwait").oninput = () => { $("#gwv").textContent = $("#gwait").value; };
+  $("#gstart").onclick = async () => {
+    gmOpts = { conv: $("#gconv").checked, calls: $("#gcalls").checked, english: $("#geng").checked, wait: +$("#gwait").value };
+    try { localStorage.setItem("game:opts", JSON.stringify(gmOpts)); } catch {}
+    if (!gmOpts.conv && !gmOpts.calls) return toast("Pick conversations, callouts or both", true);
+    const items = [];
+    if (gmOpts.conv) (talkScenes || await api("/api/talk")).forEach((sc) => sc.beats.forEach((b) => items.push({ kind: "conv", who: b.who, line: b.line, answer: b.replies[0], scene: sc.title })));
+    if (gmOpts.calls) { const calls = await api("/api/callouts"); for (let k = 0; k < 2; k++) calls.forEach((c) => items.push({ kind: "call", cue: c.english, answer: c })); }
+    items.sort(() => Math.random() - 0.5);
+    gm = { items, i: 0, running: true, paused: false, right: 0, done: 0, stage: "cue", heard: null, left: 0 };
+    gameDraw(); gameLoop(gm);
+  };
+}
+function gameReport() {
+  const it = gm && gm.items[gm.i % gm.items.length]; if (!it) return;
+  const cue = it.kind === "conv" ? `${it.who}: ${it.line.hanzi} · ${it.line.english}` : `🔫 ${it.cue}`;
+  api("/api/state", { view: "game", english: gm.paused ? `⏸ ${cue}` : cue, hanzi: it.answer.hanzi, pinyin: it.answer.pinyin, shown: gm.stage === "answer", left: gm.left }).catch(() => {});
+}
+function gameDraw() {
+  if (!gm || view !== "talk") return;
+  const it = gm.items[gm.i % gm.items.length];
+  const res = gm.heard ? ["Not quite", "Close 🥢", "Clear 🥢🥢"][gm.heard.level] : "";
+  $("#main").innerHTML = `<div class="talk" style="max-width:900px"><div class="crumb" style="padding:0"><button class="btn ghost" id="gback">■ Stop</button>
+    <span class="tag">🎮 Game mode · ${gm.done} answered · ${gm.right} right</span><button class="btn ghost" id="gpause" style="margin-left:auto">${gm.paused ? "▶ Resume" : "⏸ Pause"}</button><button class="btn ghost" id="gskip">Skip ›</button></div>
+    <div class="glass" style="padding:40px;text-align:center">
+      ${it.kind === "conv" ? `<div class="tag">${esc(it.scene)} · ${esc(it.who)}</div><div style="font:44px var(--zh);margin:10px 0">${esc(it.line.hanzi)}</div>
+        <div>${tonePinyin(it.line.pinyin)}</div><div class="muted">${esc(it.line.english)}</div>`
+      : `<div class="tag">🔫 Call it out in Chinese</div><div style="font-size:40px;font-weight:600;margin:14px 0">${esc(it.cue)}</div>`}
+      <div style="margin-top:24px;font-size:22px;color:${gm.stage === "answer" ? "var(--sun)" : "var(--muted)"}">${gm.paused ? "⏸ Paused" : gm.stage === "answer" ? `🎤 Your turn · ${gm.left}s` : gm.stage === "model" ? "🔊 Listen" : "…"}</div>
+      ${gm.heard ? `<div style="margin-top:8px;color:${gm.heard.level === 2 ? "var(--jade)" : gm.heard.level === 1 ? "var(--sun)" : "var(--coral)"}">${res}</div>` : ""}
+      ${gm.stage === "model" ? `<div style="font:30px var(--zh);margin-top:14px;color:var(--sun)">${esc(it.answer.hanzi)}</div><div>${tonePinyin(it.answer.pinyin)}</div><div class="tag">${esc(it.kind === "conv" ? it.answer.english : it.cue)}</div>` : ""}
+    </div></div>`;
+  $("#gback").onclick = () => { gameStop(); talkList(); };
+  $("#gpause").onclick = () => { gm.paused = !gm.paused; gameDraw(); gameReport(); };
+  $("#gskip").onclick = () => { gm.skip = true; gm.onSaid?.(null); };
+}
+async function gameLoop(me) {
+  while (gm === me && me.running) {
+    if (me.paused) { await sleep(300); continue; }
+    const it = me.items[me.i % me.items.length];
+    me.stage = "cue"; me.heard = null; me.skip = false; gameDraw(); gameReport();
+    if (it.kind === "conv") await playWait(it.line.voice); else if (gmOpts.english) await speakEn(it.cue); else await sleep(800);
+    if (gm !== me) return;
+    // Your turn: wait for the phone's answer (or the time running out, or a skip). Paused time doesn't count.
+    me.stage = "answer"; me.left = gmOpts.wait; gameDraw(); gameReport(); beep();
+    const heard = await new Promise((ok) => {
+      let ms = gmOpts.wait * 1000, done = false;
+      let off = () => {};
+      const finish = (v) => { if (!done) { done = true; off(); me.onSaid = null; ok(v); } };
+      me.onSaid = finish;
+      off = gclock.every(() => {
+        if (gm !== me) return finish(null);
+        if (me.paused) return;
+        ms -= 250; const s = Math.ceil(ms / 1000); if (s !== me.left) { me.left = s; gameDraw(); gameReport(); }
+        if (ms <= 0) finish(null);
+      });
+    });
+    if (gm !== me) return;
+    me.heard = heard; me.done++; if (heard && heard.level >= 1) me.right++;
+    if (!me.skip) { me.stage = "model"; gameDraw(); gameReport(); await playWait(it.answer.voice); await sleep(1200); }
+    me.i++;
+  }
+}
+function gameRemote(c) {
+  if (c.cmd === "said") gm.onSaid?.({ level: c.value, text: c.text });
+  else if (c.cmd === "show") { gm.paused = !gm.paused; gameDraw(); gameReport(); }
+  else if (c.cmd === "grade" && c.value === 4) { gm.skip = true; gm.onSaid?.(null); }
+  else if (c.cmd === "play") { const it = gm.items[gm.i % gm.items.length]; if (it.kind === "conv") play(it.line); else speakEn(it.cue); }
 }
 
 // Typing sprint: English shows, type it in Chinese; it moves on as soon as it's right.

@@ -25,6 +25,7 @@ object Talk {
     private const val DRIVER = "Driver 师傅"
     private const val CLERK = "Pharmacist 店员"
     private const val VENDOR = "Stall owner 老板"
+    private const val MATE = "Teammate 队友"
 
     private fun r(h: String, p: String, e: String) = Reply(h, p, e)
     private fun b(who: String, h: String, p: String, e: String, a: Reply, c: Reply, tip: String = "") = Beat(who, h, p, e, listOf(a, c), tip)
@@ -225,6 +226,62 @@ object Talk {
                     r("明天再玩吧，该睡觉了", "míngtiān zài wán ba, gāi shuìjiào le", "Let's play tomorrow, it's bedtime")),
             ),
         ),
+        // Counter-Strike with a Chinese teammate. 下包/拆包/A点/回防/转点/补枪/经济局 checked against Chinese
+        // CS sources (csgo.com.cn guides, Sina Esports' Dust2 callouts, Zhihu, Bilibili), Nov 2026.
+        // 残血 ("low HP") is everyday gaming Chinese but wasn't found in a CS-specific source: flagged.
+        Scene(
+            "csmatch", Group.GAMES, "🔫", "A CS match", "打CS",
+            listOf(
+                b(MATE, "准备好了吗？", "zhǔnbèi hǎo le ma?", "Ready?",
+                    r("好了，开始吧", "hǎo le, kāishǐ ba", "Ready, let's go"),
+                    r("等我一下", "děng wǒ yíxià", "Give me a sec")),
+                b(MATE, "这局买什么？", "zhè jú mǎi shénme?", "What are you buying this round?",
+                    r("我买步枪", "wǒ mǎi bùqiāng", "I'm buying a rifle"),
+                    r("没钱了，经济局", "méi qián le, jīngjì jú", "I'm broke, eco round"),
+                    "经济局 = an eco round: you save money instead of buying."),
+                b(MATE, "你去A还是B？", "nǐ qù A háishi B?", "Are you going A or B?",
+                    r("我去B", "wǒ qù B", "I'll go B"),
+                    r("我们一起去A", "wǒmen yìqǐ qù A", "Let's go A together")),
+                b(MATE, "B点几个人？", "B diǎn jǐ ge rén?", "How many at B?",
+                    r("两个", "liǎng ge", "Two"),
+                    r("我看到一个", "wǒ kàn dào yí ge", "I see one")),
+                b(MATE, "我残血了", "wǒ cán xuè le", "I'm low on HP",
+                    r("退后，我来", "tuìhòu, wǒ lái", "Fall back, I've got it"),
+                    r("我来补枪", "wǒ lái bǔ qiāng", "I'll trade for you"),
+                    "补枪 = to trade a kill: shoot the enemy who just shot your teammate."),
+                b(MATE, "包下了！", "bāo xià le!", "Bomb's planted!",
+                    r("回防！", "huífáng!", "Retake!"),
+                    r("快拆包！", "kuài chāi bāo!", "Defuse it, quick!")),
+                b(MATE, "赢了！", "yíng le!", "We won!",
+                    r("打得好！", "dǎ de hǎo!", "Nice play!"),
+                    r("太好了！", "tài hǎo le!", "Awesome!")),
+            ),
+        ),
+    )
+
+    /**
+     * CS callouts for Game mode: the English cue is spoken, you call it out in Chinese.
+     * Sources as for the "csmatch" scene above; 残血 flagged there.
+     */
+    val csCallouts: List<Reply> = listOf(
+        r("A点有人！", "A diǎn yǒu rén!", "Enemy at A!"),
+        r("B点一个", "B diǎn yí ge", "One at B"),
+        r("中路两个", "zhōnglù liǎng ge", "Two in mid"),
+        r("A点下包了", "A diǎn xià bāo le", "Bomb's planted at A"),
+        r("快拆包！", "kuài chāi bāo!", "Defuse, quick!"),
+        r("转B点！", "zhuǎn B diǎn!", "Rotate to B!"),
+        r("回防A点", "huífáng A diǎn", "Retake A"),
+        r("我残血", "wǒ cán xuè", "I'm low HP"),
+        r("补枪！", "bǔ qiāng!", "Trade me!"),
+        r("扔个闪光", "rēng ge shǎnguāng", "Throw a flash"),
+        r("扔个烟", "rēng ge yān", "Throw a smoke"),
+        r("小心火！", "xiǎoxīn huǒ!", "Watch the molotov!"),
+        r("这局经济局", "zhè jú jīngjì jú", "Eco this round"),
+        r("这局买枪", "zhè jú mǎi qiāng", "Buy guns this round"),
+        r("最后一个", "zuìhòu yí ge", "Last one"),
+        r("我在换弹", "wǒ zài huàn dàn", "I'm reloading"),
+        r("一起冲！", "yìqǐ chōng!", "Push together!"),
+        r("守住这里", "shǒu zhù zhèlǐ", "Hold here"),
     )
 
     fun byId(id: String) = scenes.firstOrNull { it.id == id }

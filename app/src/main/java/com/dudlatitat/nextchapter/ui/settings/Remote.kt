@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,7 @@ import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.desktop.DesktopServer
 import com.dudlatitat.nextchapter.desktop.PageState
 import com.dudlatitat.nextchapter.speech.Mark
+import com.dudlatitat.nextchapter.speech.verdict
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.PinyinText
 import com.dudlatitat.nextchapter.ui.theme.Night
@@ -175,6 +177,14 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                         Text("Open the page on your computer", color = Night.ink, textAlign = TextAlign.Center)
                         Text("It shows up here as soon as it's open.", style = MaterialTheme.typography.bodySmall, color = Night.muted, textAlign = TextAlign.Center)
                     }
+                    s.view == "game" -> {
+                        Text("🎮 Game mode", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+                        Text(s.english, style = MaterialTheme.typography.titleMedium, color = Night.ink, textAlign = TextAlign.Center)
+                        Text(
+                            if (s.shown) "🎤 Your turn · ${s.left}s: hold the button and answer" else "Listen…",
+                            style = MaterialTheme.typography.titleSmall, color = if (s.shown) Night.sun else Night.muted, textAlign = TextAlign.Center,
+                        )
+                    }
                     s.view == "talk" && s.english.isNotEmpty() -> {
                         Text("They say", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                         Text(s.english, style = MaterialTheme.typography.titleMedium, color = Night.ink, textAlign = TextAlign.Center)
@@ -237,7 +247,7 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
         Segment("Review", review && !aplus) { press("tab", 1) }
         Segment("A+", aplus) { press("tab", 2) }
         Segment("Sky", p?.view == "sky") { press("tab", 3) }
-        Segment("💬", p?.view == "talk") { press("tab", 5) }
+        Segment("💬", p?.view == "talk" || p?.view == "game") { press("tab", 5) }
         Segment("💻", p?.view == "terminal") { press("tab", 4) }
     }
 
@@ -263,6 +273,16 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
     }
 
     // Talk: pick reply 1 or 2, say it here (checked on the phone, coloured on the computer).
+    // Game mode: the game has the keyboard, so the phone is the push-to-talk button and the controls.
+    if (p?.view == "game") {
+        HoldToTalk(server, vm, p)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pad(if (p.english.startsWith("⏸")) "▶ Resume" else "⏸ Pause", null, Night.ink, fill = { 0.06f }) { press("show", 0) }
+            Pad("🔊 Again", null, Night.ink, fill = { 0.06f }) { press("play", 0) }
+            Pad("Skip ›", null, Night.ink, fill = { 0.06f }) { press("grade", 4) }
+        }
+    }
+
     if (p?.view == "talk" && p.english.isNotEmpty()) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Pad("1", null, Night.violet, tall = true) { press("grade", 1) }
@@ -406,4 +426,59 @@ private fun RowScope.SayIt(server: DesktopServer, vm: com.dudlatitat.nextchapter
         when { recording -> "■  Stop"; busy -> "Checking…"; else -> "🎤  Say it" }, if (recording) "listening" else "说一说",
         if (recording) Night.coral else Night.jade, tall = true, fill = { if (recording) 0.32f else 0.2f },
     ) { if (!busy) mic() }
+}
+
+/**
+ * Push-to-talk for Game mode: hold to record, let go to send. The offline check runs on the phone
+ * and only the result goes to the computer (same "said" command as Say it).
+ */
+@Composable
+private fun HoldToTalk(server: DesktopServer, vm: com.dudlatitat.nextchapter.MainViewModel, p: PageState) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    var recording by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var stopNow by remember { mutableStateOf(false) }
+    var last by remember { mutableStateOf("") }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
+    val target = rememberUpdatedState(p)
+    val color = when { recording -> Night.coral; busy -> Night.violet; else -> Night.jade }
+    Box(
+        Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(28.dp))
+            .background(color.copy(alpha = if (recording) 0.45f else 0.22f))
+            .border(2.dp, color.copy(alpha = 0.8f), RoundedCornerShape(28.dp))
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    val granted = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) ==
+                        android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (!granted) { ask.launch(android.Manifest.permission.RECORD_AUDIO); return@detectTapGestures }
+                    if (busy || recording) return@detectTapGestures
+                    val now = target.value
+                    stopNow = false; recording = true
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    scope.launch {
+                        // Long enough for a sentence; it ends when you let go (or after a pause in your voice).
+                        val clip = com.dudlatitat.nextchapter.speech.Recorder.record(maxSeconds = 8f, stop = { stopNow })
+                        recording = false; busy = true
+                        val a = vm.coach.check(clip, now.hanzi, now.pinyin)
+                        busy = false
+                        val v = a.verdict()
+                        val marks = a.chars?.joinToString("") { when (it.mark) { Mark.RIGHT -> "R"; Mark.TONE -> "T"; Mark.MISSED -> "M" } } ?: ""
+                        val level = when (v) { com.dudlatitat.nextchapter.data.Callouts.Verdict.GREAT -> 2; com.dudlatitat.nextchapter.data.Callouts.Verdict.CLOSE -> 1; else -> 0 }
+                        server.send("said", level, if (a.tooQuiet) "quiet" else marks)
+                        last = listOf("Not quite: listen to the answer", "Close! 🥢", "Clear! 🥢🥢")[level]
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                    tryAwaitRelease()
+                    stopNow = true
+                })
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(when { recording -> "🎙️ Listening… let go to send"; busy -> "Checking…"; else -> "Hold to talk · 按住说话" }, style = MaterialTheme.typography.titleLarge, color = Night.ink)
+            if (last.isNotEmpty() && !recording && !busy) Text(last, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
+    }
 }

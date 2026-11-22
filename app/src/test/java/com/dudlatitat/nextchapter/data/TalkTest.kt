@@ -36,4 +36,11 @@ class TalkTest {
         assertFalse(Talk.typedMatches("  ", r))
         assertEquals("lvse", Talk.plain("lǜsè"))
     }
+
+    @Test fun csCalloutsAreWellFormed() {
+        assertTrue(Talk.csCallouts.size >= 15)
+        assertEquals(Talk.csCallouts.size, Talk.csCallouts.map { it.hanzi }.toSet().size)
+        Talk.csCallouts.forEach { assertTrue(it.pinyin.isNotBlank() && it.english.isNotBlank()) }
+        assertTrue(Talk.byId("csmatch")!!.group == Talk.Group.GAMES)
+    }
 }

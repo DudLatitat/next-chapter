@@ -145,6 +145,11 @@ tools/
   - `lookup/Lookup.kt` loads it once in the background.
   - Phone: `ui/learn/HowSay.kt` sheet (🔍 in chats, and the 查 Look up tile). Chat bubbles show pinyin + English by default (拼音 on/off toggle).
   - PC: `/api/lookup` and a lookup panel in chats, plus a "How do I say…" card in Talk.
+- **1.98 (Game mode):**
+  - `Talk.kt`: a "csmatch" scene (Teammate 队友) and `Talk.csCallouts` (18 callouts; CS terms checked against Chinese CS sources; 残血 flagged). `/api/callouts`.
+  - PC Talk tab → 🎮 Game mode: background loop. A conversation line plays, or an English cue for a callout (the PC's local `speechSynthesis` voice); a beep marks your turn; wait N s for the phone's `said` (pause doesn't count down); then the native answer plays. Options are in localStorage `game:opts`.
+  - Timing runs on a Web Worker clock (`gclock`): Chrome throttles a hidden page's timers to about once a minute after ~5 min, which would stall the loop while a fullscreen game covers it.
+  - Remote: view "game" card plus `HoldToTalk` (press records, release sends; offline check → `said`), Pause (`show`), Again (`play`), Skip (`grade` 4).
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful
