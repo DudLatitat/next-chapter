@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 14
+    const val VERSION = 15
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -98,6 +98,34 @@ object Seed {
 
         // Gaming together (一起玩): everyday talk for any game with Yuling. Common gaming words: 开黑
         // (team up on voice), 拉我 (invite me), 卡了 (lagging), 掉线 (disconnected), 带飞 (carry), 菜 (bad at it).
+        // Comfort: for when she's crying or feeling worthless. Everyday, sincere Mandarin: being there
+        // (我在, 有我在, 陪着你) and the two most natural comfort words, 委屈 ("you've had it hard") and
+        // 心疼 ("it hurts me to see you hurt"). 想哭就哭吧 instead of 别哭了, which can feel like "stop it".
+        c("comfort", "我在这儿", "wǒ zài zhèr", "I'm right here"),
+        c("comfort", "有我在", "yǒu wǒ zài", "You've got me"),
+        c("comfort", "我陪着你", "wǒ péizhe nǐ", "I'm here with you"),
+        c("comfort", "想哭就哭吧", "xiǎng kū jiù kū ba", "If you need to cry, cry"),
+        c("comfort", "哭出来会好受一点", "kū chūlái huì hǎoshòu yìdiǎn", "Letting it out helps a little"),
+        c("comfort", "慢慢说，我听着", "mànman shuō, wǒ tīngzhe", "Take your time, I'm listening"),
+        c("comfort", "不想说也没关系", "bù xiǎng shuō yě méi guānxi", "It's okay if you don't want to talk"),
+        c("comfort", "抱抱你", "bàobao nǐ", "Holding you (a hug)"),
+        c("comfort", "委屈你了", "wěiqu nǐ le", "You've had it so hard"),
+        c("comfort", "我心疼你", "wǒ xīnténg nǐ", "It hurts me to see you hurting"),
+        c("comfort", "不是你的错", "bú shì nǐ de cuò", "It's not your fault"),
+        c("comfort", "你已经很努力了", "nǐ yǐjīng hěn nǔlì le", "You've already tried so hard"),
+        c("comfort", "别太为难自己", "bié tài wéinán zìjǐ", "Don't be so hard on yourself"),
+        c("comfort", "你不需要完美", "nǐ bù xūyào wánměi", "You don't have to be perfect"),
+        c("comfort", "你很好，真的", "nǐ hěn hǎo, zhēn de", "You're good, really"),
+        c("comfort", "在我眼里你特别好", "zài wǒ yǎn lǐ nǐ tèbié hǎo", "In my eyes, you're wonderful"),
+        c("comfort", "你对我很重要", "nǐ duì wǒ hěn zhòngyào", "You matter so much to me"),
+        c("comfort", "你值得被好好对待", "nǐ zhíde bèi hǎohǎo duìdài", "You deserve to be treated well"),
+        c("comfort", "你不是一个人", "nǐ bú shì yí ge rén", "You're not alone"),
+        c("comfort", "我永远站在你这边", "wǒ yǒngyuǎn zhàn zài nǐ zhè biān", "I'm always on your side"),
+        c("comfort", "我们一起想办法", "wǒmen yìqǐ xiǎng bànfǎ", "We'll figure it out together"),
+        c("comfort", "今晚先好好休息", "jīnwǎn xiān hǎohǎo xiūxi", "Just rest tonight"),
+        c("comfort", "明天会好一点的", "míngtiān huì hǎo yìdiǎn de", "Tomorrow will be a little better"),
+        c("comfort", "我为你骄傲", "wǒ wèi nǐ jiāo'ào", "I'm proud of you"),
+
         // WeChat texting: what people actually type. 在吗 and 嗯嗯 (warmer than a bare 嗯, which can read
         // as cold) checked against Yoyo Chinese / That's Mandarin / Go East texting guides, Nov 2026.
         // 好哒 (playful 好的) and 上号 (gaming: get on your account) are everyday slang, marked as such.

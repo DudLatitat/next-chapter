@@ -151,6 +151,7 @@ tools/
   - Timing runs on a Web Worker clock (`gclock`): Chrome throttles a hidden page's timers to about once a minute after ~5 min, which would stall the loop while a fullscreen game covers it.
   - Remote: view "game" card plus `HoldToTalk` (press records, release sends; offline check → `said`), Pause (`show`), Again (`play`), Skip (`grade` 4).
 - **1.99 (Fortnite callouts):** `Talk.fortniteCallouts` (15; battle-royale terms shared with PUBG 毒圈/舔包/倒地 from GamerSky/TapTap, otherwise plain Mandarin; 残血 flagged). `/api/callouts?game=fortnite`; Game mode has a 🪂 checkbox (`game:opts.fn`).
+- **1.100 (Comfort deck):** new deck `comfort` 安慰 (24 lines; Seed v15; `SeedTest`): being there, listening, 委屈/心疼, "not your fault", worth and belonging.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

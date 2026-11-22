@@ -46,6 +46,7 @@ val Decks = listOf(
     Deck("text", "WeChat texting", "微信聊天", "What people actually type: openers, replies, chat habits"),
     Deck("trip", "Trip prep", "出发", "Airport, taxi, hotel, dinner with her family · opens 60 days before a trip"),
     Deck("sweet", "Sweet talk", "甜言蜜语", "Compliments and flirting, said like you mean it"),
+    Deck("comfort", "Comfort", "安慰", "When she's hurting: stay with her, listen, remind her what she's worth"),
     Deck("core", "Core words", "基础", "The 300 most useful single words"),
     Deck("family", "Her family", "家人", "Meeting and visiting her mom and relatives"),
     Deck("daily", "Everyday", "日常", "Getting by, asking for help"),
