@@ -68,7 +68,7 @@ fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit
         if (checked == null || changing) {
             Spacer(Modifier.height(6.dp))
             Text("👣 First step: ${Routine.text(job.firstStep, her)}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
-            Text("Bad day? ${Routine.text(job.minimum, her)} still counts.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            Text("Short on energy? ${Routine.text(job.minimum, her)} is a win.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             Spacer(Modifier.height(12.dp))
             if (checked == null) Button(
                 onClick = { onStart(job) }, modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -83,7 +83,7 @@ fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit
                 ) { Text("Done ✓") }
                 OutlinedButton(onClick = { vm.checkIn(CheckIn.MINIMUM); changing = false }) { Text("Did the minimum", color = Night.sun) }
             }
-            TextButton(onClick = { vm.checkIn(CheckIn.SKIPPED); changing = false }) { Text("Skip today", color = Night.muted) }
+            TextButton(onClick = { vm.checkIn(CheckIn.SKIPPED); changing = false }) { Text("Not tonight", color = Night.muted) }
         } else {
             Spacer(Modifier.height(8.dp))
             // A little bounce when you check in.

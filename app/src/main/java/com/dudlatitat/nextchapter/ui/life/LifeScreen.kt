@@ -111,10 +111,12 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.compose.runtime.MutableState<String?>) {
     var page by pageState
     var pickingExam by remember { mutableStateOf(false) }
+    var bodyOpen by remember { mutableStateOf(false) }
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
     // Start opens the right place for tonight's job; anything else starts the study timer.
     val startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit = { job ->
@@ -153,6 +155,10 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
                     "Career path", subtitle = next?.let { "Next: ${it.name} · ${it.status}" } ?: "Certs, classes and job postings",
                     leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("业", Night.violet) }, onClick = { page = "career" },
                 )
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    "Body", subtitle = com.dudlatitat.nextchapter.data.Body.pill(state, com.dudlatitat.nextchapter.data.today()),
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.mint) }, onClick = { bodyOpen = true },
+                )
                 val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
                 com.dudlatitat.nextchapter.ui.components.ListRow(
                     "Wins", subtitle = "${all.count { it.done }} of ${all.size} milestones", divider = false,
@@ -170,6 +176,12 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
     }
 
     if (pickingExam) PickDate(state.aplusExam, onDismiss = { pickingExam = false }) { vm.setAPlusExam(it); pickingExam = false }
+    // Body lives here now (Today stays about the day, not the scale).
+    if (bodyOpen) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { bodyOpen = false },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Night.ground1,
+    ) { com.dudlatitat.nextchapter.ui.today.BodySheet(state, vm) }
 }
 
 /** Career: certs, classes and job postings, on their own page. */

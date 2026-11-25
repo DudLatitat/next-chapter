@@ -46,7 +46,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
  */
 @Composable
 fun TodayThree(
-    state: AppState, calm: Boolean, onItem: (DayPlan.Item) -> Unit, onPrayer: () -> Unit,
+    state: AppState, calm: Boolean, onItem: (DayPlan.Item) -> Unit, onPrayer: () -> Unit, quiet: Boolean = false,
     @Suppress("UNUSED_PARAMETER") onWeek: () -> Unit = {},
 ) {
     val day = com.dudlatitat.nextchapter.data.today()
@@ -72,7 +72,8 @@ fun TodayThree(
         }
         Spacer(Modifier.height(10.dp))
         val next = plan.items.indexOfFirst { !it.done }
-        plan.items.forEachIndexed { i, item -> QuestRow(item, isNext = i == next, breathe = !calm && i == next) { onItem(item) } }
+        // After wind-down: no Go buttons, nothing breathing. Just where the day ended up.
+        plan.items.forEachIndexed { i, item -> QuestRow(item, isNext = !quiet && i == next, breathe = !calm && !quiet && i == next) { onItem(item) } }
         // Prayer: a quiet fourth row (it isn't one of the three, but it's part of the day).
         val prayed = day in state.prayedDays
         Row(

@@ -82,7 +82,7 @@ private val clock = DateTimeFormatter.ofPattern("h:mm a", Locale.US)
 fun TodayScreen(
     state: AppState, vm: MainViewModel, onStudy: () -> Unit, onOpenMove: () -> Unit, onSettings: () -> Unit, onRedo: () -> Unit,
     onPhrasebook: () -> Unit = {}, onOpenLife: () -> Unit = {}, onAPlus: () -> Unit = {},
-    onTool: (String) -> Unit = {}, onLifePage: (String) -> Unit = {},
+    onTool: (String) -> Unit = {}, onLifePage: (String) -> Unit = {}, onOpenChinese: () -> Unit = {},
 ) {
     // The clock this screen runs on: ticks each minute and on coming back to the app, so the
     // greeting, the Now card, her time and "today" never go stale.
@@ -106,13 +106,22 @@ fun TodayScreen(
         }
     }
 
-    // Unfolded: the header and today's three on the left, this moment and the rest on the right.
+    // Unfolded: your clock, the Now card and today's three on the left; the day line and the
+    // pillars on the right. During her call only the call card shows.
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
+    val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
+    val kind = remember(state, minute) { com.dudlatitat.nextchapter.data.NowPlan.of(state) }
+    val calm = kind == com.dudlatitat.nextchapter.data.NowPlan.Kind.CALL
+    val quiet = kind == com.dudlatitat.nextchapter.data.NowPlan.Kind.WIND_DOWN
     val top: @Composable () -> Unit = {
         Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy, onSearch = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current.openSearch)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
-        TodayThree(
-            state, calm = part == Life.Part.CALL,
+        NowHero(
+            kind, state, vm, startJob, onPray = { prayerOpen = true },
+            onReview = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onDrive = { onTool("drive") }, onAPlus = onAPlus,
+        )
+        if (!calm) TodayThree(
+            state, calm = calm, quiet = quiet,
             onItem = { item ->
                 when (item.kind) {
                     com.dudlatitat.nextchapter.data.DayPlan.Kind.REVIEW -> if (Srs.queue(state).isEmpty()) onRedo() else onStudy()
@@ -121,14 +130,24 @@ fun TodayScreen(
                 }
                 Unit
             },
-            onPrayer = { prayerOpen = true }, onWeek = { onLifePage("routine") },
+            onPrayer = { prayerOpen = true },
         )
     }
     val rest: @Composable () -> Unit = {
-        NowCard(state, vm, part, minute, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
+        if (!calm) {
+            DayTimeline(state, nowMin)
+            PillarStrip(state) { id ->
+                when (id) {
+                    com.dudlatitat.nextchapter.data.Pillars.Id.TALK -> onOpenChinese()
+                    com.dudlatitat.nextchapter.data.Pillars.Id.CAREER -> onOpenLife()
+                    com.dudlatitat.nextchapter.data.Pillars.Id.MONEY, com.dudlatitat.nextchapter.data.Pillars.Id.US -> onOpenMove()
+                    com.dudlatitat.nextchapter.data.Pillars.Id.HEALTH -> onLifePage("routine")
+                    com.dudlatitat.nextchapter.data.Pillars.Id.FAITH -> prayerOpen = true
+                }
+            }
+        }
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
-        val nm = LocalTime.now().let { it.hour * 60 + it.minute }
-        if (com.dudlatitat.nextchapter.data.TonightLine.showing(state.tonight, today(), nm)) state.tonight?.let { t ->
+        if (!calm && com.dudlatitat.nextchapter.data.TonightLine.showing(state.tonight, today(), nowMin)) state.tonight?.let { t ->
             GlassCard(highlight = true, onClick = { vm.speaker.say(t.hanzi) }) {
                 Text("Say this to ${state.herName.trim().ifEmpty { "her" }} tonight 💛", style = MaterialTheme.typography.labelMedium, color = Night.rose)
                 Spacer(Modifier.height(6.dp))
@@ -137,25 +156,12 @@ fun TodayScreen(
                 Text(t.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
         }
-        val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
+        val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && !calm
         if (sundayAfternoon) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
-        // Unfolded there's room for the goal itself: how ready you are for her family.
-        if (wide) ReadyLadder(state) { t ->
-            when {
-                t.startsWith("deck:") -> onStudy() // deck phrases are learned in reviews
-                t.startsWith("talk:") -> onTool("dinner")
-                t.startsWith("texts:") -> onTool("texts")
-                else -> onTool(t)
-            }
-        }
-        // Everything else for today, as one quiet list: body, coming up, last week (Mondays).
+        // What's coming and (Mondays) last week, as one quiet list.
         val monday = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()
         val coming = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
-        com.dudlatitat.nextchapter.ui.components.ListGroup {
-            com.dudlatitat.nextchapter.ui.components.ListRow(
-                "Body", subtitle = com.dudlatitat.nextchapter.data.Body.pill(state, today()), divider = coming != null || monday,
-                leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.violet) }, onClick = { bodyOpen = true },
-            )
+        if (!calm && (coming != null || monday)) com.dudlatitat.nextchapter.ui.components.ListGroup {
             if (coming != null) com.dudlatitat.nextchapter.ui.components.ListRow(
                 "Coming up", subtitle = coming, divider = monday,
                 leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("近", Night.sun) }, onClick = onOpenLife,
@@ -235,44 +241,45 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
     val her = Life.herTime(now)
     val hour = now.hour
     val helloZh = when { hour < 5 -> "夜深了"; hour < 12 -> "早上好"; hour < 18 -> "下午好"; else -> "晚上好" }
+    val hello = when { hour < 5 -> "Up late"; hour < 12 -> "Good morning"; hour < 18 -> "Good afternoon"; else -> "Good evening" }
     val herMin = her.hour * 60 + her.minute
     val sky = com.dudlatitat.nextchapter.data.HerSky
     val tint by androidx.compose.animation.animateColorAsState(Color(sky.color(herMin)), androidx.compose.animation.core.tween(1500), label = "herSky")
     val phase = sky.phase(herMin)
     val trip = daysUntil(state.nextTripDate())
     val move = daysUntil(state.moveDate)
-    val ready = remember(state) { com.dudlatitat.nextchapter.data.Ready.family(state).percent }
     val shape = RoundedCornerShape(28.dp)
+    val nowMin = now.hour * 60 + now.minute
     // Her sky: the card is the colour of the sky where she is right now, fading into the night.
     Column(
         Modifier.fillMaxWidth().clip(shape)
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.55f), Night.ground1.copy(alpha = 0.0f))))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.5f), Night.ground1.copy(alpha = 0.0f))))
             .padding(horizontal = 20.dp, vertical = 14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("$helloZh, Rudy", style = MaterialTheme.typography.titleMedium, color = Night.sun, modifier = Modifier.weight(1f))
+            Text("$helloZh · $hello, Rudy", style = MaterialTheme.typography.titleSmall, color = Night.sun, modifier = Modifier.weight(1f), maxLines = 1)
             IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Search", tint = Night.ink.copy(alpha = 0.8f)) }
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.ink.copy(alpha = 0.8f)) }
         }
-        // Her time is the big one: it's what you check.
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(her.format(clock), style = MaterialTheme.typography.headlineLarge, color = Night.rose)
-            Spacer(Modifier.width(10.dp))
-            Text("you ${now.format(clock)}", style = MaterialTheme.typography.labelLarge, color = Night.muted, modifier = Modifier.padding(bottom = 6.dp))
-        }
+        // Your clock is the big one; hers sits right under it.
+        Text(now.format(clock), style = MaterialTheme.typography.displaySmall, color = Night.ink)
         Text(
-            "${phase.emoji} ${phase.word} for ${Life.herLabel(state.herName, state.herCity)} · ${Life.herDayWord(now)}",
-            style = MaterialTheme.typography.labelLarge, color = Night.ink.copy(alpha = 0.85f),
+            "${state.herName.trim().ifEmpty { "Her time" }} ${her.format(clock)} · ${com.dudlatitat.nextchapter.data.NowPlan.herPart(now)} ${phase.emoji}" +
+                Life.herDayWord(now).let { if (it.isBlank() || it == "today") "" else " · $it" },
+            style = MaterialTheme.typography.bodyMedium, color = Night.rose, maxLines = 2,
         )
-        Spacer(Modifier.height(10.dp))
-        // Countdowns and today's status as chips; they wrap onto a second line when needed.
+        Spacer(Modifier.height(4.dp))
+        com.dudlatitat.nextchapter.ui.components.StatusStrip(listOfNotNull(
+            com.dudlatitat.nextchapter.ui.components.Fact(com.dudlatitat.nextchapter.data.NowPlan.callLine(nowMin), Night.rose),
+            trip?.takeIf { it >= 0 }?.let { com.dudlatitat.nextchapter.ui.components.Fact("✈ ${it}d", onClick = onOpenMove) },
+        ))
+        // Only when they apply: trip phrases (60 days before a trip) and the work day.
         val T = com.dudlatitat.nextchapter.data.TripPrep
         val P = com.dudlatitat.nextchapter.data.Places
-        val nowMin = now.hour * 60 + now.minute
         val atWork = P.atWork(state, today(), nowMin)
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            trip?.takeIf { it >= 0 }?.let { Pill("✈️ 成都 ${friendlySpan(it)} · ready $ready%", Night.rose, onClick = onOpenMove) }
-            move?.takeIf { it >= 0 }?.let { Pill("搬家 ${friendlySpan(it)}", Night.sun, onClick = onOpenMove) }
+        if (T.open(state, today()) || atWork) androidx.compose.foundation.layout.FlowRow(
+            Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             if (T.open(state, today())) {
                 val said = T.saidToday(state, today())
                 Pill(if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}", Night.rose, onClick = onTrip)
@@ -283,65 +290,6 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
                     Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() })
                 }
             }
-        }
-    }
-}
-
-/**
- * The one card for right now, for what the rings can't say: call time → heading home (Drive mode
- * for the ride) → tonight's job (Start and
- * check-in) → wind down → otherwise the phrase of the day. (Phrases, A+ and prayer are the rings.)
- */
-@Composable
-private fun NowCard(
-    state: AppState, vm: MainViewModel, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit,
-    onPray: () -> Unit, onChinese: () -> Unit, onAPlus: () -> Unit, onDrive: () -> Unit,
-) {
-    val R = com.dudlatitat.nextchapter.data.Routine
-    val job = R.jobOn(state, java.time.LocalDate.now())
-    val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
-    val unanswered = R.checkFor(state.routineChecks, today()) == null
-    val her = state.herName.trim()
-    when {
-        part == Life.Part.CALL -> GlassCard(highlight = true) {
-            Text("Call time 💛", style = MaterialTheme.typography.headlineSmall, color = Night.rose)
-            Text(
-                (if (her.isEmpty()) "She's" else "$her is") + " starting her day. Everything else can wait until 8.",
-                style = MaterialTheme.typography.bodyMedium, color = Night.ink,
-            )
-            if (unanswered) Text("After: ${R.text(job.task, her)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-        }
-        com.dudlatitat.nextchapter.data.Places.headingHome(state, today(), nowMin) -> NowLine(
-            "Heading home? 🚗", "Drive mode: phrases out loud, hands-free, for the ride.", "Drive", Night.jade, onDrive,
-        )
-        unanswered && nowMin >= minOf(com.dudlatitat.nextchapter.data.Places.homeTime(state, today()), job.minutes) - 15 -> TonightJob(state, vm, startJob)
-        part == Life.Part.LATE -> GlassCard {
-            Text("Winding down 🌙", style = MaterialTheme.typography.titleLarge, color = Night.ink)
-            Text(
-                "You did enough today. Phone down by ${com.dudlatitat.nextchapter.ui.life.clockLabel(state.windDownMinutes)}.",
-                style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-            )
-            state.phraseOfTheDay()?.let { Spacer(Modifier.height(10.dp)); PhraseRow(it, vm) }
-        }
-        // The rings already say what's left to do; the rest of the day, a line to carry with you.
-        else -> state.phraseOfTheDay()?.let { GlassCard { PhraseRow(it, vm) } }
-    }
-}
-
-/** A Now card with one sentence and one button. */
-@Composable
-private fun NowLine(title: String, line: String, button: String, color: Color, onClick: () -> Unit) {
-    GlassCard(highlight = true, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, color = Night.ink)
-                Text(line, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-            }
-            Spacer(Modifier.width(10.dp))
-            androidx.compose.material3.Button(
-                onClick = onClick,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = color, contentColor = Night.ground2),
-            ) { Text(button) }
         }
     }
 }
