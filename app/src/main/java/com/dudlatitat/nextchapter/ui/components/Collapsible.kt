@@ -37,7 +37,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
  * Whether each collapsible section is open, remembered on the phone (a screen preference, so
  * it lives in its own small settings file, not in your saved progress or backups).
  */
-private fun uiPrefs(context: Context) = context.getSharedPreferences("ui_sections", Context.MODE_PRIVATE)
+internal fun uiPrefs(context: Context) = context.getSharedPreferences("ui_sections", Context.MODE_PRIVATE)
 
 /**
  * A card with a header you tap to open or close: title, a one-line summary (shown when closed),

@@ -110,7 +110,7 @@ fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
     GlassCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Weekly routine · 每周", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-            if (streak > 0) Pill("🔥 $streak", Night.sun)
+            if (streak > 0) Pill("🌙 $streak", Night.violet)
         }
         Text("Tonight: ${Routine.text(job.task, state.herName)}", style = MaterialTheme.typography.bodySmall, color = Night.muted, maxLines = 1)
         Spacer(Modifier.height(10.dp))
@@ -136,7 +136,7 @@ fun RoutineScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         GlassCard(highlight = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("This week", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-                Pill(if (streak > 0) "🔥 $streak-day streak" else "Fresh start ✨", Night.sun)
+                Pill(if (streak > 0) "🌙 $streak ${if (streak == 1) "night" else "nights"} in a row" else "Fresh start ✨", Night.violet)
             }
             Spacer(Modifier.height(12.dp))
             WeekDots(state, big = true)

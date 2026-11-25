@@ -21,6 +21,9 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,10 +112,13 @@ fun SuggestedNext(state: AppState, onTool: (String) -> Unit, onDeck: (String) ->
         else -> return
     }
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).pressClick(onClick = go).clip(RoundedCornerShape(14.dp)).background(Night.rose.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).pressClick(onClick = go).clip(RoundedCornerShape(18.dp))
+            .background(Night.rose.copy(alpha = 0.22f)).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        com.dudlatitat.nextchapter.ui.components.IconBadge("玩", Night.rose, 36.dp, filled = true)
+        Spacer(Modifier.width(12.dp))
+        Text(label, style = MaterialTheme.typography.titleSmall, color = Night.ink, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text("›", style = MaterialTheme.typography.titleLarge, color = Night.rose)
     }
 }
@@ -165,6 +171,57 @@ fun SituationSheet(s: PracticeTools.Situation, onDismiss: () -> Unit, onTool: (S
                         Text(t.blurb, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
                     Text("›", style = MaterialTheme.typography.titleLarge, color = s.color)
+                }
+            }
+        }
+    }
+}
+
+
+/** What a tool's row says under its name: your best, or that you played it today. */
+fun toolStatus(state: AppState, id: String, day: Long): String? {
+    val today = if (state.played[id] == day) "played today ✓" else null
+    val best = when (id) {
+        "callouts" -> state.calloutBest.takeIf { it > 0 }?.let { "best $it" }
+        "numbers" -> state.numbersBest.takeIf { it > 0 }?.let { "best $it" }
+        "sprint" -> state.sprintBest.takeIf { it > 0 }?.let { "best $it/min" }
+        "dinner" -> state.dinnerBest.size.takeIf { it > 0 }?.let { "$it scenes played" }
+        "texts" -> state.textBest.size.takeIf { it > 0 }?.let { "$it chats done" }
+        "prayer" -> state.prayerSteps.values.maxOrNull()?.takeIf { it > 0 }?.let { "rung $it" }
+        "family" -> state.familyNames.size.takeIf { it > 0 }?.let { "$it names saved" }
+        else -> null
+    }
+    return listOfNotNull(today, best).joinToString(" · ").ifEmpty { null }
+}
+
+/**
+ * Practice, by situation: a row of chips (家人 · 微信 · 玩 · 读写) and that situation's tools
+ * listed right under it. One tap to switch, no sheet; it remembers which one you had open.
+ */
+@Composable
+fun SituationPanel(state: AppState, onTool: (String) -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = androidx.compose.runtime.remember { com.dudlatitat.nextchapter.ui.components.uiPrefs(context) }
+    var pick by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(prefs.getInt("learn.situation", 0).coerceIn(0, PracticeTools.situations.lastIndex)) }
+    val day = com.dudlatitat.nextchapter.data.today()
+    Column {
+        com.dudlatitat.nextchapter.ui.components.SegmentedChips(
+            PracticeTools.situations.map { "${it.zh} ${it.name.substringBefore(" &")}" to it.color }, pick,
+            onSelect = { pick = it; prefs.edit().putInt("learn.situation", it).apply() },
+        )
+        Spacer(Modifier.height(10.dp))
+        val sit = PracticeTools.situations[pick]
+        androidx.compose.animation.AnimatedContent(sit, transitionSpec = {
+            androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60)) togetherWith androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+        }, label = "situation") { s ->
+            com.dudlatitat.nextchapter.ui.components.ListGroup {
+                s.tools.forEachIndexed { i, t ->
+                    val status = toolStatus(state, t.id, day)
+                    com.dudlatitat.nextchapter.ui.components.ListRow(
+                        t.name, subtitle = status ?: t.blurb, divider = i < s.tools.lastIndex,
+                        leading = { com.dudlatitat.nextchapter.ui.components.IconBadge(t.zh, s.color, 44.dp) },
+                        onClick = { onTool(t.id) },
+                    )
                 }
             }
         }

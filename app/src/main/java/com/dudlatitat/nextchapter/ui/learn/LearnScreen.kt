@@ -172,42 +172,48 @@ private fun Overview(
     val day = today()
     val doneToday = remember(state, day) { state.cards.count { it.last == day } }
     val queue = remember(state, day) { Srs.queue(state, day) }
-    var situation by remember { mutableStateOf<PracticeTools.Situation?>(null) }
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
-    situation?.let { sit -> SituationSheet(sit, onDismiss = { situation = null }, onTool = onTool) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("Chinese", "学中文 · for real life there") }
-        item { SearchPill(onClick = { onTool("lookup") }) }
+        item { SearchPill(onClick = { onTool("lookup") }, modifier = Modifier.padding(top = 8.dp)) }
         val hero: @Composable () -> Unit = {
-            GlassCard(highlight = true) {
+            com.dudlatitat.nextchapter.ui.components.HeroCard {
+                val fresh = queue.count { it.isNew }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(if (queue.isEmpty()) "You're all caught up ✓" else "${queue.size} waiting", style = MaterialTheme.typography.titleLarge, color = Night.ink)
-                        val fresh = queue.count { it.isNew }
-                        Text(
-                            if (queue.isEmpty()) "New phrases arrive tomorrow" else "${queue.size - fresh} to remember · $fresh new today",
-                            style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-                        )
+                        if (queue.isEmpty()) {
+                            Text("All caught up ✓", style = MaterialTheme.typography.headlineSmall, color = Night.jade)
+                            Text("New phrases arrive tomorrow", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                        } else {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text("${queue.size}", style = MaterialTheme.typography.displaySmall, color = Night.sun)
+                                Spacer(Modifier.width(8.dp))
+                                Text("waiting", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.padding(bottom = 6.dp))
+                            }
+                            Text("${queue.size - fresh} to remember · $fresh new", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                        }
                     }
+                    // Never a dead end: caught up, the big button plays today's game instead.
+                    val game = remember(state, day) { com.dudlatitat.nextchapter.data.DayPlan.pickGame(state, day) }
                     Button(
-                        onClick = onReview, enabled = queue.isNotEmpty(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-                    ) { Text("Practice") }
+                        onClick = { if (queue.isEmpty()) onTool(game) else onReview() },
+                        modifier = Modifier.height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (queue.isEmpty()) Night.rose else Night.sun, contentColor = Night.ground2),
+                    ) {
+                        Icon(Icons.Rounded.PlayArrow, null)
+                        Text(if (queue.isEmpty()) " Play" else " Practice", style = MaterialTheme.typography.titleMedium)
+                    }
                 }
-                if (doneToday > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    TextButton(onClick = onRedo) { Text("↻  Redo today ($doneToday)", color = Night.sun) }
-                }
-                // Said it for real ★: the count that matters most.
                 val real = state.realUses.map { it.id }.toSet().size
-                if (real > 0) Text(
-                    "★ $real phrase${if (real == 1) "" else "s"} used for real with her and her family",
-                    style = MaterialTheme.typography.bodyMedium, color = Night.sun,
-                )
+                if (doneToday > 0 || real > 0) Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (doneToday > 0) TextButton(onClick = onRedo, contentPadding = PaddingValues(horizontal = 0.dp)) { Text("↻ Redo today ($doneToday)", color = Night.sun) }
+                    if (doneToday > 0 && real > 0) Spacer(Modifier.width(12.dp))
+                    // Said it for real ★: the count that matters most.
+                    if (real > 0) Pill("★ $real said for real", Night.sun)
+                }
                 Spacer(Modifier.height(10.dp))
                 SuggestedNext(state, onTool, onDeck)
             }
@@ -217,7 +223,7 @@ private fun Overview(
             Column {
                 SectionLabel("Practice")
                 Spacer(Modifier.height(4.dp))
-                SituationTiles(onOpen = { situation = it })
+                SituationPanel(state, onTool)
             }
         }
         val decks: @Composable () -> Unit = {
@@ -254,7 +260,7 @@ private fun Overview(
         }
         // Unfolded: review and practice on the left, readiness and decks on the right.
         if (wide) item { com.dudlatitat.nextchapter.ui.components.TwoPanes({ hero(); practice() }, { ready(); decks() }) }
-        else { item { hero() }; item { practice() }; item { decks() }; item { ready() } }
+        else { item { hero() }; item { practice() }; item { ready() }; item { decks() } }
         // Then your tones and how it's going.
         item { WeakTones(state, onDrill) }
         item { SectionLabel("How it's going") }

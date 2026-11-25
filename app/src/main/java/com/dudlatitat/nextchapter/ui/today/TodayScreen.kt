@@ -139,22 +139,32 @@ fun TodayScreen(
         }
         val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
         if (sundayAfternoon) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
-        // Everything else for today, folded: coming up, body, last week (Mondays).
-        val monday = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()
-        val coming = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
-        com.dudlatitat.nextchapter.ui.components.Collapsible(
-            "today.more", "More today",
-            summary = listOfNotNull(coming, com.dudlatitat.nextchapter.data.Body.pill(state, today()), if (monday) "last week" else null).joinToString(" · "),
-        ) {
-            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, onClick = { bodyOpen = true })
-            if (coming != null) { Spacer(Modifier.height(10.dp)); com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife) }
-            if (monday) {
-                Spacer(Modifier.height(12.dp))
-                Text("Last week", style = MaterialTheme.typography.titleSmall, color = Night.ink)
-                com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true, bare = true)
+        // Unfolded there's room for the goal itself: how ready you are for her family.
+        if (wide) ReadyLadder(state) { t ->
+            when {
+                t.startsWith("deck:") -> onStudy() // deck phrases are learned in reviews
+                t.startsWith("talk:") -> onTool("dinner")
+                t.startsWith("texts:") -> onTool("texts")
+                else -> onTool(t)
             }
         }
-
+        // Everything else for today, as one quiet list: body, coming up, last week (Mondays).
+        val monday = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()
+        val coming = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
+        com.dudlatitat.nextchapter.ui.components.ListGroup {
+            com.dudlatitat.nextchapter.ui.components.ListRow(
+                "Body", subtitle = com.dudlatitat.nextchapter.data.Body.pill(state, today()), divider = coming != null || monday,
+                leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.violet) }, onClick = { bodyOpen = true },
+            )
+            if (coming != null) com.dudlatitat.nextchapter.ui.components.ListRow(
+                "Coming up", subtitle = coming, divider = monday,
+                leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("近", Night.sun) }, onClick = onOpenLife,
+            )
+            if (monday) com.dudlatitat.nextchapter.ui.components.ListRow(
+                "Last week", subtitle = com.dudlatitat.nextchapter.ui.progress.recapSummary(state, lastWeek = true), divider = false,
+                leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("周", Night.jade) }, onClick = { onLifePage("routine") },
+            )
+        }
     }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(if (wide) 1100.dp else 720.dp).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
@@ -224,12 +234,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
-    val (hello, helloZh) = when {
-        hour < 5 -> "Up late" to "夜深了"
-        hour < 12 -> "Good morning" to "早上好"
-        hour < 18 -> "Good afternoon" to "下午好"
-        else -> "Good evening" to "晚上好"
-    }
+    val helloZh = when { hour < 5 -> "夜深了"; hour < 12 -> "早上好"; hour < 18 -> "下午好"; else -> "晚上好" }
     val herMin = her.hour * 60 + her.minute
     val sky = com.dudlatitat.nextchapter.data.HerSky
     val tint by androidx.compose.animation.animateColorAsState(Color(sky.color(herMin)), androidx.compose.animation.core.tween(1500), label = "herSky")
@@ -237,65 +242,45 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
     val trip = daysUntil(state.nextTripDate())
     val move = daysUntil(state.moveDate)
     val ready = remember(state) { com.dudlatitat.nextchapter.data.Ready.family(state).percent }
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(28.dp)
+    // Her sky: the card is the colour of the sky where she is right now, fading into the night.
     Column(
         Modifier.fillMaxWidth().clip(shape)
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, Night.cardBottom)))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
-            .padding(18.dp),
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.55f), Night.ground1.copy(alpha = 0.0f))))
+            .padding(horizontal = 20.dp, vertical = 14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(helloZh, style = MaterialTheme.typography.titleMedium, color = Night.sun)
-                Text("$hello, Rudy", style = MaterialTheme.typography.titleLarge, color = Night.ink, maxLines = 2)
-            }
-            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Search", tint = Night.ink.copy(alpha = 0.7f)) }
-            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.ink.copy(alpha = 0.7f)) }
+            Text("$helloZh, Rudy", style = MaterialTheme.typography.titleMedium, color = Night.sun, modifier = Modifier.weight(1f))
+            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Search", tint = Night.ink.copy(alpha = 0.8f)) }
+            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.ink.copy(alpha = 0.8f)) }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            Column {
-                Text("You", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-                Text(now.format(clock), style = MaterialTheme.typography.titleMedium, color = Night.ink)
-            }
-            Column {
-                Text("${Life.herLabel(state.herName, state.herCity)} ${phase.emoji} ${phase.word}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-                Text(her.format(clock) + " " + Life.herDayWord(now), style = MaterialTheme.typography.titleMedium, color = Night.rose)
-            }
+        // Her time is the big one: it's what you check.
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(her.format(clock), style = MaterialTheme.typography.headlineLarge, color = Night.rose)
+            Spacer(Modifier.width(10.dp))
+            Text("you ${now.format(clock)}", style = MaterialTheme.typography.labelLarge, color = Night.muted, modifier = Modifier.padding(bottom = 6.dp))
         }
-        // One line of countdowns (tap for Move): the trip with how ready you are, then the move.
-        val parts = listOfNotNull(
-            trip?.takeIf { it >= 0 }?.let { "✈️ 成都 ${friendlySpan(it)} · ready $ready%" },
-            move?.takeIf { it >= 0 }?.let { "搬家 ${friendlySpan(it)}" },
+        Text(
+            "${phase.emoji} ${phase.word} for ${Life.herLabel(state.herName, state.herCity)} · ${Life.herDayWord(now)}",
+            style = MaterialTheme.typography.labelLarge, color = Night.ink.copy(alpha = 0.85f),
         )
-        if (parts.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                parts.joinToString("   ·   "), style = MaterialTheme.typography.bodyMedium, color = Night.ink,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onOpenMove).padding(vertical = 6.dp),
-            )
-        }
-        // Only when it applies: trip phrases (60 days before a trip) and the work day.
+        Spacer(Modifier.height(10.dp))
+        // Countdowns and today's status as chips; they wrap onto a second line when needed.
         val T = com.dudlatitat.nextchapter.data.TripPrep
         val P = com.dudlatitat.nextchapter.data.Places
         val nowMin = now.hour * 60 + now.minute
         val atWork = P.atWork(state, today(), nowMin)
-        if (T.open(state, today()) || atWork) {
-            Spacer(Modifier.height(4.dp))
-            // Wraps onto a second line when there are several chips (it used to squeeze "I'm home" into a column).
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (T.open(state, today())) {
-                    val said = T.saidToday(state, today())
-                    Pill(
-                        if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
-                        Night.rose, onClick = onTrip,
-                    )
-                }
-                if (atWork) {
-                    Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
-                    if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
-                        Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() })
-                    }
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            trip?.takeIf { it >= 0 }?.let { Pill("✈️ 成都 ${friendlySpan(it)} · ready $ready%", Night.rose, onClick = onOpenMove) }
+            move?.takeIf { it >= 0 }?.let { Pill("搬家 ${friendlySpan(it)}", Night.sun, onClick = onOpenMove) }
+            if (T.open(state, today())) {
+                val said = T.saidToday(state, today())
+                Pill(if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}", Night.rose, onClick = onTrip)
+            }
+            if (atWork) {
+                Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
+                if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
+                    Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() })
                 }
             }
         }

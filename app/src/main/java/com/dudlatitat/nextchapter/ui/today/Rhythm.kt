@@ -61,7 +61,7 @@ fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Tonight's job · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-            if (streak > 0) Pill("🔥 $streak", Night.sun)
+            if (streak > 0) Pill("🌙 $streak ${if (streak == 1) "night" else "nights"}", Night.violet)
         }
         Spacer(Modifier.height(6.dp))
         Text(Routine.text(job.task, her), style = MaterialTheme.typography.titleLarge, color = Night.ink)
