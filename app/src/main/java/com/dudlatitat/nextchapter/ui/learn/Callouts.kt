@@ -70,6 +70,7 @@ import kotlinx.coroutines.launch
 /** Practice → Callouts: ten Identity V callouts, shouted against the clock. */
 @Composable
 fun CalloutScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -153,7 +154,10 @@ fun CalloutScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
         when {
             r == null -> Intro(state.calloutBest, onStart = ::start)
-            done -> Results(score, greats, bestBefore, onAgain = ::start, onBack = onBack)
+            done -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Results(score, greats, bestBefore, onAgain = ::start, onBack = onBack)
+                com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore)
+            }
             else -> {
                 // Progress dots and the combo.
                 Row(verticalAlignment = Alignment.CenterVertically) {

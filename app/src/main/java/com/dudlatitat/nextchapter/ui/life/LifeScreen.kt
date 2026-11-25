@@ -238,6 +238,7 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
 /** One A+ session: question, tap to reveal, grade. Misses come back at the end. */
 @Composable
 private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val queue = remember { mutableStateListOf<String>().apply { addAll(APlus.queue(state).map { it.id }) } }
     val total = remember { queue.size }
@@ -259,6 +260,8 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
             Text("Done for today ✓", style = MaterialTheme.typography.headlineMedium, color = Night.jade, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             Text("One step closer to passing. 加油!", style = MaterialTheme.typography.bodyLarge, color = Night.muted, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             Spacer(Modifier.height(20.dp))
+            com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore)
+            Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back to Life", color = Night.sun) }
             return@Column
         }

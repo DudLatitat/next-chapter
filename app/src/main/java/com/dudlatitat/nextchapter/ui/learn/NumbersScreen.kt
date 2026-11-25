@@ -55,6 +55,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 /** Practice → Number ears 听价格: hear a price or a time at real speed, type the number. */
 @Composable
 fun NumbersScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     var kind by remember { mutableStateOf<Numbers.Kind?>(null) }
@@ -131,7 +132,7 @@ fun NumbersScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                         Button(onClick = { start(kind) }, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Again · 再来") }
                     }
                 }
-            }
+            }.also { Spacer(Modifier.height(12.dp)); com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore) }
             item != null -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${i + 1} / ${r.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))

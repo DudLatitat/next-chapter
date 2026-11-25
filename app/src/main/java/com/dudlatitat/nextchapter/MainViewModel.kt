@@ -73,6 +73,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun climbPrayer(prayer: String, rung: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(s.copy(prayerSteps = com.dudlatitat.nextchapter.data.Ladder.climbed(s.prayerSteps, prayer, rung))), "prayer") }
     /** A game with no score of its own (the family quiz) still counts for today's plan and the streak. */
+    /** Claims today's "done for today" moment (shown once a day). */
+    fun celebrate(day: Long = today()) = store.edit { it.copy(celebrated = day) }
     fun markPlayed(tool: String) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(s), tool) }
     fun recordReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.recordReal(s, card.id) }
     fun saidForReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.saidForReal(s, card.id) }

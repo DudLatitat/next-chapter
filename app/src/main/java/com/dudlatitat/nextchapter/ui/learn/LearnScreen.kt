@@ -99,12 +99,12 @@ fun LearnScreen(
 
     LaunchedEffect(startTool) {
         if (startTool == "add") { adding = true; onReviewStarted() } // shortcut: straight to "add a phrase"
-        else if (startTool != null) { tool = startTool; onReviewStarted() }
+        else if (startTool != null) { reviewing = false; redoing = false; openDeck = null; tool = startTool; onReviewStarted() }
     }
     // Opening a deck from elsewhere (Progress → By deck).
     LaunchedEffect(startDeck) { if (startDeck != null) { openDeck = startDeck; onDeckOpened() } }
     LaunchedEffect(startReview, startRedo) {
-        if (startReview) { reviewing = true; onReviewStarted() }
+        if (startReview) { tool = null; openDeck = null; reviewing = true; onReviewStarted() }
         if (startRedo) { redoing = true; onReviewStarted() }
     }
 
@@ -366,6 +366,7 @@ private enum class Direction { READ, SAY, LISTEN }
 @Composable
 private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCalibrate: () -> Unit, practice: Boolean = false) {
     BackHandler(onBack = onClose)
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     // The queue as it was when the session started; misses go back to the end. Practice mode
     // replays today's cards without touching their schedule.
     // Saveable, so glancing at another tab (or folding the phone) keeps your place in the session.
@@ -459,6 +460,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                         }
                     }
                 }
+                if (!practice) { Spacer(Modifier.height(16.dp)); com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore) }
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = onClose, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Back") }
             }

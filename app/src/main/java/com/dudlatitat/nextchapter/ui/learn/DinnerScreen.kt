@@ -126,6 +126,7 @@ private fun ScenePicker(state: AppState, onBack: () -> Unit, onPick: (Dinner.Sce
 
 @Composable
 private fun Table(scene: Dinner.Scene, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
@@ -224,6 +225,8 @@ private fun Table(scene: Dinner.Scene, vm: MainViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore)
             }
         }
 

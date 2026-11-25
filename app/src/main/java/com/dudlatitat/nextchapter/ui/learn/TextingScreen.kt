@@ -128,6 +128,7 @@ private fun ChatList(state: AppState, onBack: () -> Unit, onOpen: (String) -> Un
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     val lines = remember(th.id) { mutableStateListOf<Line>() }
@@ -197,6 +198,8 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
                             TextButton(onClick = onBack) { Text("Other chats", color = Night.muted) }
                             Button(onClick = { lines.clear(); score = 0; turn = 0 }, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text("Again · 再来") }
                         }
+                        Spacer(Modifier.height(12.dp))
+                        com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore)
                     }
                 }
             }
@@ -261,6 +264,7 @@ private fun Bubble(l: Line, avatar: String, help: Boolean, onPlay: () -> Unit) {
 /** Practice → 打字 Sprint: an English line, you type it in Chinese, 60 seconds. */
 @Composable
 fun SprintScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+    val payBefore = com.dudlatitat.nextchapter.ui.components.rememberBefore(vm)
     BackHandler(onBack = onBack)
     val haptic = LocalHapticFeedback.current
     var running by remember { mutableStateOf(false) }
@@ -343,6 +347,7 @@ fun SprintScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                     }
                     Spacer(Modifier.height(10.dp))
                     Button(onClick = ::start, colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary)) { Text(if (finished) "Again · 再来" else "Start · 开始") }
+                    if (finished) { Spacer(Modifier.height(12.dp)); com.dudlatitat.nextchapter.ui.components.SessionPayoff(vm, payBefore) }
                 }
             }
         }

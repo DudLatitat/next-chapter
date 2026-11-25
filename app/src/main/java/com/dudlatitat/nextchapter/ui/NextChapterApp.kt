@@ -117,6 +117,19 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         unselectedIconColor = Night.muted, unselectedTextColor = Night.muted,
     )
 
+    // "Next" from any payoff screen: the same routes as Today's rings.
+    val planNav: (com.dudlatitat.nextchapter.data.DayPlan.Item) -> Unit = { item ->
+        when (item.kind) {
+            com.dudlatitat.nextchapter.data.DayPlan.Kind.REVIEW -> { startReview = true; tab = Tab.LEARN }
+            com.dudlatitat.nextchapter.data.DayPlan.Kind.PLAY -> { startTool = item.tool; tab = Tab.LEARN }
+            com.dudlatitat.nextchapter.data.DayPlan.Kind.LIFE -> if (item.tool == "aplus") { startAPlus = true; tab = Tab.LIFE } else { returnToday = false; tab = Tab.TODAY }
+        }
+    }
+    val day = com.dudlatitat.nextchapter.data.today()
+    val claim = androidx.compose.runtime.remember(state, day) { com.dudlatitat.nextchapter.data.Payoff.claimDue(state, day) }
+    val callTime = com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now())
+
+    com.dudlatitat.nextchapter.ui.components.ProvidePlanNav(planNav) {
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
         Scaffold(
@@ -181,5 +194,14 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
                 SettingsScreen(state, vm, onBack = { settings = false })
             }
         }
+        // All three done: the once-a-day moment, on Today (where the rings are), never during her call.
+        androidx.compose.animation.AnimatedVisibility(
+            claim && tab == Tab.TODAY && !settings && !callTime,
+            enter = androidx.compose.animation.fadeIn(tween(500)),
+            exit = androidx.compose.animation.fadeOut(tween(400)) + androidx.compose.animation.scaleOut(tween(400), targetScale = 1.05f),
+        ) {
+            com.dudlatitat.nextchapter.ui.components.DayClaim(state, androidx.compose.runtime.remember(state, day) { com.dudlatitat.nextchapter.data.Stats.streak(state, day) }) { vm.celebrate(day) }
+        }
+    }
     }
 }
