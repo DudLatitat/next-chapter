@@ -11,7 +11,8 @@ package com.dudlatitat.nextchapter.data
  */
 object DayPlan {
     enum class Kind { REVIEW, PLAY, LIFE }
-    data class Item(val kind: Kind, val title: String, val detail: String, val done: Boolean, val tool: String? = null)
+    /** [ring] is the short label under its ring on Today; [progress] fills it (0–1). */
+    data class Item(val kind: Kind, val title: String, val detail: String, val done: Boolean, val tool: String? = null, val ring: String = "", val progress: Float = if (done) 1f else 0f)
     data class Plan(val items: List<Item>, val welcomeBack: Int) {
         val doneCount: Int get() = items.count { it.done }
         val finished: Boolean get() = items.all { it.done }
@@ -57,18 +58,21 @@ object DayPlan {
             when { caughtUp && reviewedToday == 0 -> "Reviews: all caught up"; miss > 0 -> "Welcome back: $goal phrases"; else -> "Review $goal phrases" },
             if (reviewedToday >= goal || caughtUp) "Done ✓" else "${minOf(reviewedToday, goal)}/$goal · about ${maxOf(1, goal / 2)} min",
             done = reviewedToday >= goal || caughtUp,
+            ring = "Phrases",
+            progress = if (reviewedToday >= goal || caughtUp) 1f else reviewedToday.toFloat() / goal,
         )
         val game = pickGame(s, day)
-        val play = Item(Kind.PLAY, "Play: ${games.getValue(game)}", "One round, about 3 min", done = s.played.values.any { it == day }, tool = game)
+        val play = Item(Kind.PLAY, "Play: ${games.getValue(game)}", "One round, about 3 min", done = s.played.values.any { it == day }, tool = game, ring = "Play")
         val aplusDue = APlus.queue(s, day).size
         val aplusDone = s.aplus.count { it.last == day && it.due > day }
         val job = Routine.jobOn(s, java.time.LocalDate.ofEpochDay(day))
         val life = if (aplusDue > 0 || aplusDone > 0) {
             val g = minOf(5, aplusDone + aplusDue)
-            Item(Kind.LIFE, "A+: $g cards", if (aplusDone >= g) "Done ✓" else "$aplusDone/$g", done = aplusDone >= g, tool = "aplus")
+            Item(Kind.LIFE, "A+: $g cards", if (aplusDone >= g) "Done ✓" else "$aplusDone/$g", done = aplusDone >= g, tool = "aplus", ring = "A+", progress = (aplusDone.toFloat() / g).coerceAtMost(1f))
         } else {
             val checked = Routine.checkFor(s.routineChecks, day)
-            Item(Kind.LIFE, "Tonight: ${Routine.text(job.task, s.herName)}", job.minimum, done = checked == CheckIn.DONE || checked == CheckIn.MINIMUM, tool = "job")
+            Item(Kind.LIFE, "Tonight: ${Routine.text(job.task, s.herName)}", job.minimum, done = checked == CheckIn.DONE || checked == CheckIn.MINIMUM, tool = "job", ring = "Tonight",
+                progress = when (checked) { CheckIn.DONE -> 1f; CheckIn.MINIMUM -> 0.6f; else -> 0f })
         }
         return Plan(listOf(review, play, life), miss)
     }

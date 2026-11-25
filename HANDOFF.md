@@ -164,6 +164,11 @@ tools/
   - Comeback: 2+ missed days → "Welcome back", the review session is capped at 15 (most overdue first; `Srs.queue` already sorts by due). The cap is in `LearnScreen.Review` via `DayPlan.sessionLimit`.
   - Rest day: `Stats.streak` now uses `Stats.withRest`: one missed day per 7 doesn't break 🔥 (and isn't counted). `Srs.streak` (early starts) is unchanged.
   - `data/Ready` (`ReadyTest`): family ladder of 8 rungs (hello, video call, arrive, dinner, out and about, errands, WeChat, the big dinner) worked out from Talk scene bests (60% of chopsticks), Texts bests, Number ears 150+, learned deck cards (reps ≥ 2) and ★. Card `ReadyLadder` on the Chinese tab (pieces are tappable); "ready N%" on the Hero's trip pill.
+- **1.103 (UI overhaul phase 1 of 4: Today):** a design review (one-off subagent) found Today answered "what now?" four times. Now:
+  - `Header` (was Hero): greeting, both clocks, one line of countdowns (trip · ready % · move). The background follows her sky (`data/HerSky`, `HerSkyTest`). Trip-phrase and work pills only when they apply.
+  - `TodayThree` is now three rings (phrases, a game, A+/tonight) built from `DayPlan` (`Item.ring`/`progress`), with the one 🔥 streak (practice days), a 🙏 chip and the week dots. The old `TodayRings` and the second (routine) streak on Today are gone; the routine streak lives in Life.
+  - Body, Coming up and Monday's last week fold into "More today".
+  - Phases still to come: 2 Chinese tab (suggested tool + situation tiles), 3 shared style rules, 4 Fold two-pane + slimmer Life/Move.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

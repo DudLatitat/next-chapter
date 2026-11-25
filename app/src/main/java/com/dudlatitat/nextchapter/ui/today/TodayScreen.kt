@@ -1,6 +1,7 @@
 package com.dudlatitat.nextchapter.ui.today
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -108,18 +109,20 @@ fun TodayScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(720.dp).padding(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Hero(state, vm, part, minute, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
+        Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
-        TodayThree(state) { item ->
-            when (item.kind) {
-                com.dudlatitat.nextchapter.data.DayPlan.Kind.REVIEW -> if (Srs.queue(state).isEmpty()) onRedo() else onStudy()
-                com.dudlatitat.nextchapter.data.DayPlan.Kind.PLAY -> item.tool?.let(onTool)
-                com.dudlatitat.nextchapter.data.DayPlan.Kind.LIFE -> { if (item.tool == "aplus") onAPlus() else { jobOpen = true } }
-            }
-            Unit
-        }
-        TodayRings(state, part, minute, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
-
+        TodayThree(
+            state, calm = part == Life.Part.CALL,
+            onItem = { item ->
+                when (item.kind) {
+                    com.dudlatitat.nextchapter.data.DayPlan.Kind.REVIEW -> if (Srs.queue(state).isEmpty()) onRedo() else onStudy()
+                    com.dudlatitat.nextchapter.data.DayPlan.Kind.PLAY -> item.tool?.let(onTool)
+                    com.dudlatitat.nextchapter.data.DayPlan.Kind.LIFE -> { if (item.tool == "aplus") onAPlus() else { jobOpen = true } }
+                }
+                Unit
+            },
+            onPrayer = { prayerOpen = true }, onWeek = { onLifePage("routine") },
+        )
         NowCard(state, vm, part, minute, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
         val nm = LocalTime.now().let { it.hour * 60 + it.minute }
@@ -134,13 +137,20 @@ fun TodayScreen(
         }
         val sundayAfternoon = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.SUNDAY && part != Life.Part.MORNING && part != Life.Part.CALL
         if (sundayAfternoon) SundayReview(state, vm, onOpenRoutine = { onLifePage("routine") })
-        if (java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()) {
-            com.dudlatitat.nextchapter.ui.components.Collapsible(
-                "today.lastweek", "Last week", summary = com.dudlatitat.nextchapter.ui.progress.recapSummary(state, lastWeek = true),
-            ) { com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true, bare = true) }
-        }
-        com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)?.let {
-            GlassCard { com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife) }
+        // Everything else for today, folded: coming up, body, last week (Mondays).
+        val monday = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()
+        val coming = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
+        com.dudlatitat.nextchapter.ui.components.Collapsible(
+            "today.more", "More today",
+            summary = listOfNotNull(coming, com.dudlatitat.nextchapter.data.Body.pill(state, today()), if (monday) "last week" else null).joinToString(" · "),
+        ) {
+            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable { bodyOpen = true })
+            if (coming != null) { Spacer(Modifier.height(10.dp)); com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife) }
+            if (monday) {
+                Spacer(Modifier.height(12.dp))
+                Text("Last week", style = MaterialTheme.typography.titleSmall, color = Night.ink)
+                com.dudlatitat.nextchapter.ui.progress.WeeklyRecap(state, lastWeek = true, bare = true)
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -195,10 +205,13 @@ fun TodayScreen(
     }
 }
 
-/** The warm header: greeting, both clocks, the trip, the streaks, and a call-time note. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/**
+ * The header: greeting, both clocks, and one line of countdowns. Its sky follows hers: the
+ * background is the colour of the sky in Chengdu right now (dawn rose, pale day, dusk, deep
+ * night), fading as her day turns (`HerSky`).
+ */
 @Composable
-private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, onSettings: () -> Unit, onOpenMove: () -> Unit, onBody: () -> Unit, onTrip: () -> Unit) {
+private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMETER") minute: Long, onSettings: () -> Unit, onOpenMove: () -> Unit, onTrip: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -208,63 +221,69 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, @Suppress(
         hour < 18 -> "Good afternoon" to "下午好"
         else -> "Good evening" to "晚上好"
     }
-    val herSky = if (her.hour in 6..18) "☀️" else "🌙"
-    val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
-    val early = Srs.streak(state.wakeDays)
+    val herMin = her.hour * 60 + her.minute
+    val sky = com.dudlatitat.nextchapter.data.HerSky
+    val tint by androidx.compose.animation.animateColorAsState(Color(sky.color(herMin)), androidx.compose.animation.core.tween(1500), label = "herSky")
+    val phase = sky.phase(herMin)
     val trip = daysUntil(state.nextTripDate())
     val move = daysUntil(state.moveDate)
-    GlassCard(highlight = true) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(tint, Night.cardBottom)))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
+            .padding(18.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(helloZh, style = MaterialTheme.typography.titleMedium, color = Night.sun)
                 Text("$hello, Rudy", style = MaterialTheme.typography.titleLarge, color = Night.ink, maxLines = 2)
             }
-            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.muted) }
+            IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.ink.copy(alpha = 0.7f)) }
         }
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Column {
                 Text("You", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 Text(now.format(clock), style = MaterialTheme.typography.titleMedium, color = Night.ink)
             }
             Column {
-                Text("${Life.herLabel(state.herName, state.herCity)} $herSky", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+                Text("${Life.herLabel(state.herName, state.herCity)} ${phase.emoji} ${phase.word}", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 Text(her.format(clock) + " " + Life.herDayWord(now), style = MaterialTheme.typography.titleMedium, color = Night.rose)
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.clickable(onClick = onOpenMove), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            trip?.takeIf { it >= 0 }?.let {
-                // How ready you are for her family (Chinese tab → Ready ladder), right next to the countdown.
-                Pill("✈️ 成都 in ${friendlySpan(it)} · ready ${com.dudlatitat.nextchapter.data.Ready.family(state).percent}%", Night.rose)
-            }
-            move?.takeIf { it >= 0 }?.let { Pill("搬家 ${friendlySpan(it)}", Night.sun) }
+        // One line of countdowns (tap for Move): the trip with how ready you are, then the move.
+        val parts = listOfNotNull(
+            trip?.takeIf { it >= 0 }?.let { "✈️ 成都 ${friendlySpan(it)} · ready ${com.dudlatitat.nextchapter.data.Ready.family(state).percent}%" },
+            move?.takeIf { it >= 0 }?.let { "搬家 ${friendlySpan(it)}" },
+        )
+        if (parts.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                parts.joinToString("   ·   "), style = MaterialTheme.typography.bodyMedium, color = Night.ink,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onOpenMove).padding(vertical = 6.dp),
+            )
         }
-        Spacer(Modifier.height(6.dp))
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (streak > 0) Pill("🔥 $streak-day streak", Night.sun)
-            if (early > 0) Pill("☀️ $early early", Night.jade)
-            // Weight and today's calories; tap to log.
-            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onBody))
-            // In the 60 days before a trip: say 3 trip phrases a day (they come first in practice).
-            val T = com.dudlatitat.nextchapter.data.TripPrep
-            if (T.open(state, today())) {
-                val said = T.saidToday(state, today())
-                Pill(
-                    if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
-                    Night.rose, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
-                )
-            }
-        }
-        // Seen at work today (Settings → Work & home): when the day should end, and "I'm home" if the phone misses it.
+        // Only when it applies: trip phrases (60 days before a trip) and the work day.
+        val T = com.dudlatitat.nextchapter.data.TripPrep
         val P = com.dudlatitat.nextchapter.data.Places
         val nowMin = now.hour * 60 + now.minute
-        if (P.atWork(state, today(), nowMin)) {
-            Spacer(Modifier.height(6.dp))
+        val atWork = P.atWork(state, today(), nowMin)
+        if (T.open(state, today()) || atWork) {
+            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Pill("💼 Work till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
-                if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
-                    TextButton(onClick = { vm.arrivedHomeNow() }) { Text("I'm home 🏠", color = Night.sun) }
+                if (T.open(state, today())) {
+                    val said = T.saidToday(state, today())
+                    Pill(
+                        if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
+                        Night.rose, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
+                    )
+                }
+                if (atWork) {
+                    Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
+                    if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
+                        TextButton(onClick = { vm.arrivedHomeNow() }) { Text("I'm home 🏠", color = Night.sun) }
+                    }
                 }
             }
         }
@@ -327,89 +346,6 @@ private fun NowLine(title: String, line: String, button: String, color: Color, o
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = color, contentColor = Night.ground2),
             ) { Text(button) }
         }
-    }
-}
-
-/** Four rings for today's small things. Tap one to do it. */
-@Composable
-private fun TodayRings(state: AppState, part: Life.Part, @Suppress("UNUSED_PARAMETER") minute: Long, onChinese: () -> Unit, onAPlus: () -> Unit, onPrayer: () -> Unit, onJob: () -> Unit, onWeek: () -> Unit) {
-    val d = today()
-    val queue = Srs.queue(state)
-    val zhDone = state.cards.count { it.last == d && it.due > d }
-    val zhTotal = zhDone + queue.size
-    val aDone = state.aplus.count { it.last == d && it.due > d }
-    val aTotal = aDone + APlus.queue(state).size
-    val prayed = d in state.prayedDays
-    val R = com.dudlatitat.nextchapter.data.Routine
-    val job = R.jobOn(state, java.time.LocalDate.now())
-    val checked = R.checkFor(state.routineChecks, d)
-    val calm = part == Life.Part.CALL
-    val nowMin = LocalTime.now().let { it.hour * 60 + it.minute }
-    val jobTime = checked == null && nowMin >= minOf(com.dudlatitat.nextchapter.data.Places.homeTime(state, today()), job.minutes) - 15
-    GlassCard {
-        Text("Today · 今天", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Ring("Chinese", if (zhTotal == 0) 1f else zhDone / zhTotal.toFloat(), Night.jade, if (queue.isEmpty()) "✓" else "$zhDone/$zhTotal", onChinese, breathe = !calm && queue.isNotEmpty())
-            Ring("A+", if (aTotal == 0) 1f else aDone / aTotal.toFloat(), Night.violet, if (aTotal == 0 || aDone == aTotal) "✓" else "$aDone/$aTotal", onAPlus, breathe = !calm && aTotal > 0 && aDone < aTotal)
-            Ring("Prayer", if (prayed) 1f else 0f, Night.sun, if (prayed) "✓" else "🙏", onPrayer, breathe = !calm && !prayed)
-            Ring(
-                "Tonight", when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> 1f; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> 0.6f; else -> 0f }, Night.rose,
-                when (checked) { com.dudlatitat.nextchapter.data.CheckIn.DONE -> "✓"; com.dudlatitat.nextchapter.data.CheckIn.MINIMUM -> "½"; com.dudlatitat.nextchapter.data.CheckIn.SKIPPED -> "🌙"; null -> "→" }, onJob,
-                sub = R.text(job.task, state.herName), breathe = !calm && jobTime,
-            )
-        }
-        // Your week of evenings, at a glance (tap for the whole routine).
-        Spacer(Modifier.height(14.dp))
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onWeek).padding(vertical = 4.dp)) {
-            val streak = R.streak(state.routineChecks, d)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("This week", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-                if (streak > 0) Text("🔥 $streak", style = MaterialTheme.typography.labelMedium, color = Night.sun)
-            }
-            Spacer(Modifier.height(6.dp))
-            com.dudlatitat.nextchapter.ui.life.WeekDots(state)
-        }
-    }
-}
-
-@Composable
-private fun Ring(label: String, progress: Float, color: Color, center: String, onClick: () -> Unit, sub: String? = null, breathe: Boolean = false) {
-    // Unfinished rings breathe in their own color: a soft glow swells behind the ring and fades,
-    // slow enough to feel calm, bright enough to notice. Done rings sit still.
-    // Read only while drawing (not composing), so breathing redraws the glow without re-laying out
-    // the ring; finished rings don't run the animation at all.
-    val breath: androidx.compose.runtime.State<Float> = if (breathe) {
-        androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe").animateFloat(
-            0f, 1f,
-            androidx.compose.animation.core.infiniteRepeatable(
-                androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                androidx.compose.animation.core.RepeatMode.Reverse,
-            ),
-            label = "breath",
-        )
-    } else remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
-    Column(Modifier.width(72.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        androidx.compose.foundation.layout.Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
-            if (breathe) androidx.compose.foundation.Canvas(Modifier.size(64.dp)) {
-                drawCircle(
-                    androidx.compose.ui.graphics.Brush.radialGradient(
-                        listOf(color.copy(alpha = 0.15f + 0.40f * breath.value), color.copy(alpha = 0f)),
-                        center = this.center, radius = this.size.minDimension / 2,
-                    ),
-                    radius = this.size.minDimension / 2 * (0.8f + 0.2f * breath.value),
-                )
-            }
-            ProgressRing(
-                progress, 56.dp, color, stroke = 5.dp,
-                modifier = Modifier.graphicsLayer { val sc = 1f + 0.08f * (if (breathe) breath.value else 0f); scaleX = sc; scaleY = sc },
-            ) {
-            Text(center, style = MaterialTheme.typography.labelLarge, color = Night.ink)
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.ink)
-        if (sub != null) Text(sub, fontSize = 10.sp, color = Night.muted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 

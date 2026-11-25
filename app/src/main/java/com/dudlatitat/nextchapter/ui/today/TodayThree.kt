@@ -1,7 +1,6 @@
 package com.dudlatitat.nextchapter.ui.today
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,55 +38,101 @@ import com.dudlatitat.nextchapter.ui.components.Pill
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 /**
- * 今日三件 · Today's three: reviews, one game, one life thing, and one bar that fills.
- * After a break it says "Welcome back" instead of showing a pile of overdue cards.
+ * 今日三件 · Today's three, as three rings: phrases, one game, one life thing. One streak, the
+ * prayer dot and your week of evenings sit under them. After a break it says "Welcome back".
+ * This replaced both the old Today's three list and the four rings (they said the same thing).
  */
 @Composable
-fun TodayThree(state: AppState, onItem: (DayPlan.Item) -> Unit) {
+fun TodayThree(
+    state: AppState, calm: Boolean, onItem: (DayPlan.Item) -> Unit, onPrayer: () -> Unit, onWeek: () -> Unit,
+) {
     val plan = DayPlan.today(state)
-    val fill by animateFloatAsState(plan.doneCount / plan.items.size.toFloat(), tween(700), label = "three")
-    val barColor by animateColorAsState(if (plan.finished) Night.jade else Night.sun, label = "threeColor")
-    GlassCard(highlight = !plan.finished) {
+    val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
+    val early = com.dudlatitat.nextchapter.data.Srs.streak(state.wakeDays)
+    val titleColor by animateColorAsState(if (plan.finished) Night.jade else Night.ink, label = "threeTitle")
+    GlassCard(highlight = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (plan.finished) "今天完成了 · Done for today ✓" else "今日三件 · Today's three", style = MaterialTheme.typography.titleMedium, color = if (plan.finished) Night.jade else Night.ink)
-                if (plan.welcomeBack > 0 && !plan.finished) {
-                    Text(
-                        "Welcome back 💛 No catching up: the ${DayPlan.COMEBACK_CAP} that matter most today, the rest come back over the next few days.",
-                        style = MaterialTheme.typography.bodySmall, color = Night.rose,
-                    )
-                } else if (plan.finished) {
-                    Text("Anything more tonight is a bonus.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                Text(if (plan.finished) "今天完成了 · Done for today ✓" else "今日三件 · Today's three", style = MaterialTheme.typography.titleMedium, color = titleColor)
+                val sub = when {
+                    plan.finished -> "Anything more tonight is a bonus."
+                    plan.welcomeBack > 0 -> "Welcome back 💛 No catching up: the ${DayPlan.COMEBACK_CAP} that matter most, the rest return over the next few days."
+                    else -> "${plan.doneCount} of ${plan.items.size} done"
                 }
+                Text(sub, style = MaterialTheme.typography.bodySmall, color = if (plan.welcomeBack > 0 && !plan.finished) Night.rose else Night.muted)
             }
-            Text("${plan.doneCount}/${plan.items.size}", style = MaterialTheme.typography.titleMedium, color = barColor)
+            // The one streak (practice days; one rest day a week allowed).
+            if (streak > 0) Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🔥 $streak", style = MaterialTheme.typography.headlineSmall, color = Night.sun)
+                Text(if (streak == 1) "day" else "days", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Only the first unfinished ring breathes: one clear "next", not three blinking things.
+            val next = plan.items.indexOfFirst { !it.done }
+            plan.items.forEachIndexed { i, item ->
+                PlanRing(item, breathe = !calm && i == next, modifier = Modifier.weight(1f)) { onItem(item) }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        // Small things under the rings: prayer, early starts, and the week of evenings.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val prayed = com.dudlatitat.nextchapter.data.today() in state.prayedDays
+            Pill(if (prayed) "🙏 Prayed ✓" else "🙏 Pray", if (prayed) Night.jade else Night.sun, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onPrayer))
+            if (early > 0) Pill("☀️ $early early", Night.jade)
         }
         Spacer(Modifier.height(10.dp))
-        Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50)).background(Night.outline)) {
-            Box(Modifier.fillMaxWidth(fill).height(8.dp).clip(RoundedCornerShape(50)).background(barColor))
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClick = onWeek).padding(vertical = 4.dp)) {
+            Text("This week ›", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+            Spacer(Modifier.height(6.dp))
+            com.dudlatitat.nextchapter.ui.life.WeekDots(state)
         }
-        Spacer(Modifier.height(6.dp))
-        plan.items.forEachIndexed { i, item -> PlanRow(i + 1, item) { onItem(item) } }
     }
 }
 
+/** One of the three: a ring that fills, its label, and what it is (e.g. "Talk"). */
 @Composable
-private fun PlanRow(n: Int, item: DayPlan.Item, onClick: () -> Unit) {
-    val tint = when (item.kind) { DayPlan.Kind.REVIEW -> Night.sun; DayPlan.Kind.PLAY -> Night.rose; DayPlan.Kind.LIFE -> Night.violet }
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 8.dp, horizontal = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
+private fun PlanRing(item: DayPlan.Item, breathe: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val color = when (item.kind) { DayPlan.Kind.REVIEW -> Night.sun; DayPlan.Kind.PLAY -> Night.rose; DayPlan.Kind.LIFE -> Night.violet }
+    val ringColor by animateColorAsState(if (item.done) Night.jade else color, label = "ringColor")
+    // A soft glow swells behind the next ring, slow enough to feel calm. Read only while drawing.
+    val breath: androidx.compose.runtime.State<Float> = if (breathe) {
+        androidx.compose.animation.core.rememberInfiniteTransition(label = "breathe").animateFloat(
+            0f, 1f,
+            androidx.compose.animation.core.infiniteRepeatable(tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing), androidx.compose.animation.core.RepeatMode.Reverse),
+            label = "breath",
+        )
+    } else remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    Column(
+        modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 6.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            Modifier.size(28.dp).clip(CircleShape).background(if (item.done) Night.jade else tint.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) { Text(if (item.done) "✓" else "$n", style = MaterialTheme.typography.labelLarge, color = if (item.done) Night.ground2 else tint) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(item.title, style = MaterialTheme.typography.bodyLarge, color = if (item.done) Night.muted else Night.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(item.detail, style = MaterialTheme.typography.bodySmall, color = Night.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+            if (breathe) androidx.compose.foundation.Canvas(Modifier.size(72.dp)) {
+                drawCircle(
+                    androidx.compose.ui.graphics.Brush.radialGradient(
+                        listOf(color.copy(alpha = 0.15f + 0.35f * breath.value), color.copy(alpha = 0f)),
+                        center = center, radius = size.minDimension / 2,
+                    ),
+                    radius = size.minDimension / 2 * (0.8f + 0.2f * breath.value),
+                )
+            }
+            com.dudlatitat.nextchapter.ui.components.ProgressRing(item.progress, 60.dp, ringColor, stroke = 6.dp) {
+                Text(
+                    if (item.done) "✓" else when (item.kind) { DayPlan.Kind.REVIEW -> "字"; DayPlan.Kind.PLAY -> "🎲"; DayPlan.Kind.LIFE -> if (item.tool == "aplus") "A+" else "🌙" },
+                    style = MaterialTheme.typography.titleMedium, color = if (item.done) Night.jade else Night.ink,
+                )
+            }
         }
-        if (!item.done) Text("›", style = MaterialTheme.typography.titleLarge, color = tint)
+        Spacer(Modifier.height(4.dp))
+        Text(item.ring, style = MaterialTheme.typography.labelLarge, color = Night.ink)
+        val sub = when (item.kind) {
+            DayPlan.Kind.PLAY -> DayPlan.games[item.tool]?.substringBefore(" ·") ?: item.detail
+            DayPlan.Kind.LIFE -> if (item.tool == "aplus") item.detail else item.title.removePrefix("Tonight: ")
+            DayPlan.Kind.REVIEW -> item.detail.substringBefore(" ·")
+        }
+        Text(sub, style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
