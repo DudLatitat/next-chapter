@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -77,7 +77,7 @@ fun ToneTrainer(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Unit, 
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Text(if (focus != null) "Drill: tones ${focus.sorted().joinToString(" & ")}" else "Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
             if (tried > 0) Pill("$right/$tried", Night.jade)
         }
@@ -161,7 +161,7 @@ fun PhrasebookScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Column {
                     Text("Phrasebook · 救急", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                     Text("Tap a line to show it full screen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -252,7 +252,7 @@ private fun SayTones(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> U
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Text("Tone trainer · 声调", style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
         }
         ModeRow(say = true, onHear = onHear, onSay = {})

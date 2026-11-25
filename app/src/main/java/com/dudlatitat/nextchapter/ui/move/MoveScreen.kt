@@ -75,12 +75,22 @@ private enum class DateField { MOVE, TRIP }
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MoveScreen(state: AppState, vm: MainViewModel) {
-    var page by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
-    when (page) {
-        "flights" -> { FlightsScreen(state, vm, onBack = { page = null }); return }
-        "money" -> { MoneyScreen(state, vm, onBack = { page = null }); return }
-        "packing" -> { PackingScreen(state, vm, onBack = { page = null }); return }
+    val pageState = androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var page by pageState
+    com.dudlatitat.nextchapter.ui.components.SubNav(page, isRoot = { it == null }, label = "move") { p ->
+        when (p) {
+            "flights" -> FlightsScreen(state, vm, onBack = { page = null })
+            "money" -> MoneyScreen(state, vm, onBack = { page = null })
+            "packing" -> PackingScreen(state, vm, onBack = { page = null })
+            else -> MoveHome(state, vm, pageState)
+        }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.compose.runtime.MutableState<String?>) {
+    var page by pageState
     var picking by remember { mutableStateOf<DateField?>(null) }
     var editingMoney by remember { mutableStateOf(false) }
     var addingTask by remember { mutableStateOf(false) }

@@ -234,6 +234,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
     val phase = sky.phase(herMin)
     val trip = daysUntil(state.nextTripDate())
     val move = daysUntil(state.moveDate)
+    val ready = remember(state) { com.dudlatitat.nextchapter.data.Ready.family(state).percent }
     val shape = RoundedCornerShape(24.dp)
     Column(
         Modifier.fillMaxWidth().clip(shape)
@@ -261,7 +262,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
         }
         // One line of countdowns (tap for Move): the trip with how ready you are, then the move.
         val parts = listOfNotNull(
-            trip?.takeIf { it >= 0 }?.let { "✈️ 成都 ${friendlySpan(it)} · ready ${com.dudlatitat.nextchapter.data.Ready.family(state).percent}%" },
+            trip?.takeIf { it >= 0 }?.let { "✈️ 成都 ${friendlySpan(it)} · ready $ready%" },
             move?.takeIf { it >= 0 }?.let { "搬家 ${friendlySpan(it)}" },
         )
         if (parts.isNotEmpty()) {

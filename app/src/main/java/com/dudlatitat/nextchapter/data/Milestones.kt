@@ -7,7 +7,7 @@ object Milestones {
     fun all(s: AppState): List<Milestone> {
         val started = s.cards.count { !it.isNew }
         val known = s.cards.count { it.isKnown }
-        val best = bestStreak(Stats.practiceDays(s))
+        val best = Stats.bestWithRest(Stats.practiceDays(s))
         val spoken = s.toneEvents.filter { it.spoken }
         val toneAcc = (1..4).map { t -> s.toneEvents.filter { it.target == t }.let { e -> if (e.size < 10) 0f else e.count { it.got == t }.toFloat() / e.size } }
         val bookedUnder = s.flightTarget > 0 && s.trips.any { it.booked && it.price in 1..s.flightTarget }
@@ -41,9 +41,4 @@ object Milestones {
     /** Milestones reached but not celebrated yet. */
     fun fresh(s: AppState) = all(s).filter { it.done && it.id !in s.milestonesSeen }
 
-    private fun bestStreak(days: List<Long>): Int {
-        var best = 0; var run = 0; var prev: Long? = null
-        days.distinct().sorted().forEach { d -> run = if (prev != null && d == prev!! + 1) run + 1 else 1; best = maxOf(best, run); prev = d }
-        return best
-    }
 }

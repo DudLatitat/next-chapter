@@ -48,7 +48,7 @@ fun ChineseProgress(state: AppState, onOpenDeck: (String) -> Unit = {}) {
     val known = state.cards.count { it.isKnown }
     val learning = state.cards.count { !it.isNew && !it.isKnown }
     val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
-    val best = bestStreak(com.dudlatitat.nextchapter.data.Stats.practiceDays(state))
+    val best = com.dudlatitat.nextchapter.data.Stats.bestWithRest(com.dudlatitat.nextchapter.data.Stats.practiceDays(state))
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // One card for the week and the totals (they used to be two cards saying similar things).
@@ -114,17 +114,6 @@ private fun Heatmap(days: List<Long>) {
     }
 }
 
-private fun bestStreak(days: List<Long>): Int {
-    var best = 0
-    var run = 0
-    var prev: Long? = null
-    days.distinct().sorted().forEach { d ->
-        run = if (prev != null && d == prev!! + 1) run + 1 else 1
-        if (run > best) best = run
-        prev = d
-    }
-    return best
-}
 
 @Composable
 private fun MilestoneGrid(state: AppState) {

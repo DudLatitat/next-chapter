@@ -32,7 +32,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -95,7 +95,7 @@ private fun ChatList(state: AppState, onBack: () -> Unit, onOpen: (String) -> Un
     BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column {
                 Text("Texts", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                 Text("微信 · reply with your Chinese keyboard", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -173,7 +173,7 @@ private fun Chat(th: Texting.Thread, state: AppState, vm: MainViewModel, onBack:
 
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().background(Night.cardHigh).padding(top = 28.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text(th.contact, style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Text(if (typing) "对方正在输入… (typing)" else th.title, style = MaterialTheme.typography.labelSmall, color = Night.muted)
@@ -303,7 +303,7 @@ fun SprintScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("Typing sprint", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                 Text("打字 · 60 seconds, as many lines as you can", style = MaterialTheme.typography.bodySmall, color = Night.muted)

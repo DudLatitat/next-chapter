@@ -4,7 +4,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -59,7 +64,7 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     var startDeck by rememberSaveable { mutableStateOf<String?>(null) }
     // New milestones get a little celebration, once.
     // ...but never mid-practice (the Chinese tab) or during her call.
-    val fresh = com.dudlatitat.nextchapter.data.Milestones.fresh(state)
+    val fresh = androidx.compose.runtime.remember(state) { com.dudlatitat.nextchapter.data.Milestones.fresh(state) }
     val quiet = tab == Tab.LEARN || com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now())
     if (fresh.isNotEmpty() && !quiet) androidx.compose.material3.AlertDialog(
         onDismissRequest = { vm.seeMilestones(fresh.map { it.id }) },
@@ -91,14 +96,6 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         if (openToday) { settings = false; tab = Tab.TODAY; onTodayOpened() }
     }
 
-    if (settings) {
-        Box(Modifier.fillMaxSize()) {
-            StarryBackdrop()
-            SettingsScreen(state, vm, onBack = { settings = false })
-        }
-        return
-    }
-
     // Each tab keeps its place (an open review, a deck, a test) while you look at another tab.
     val tabStates = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
     // Tapping the tab you're already on goes back to its top page.
@@ -106,41 +103,82 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     // Back on a tab's top page goes to Today first, rather than closing the app.
     androidx.activity.compose.BackHandler(enabled = tab != Tab.TODAY) { tab = Tab.TODAY }
 
+    // Opened from a Today ring: when that review or game closes, come back to Today to see the
+    // ring fill (instead of being left on the Chinese or Life tab).
+    var returnToday by rememberSaveable { mutableStateOf(false) }
+    val backToToday: () -> Unit = { if (returnToday) { returnToday = false; tab = Tab.TODAY } }
+    val wide = com.dudlatitat.nextchapter.ui.components.isWide()
+    val pick: (Tab) -> Unit = { t ->
+        returnToday = false
+        if (tab == t) { tabStates.removeState("${t.name}-${resets[t] ?: 0}"); resets[t] = (resets[t] ?: 0) + 1 } else tab = t
+    }
+    val navColors = NavigationBarItemDefaults.colors(
+        selectedIconColor = Night.sun, selectedTextColor = Night.sun, indicatorColor = Night.sun.copy(alpha = 0.16f),
+        unselectedIconColor = Night.muted, unselectedTextColor = Night.muted,
+    )
+
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                NavigationBar(containerColor = Night.tabBar) {
+                // Unfolded, the tabs live in a rail on the left instead (a bar 840dp wide is a long reach).
+                if (!wide) NavigationBar(containerColor = Night.tabBar) {
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
-                            selected = tab == t,
-                            onClick = {
-                                if (tab == t) { tabStates.removeState("${t.name}-${resets[t] ?: 0}"); resets[t] = (resets[t] ?: 0) + 1 } else tab = t
-                            },
-                            icon = { Icon(t.icon, contentDescription = null) },
-                            label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Night.sun,
-                                selectedTextColor = Night.sun,
-                                indicatorColor = Night.sun.copy(alpha = 0.16f),
-                                unselectedIconColor = Night.muted,
-                                unselectedTextColor = Night.muted,
-                            ),
+                            selected = tab == t, onClick = { pick(t) },
+                            icon = { Icon(t.icon, contentDescription = null) }, label = { Text(t.label) }, colors = navColors,
                         )
                     }
                 }
             },
         ) { padding ->
-            AnimatedContent(tab, Modifier.padding(padding), transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "tab") { t ->
+            androidx.compose.foundation.layout.Row(Modifier.padding(padding)) {
+                if (wide) androidx.compose.material3.NavigationRail(
+                    containerColor = Night.tabBar,
+                    header = { Spacer(Modifier.height(12.dp)) },
+                ) {
+                    Spacer(Modifier.weight(1f))
+                    Tab.entries.forEach { t ->
+                        androidx.compose.material3.NavigationRailItem(
+                            selected = tab == t, onClick = { pick(t) },
+                            icon = { Icon(t.icon, contentDescription = null) }, label = { Text(t.label) },
+                            colors = androidx.compose.material3.NavigationRailItemDefaults.colors(
+                                selectedIconColor = Night.sun, selectedTextColor = Night.sun, indicatorColor = Night.sun.copy(alpha = 0.16f),
+                                unselectedIconColor = Night.muted, unselectedTextColor = Night.muted,
+                            ),
+                            modifier = Modifier.padding(vertical = 6.dp),
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+            AnimatedContent(tab, Modifier.weight(1f), transitionSpec = { com.dudlatitat.nextchapter.ui.components.Motion.fadeThrough() }, label = "tab") { t ->
                 tabStates.SaveableStateProvider("${t.name}-${resets[t] ?: 0}") {
                 when (t) {
-                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; tab = Tab.LIFE }, onTool = { startTool = it; tab = Tab.LEARN }, onLifePage = { startLife = it; tab = Tab.LIFE })
-                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool, startDeck = startDeck, onDeckOpened = { startDeck = null })
+                    Tab.TODAY -> TodayScreen(state, vm, onStudy = { startReview = true; returnToday = true; tab = Tab.LEARN }, onOpenMove = { tab = Tab.MOVE }, onSettings = { settings = true }, onRedo = { startRedo = true; returnToday = true; tab = Tab.LEARN }, onPhrasebook = { startTool = "phrasebook"; tab = Tab.LEARN }, onOpenLife = { tab = Tab.LIFE }, onAPlus = { startAPlus = true; returnToday = true; tab = Tab.LIFE }, onTool = { startTool = it; returnToday = true; tab = Tab.LEARN }, onLifePage = { startLife = it; tab = Tab.LIFE })
+                    Tab.LEARN -> LearnScreen(state, vm, startReview = startReview, onReviewStarted = { startReview = false; startRedo = false; startTool = null }, startRedo = startRedo, startTool = startTool, startDeck = startDeck, onDeckOpened = { startDeck = null }, onLeave = backToToday)
                     Tab.MOVE -> MoveScreen(state, vm)
-                    Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false }, startPage = startLife, onPageStarted = { startLife = null })
+                    Tab.LIFE -> com.dudlatitat.nextchapter.ui.life.LifeScreen(state, vm, startAPlus = startAPlus, onStarted = { startAPlus = false }, startPage = startLife, onPageStarted = { startLife = null }, onLeave = backToToday)
                 }
                 }
+            }
+            }
+        }
+        // Settings slides up over the app instead of replacing it, so whatever you were in the
+        // middle of (a review, a deck) is still there when you come back.
+        androidx.compose.animation.AnimatedVisibility(
+            settings,
+            enter = androidx.compose.animation.slideInVertically(tween(320, easing = com.dudlatitat.nextchapter.ui.components.Motion.Emph)) { it / 8 } + androidx.compose.animation.fadeIn(tween(220)),
+            exit = androidx.compose.animation.slideOutVertically(tween(220, easing = com.dudlatitat.nextchapter.ui.components.Motion.EmphAcc)) { it / 8 } + androidx.compose.animation.fadeOut(tween(160)),
+        ) {
+            Box(
+                Modifier.fillMaxSize().clickable(
+                    interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                ) { },
+            ) {
+                StarryBackdrop()
+                SettingsScreen(state, vm, onBack = { settings = false })
             }
         }
     }

@@ -29,6 +29,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.DayPlan
+import com.dudlatitat.nextchapter.ui.components.pressClick
+import com.dudlatitat.nextchapter.ui.components.pressClickable
+import com.dudlatitat.nextchapter.ui.components.pressScale
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 /**
@@ -83,9 +86,10 @@ object PracticeTools {
 /** "Next up": today's game if you haven't played yet, else the next readiness piece. */
 @Composable
 fun SuggestedNext(state: AppState, onTool: (String) -> Unit, onDeck: (String) -> Unit) {
-    val play = DayPlan.today(state).items.first { it.kind == DayPlan.Kind.PLAY }
+    val day = com.dudlatitat.nextchapter.data.today()
+    val play = androidx.compose.runtime.remember(state, day) { DayPlan.today(state, day) }.items.first { it.kind == DayPlan.Kind.PLAY }
     val game: String? = if (play.done) null else play.tool
-    val piece = com.dudlatitat.nextchapter.data.Ready.family(state).next?.missing?.firstOrNull { it.tool != null }
+    val piece = androidx.compose.runtime.remember(state) { com.dudlatitat.nextchapter.data.Ready.family(state) }.next?.missing?.firstOrNull { it.tool != null }
     val pieceTool: String? = piece?.tool
     val (label, go) = when {
         game != null -> {
@@ -105,7 +109,7 @@ fun SuggestedNext(state: AppState, onTool: (String) -> Unit, onDeck: (String) ->
         else -> return
     }
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(Night.rose.copy(alpha = 0.12f)).clickable(onClick = go).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).pressClick(onClick = go).clip(RoundedCornerShape(14.dp)).background(Night.rose.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Night.ink, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -122,11 +126,12 @@ fun SituationTiles(onOpen: (PracticeTools.Situation) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { s ->
                     val shape = RoundedCornerShape(20.dp)
+                    val press = com.dudlatitat.nextchapter.ui.components.rememberPress()
                     Column(
-                        Modifier.weight(1f).clip(shape)
+                        Modifier.weight(1f).then(Modifier.pressScale(press)).clip(shape)
                             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(s.color.copy(alpha = 0.22f), Night.card.copy(alpha = 0.9f))))
                             .border(1.dp, s.color.copy(alpha = 0.25f), shape)
-                            .clickable { onOpen(s) }
+                            .pressClickable(press) { onOpen(s) }
                             .padding(14.dp),
                     ) {
                         Text(s.zh, style = MaterialTheme.typography.headlineSmall, color = s.color, maxLines = 1)
@@ -151,7 +156,7 @@ fun SituationSheet(s: PracticeTools.Situation, onDismiss: () -> Unit, onTool: (S
             s.tools.forEach { t ->
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Night.card.copy(alpha = 0.85f))
-                        .clickable { onDismiss(); onTool(t.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
+                        .pressClickable(com.dudlatitat.nextchapter.ui.components.rememberPress()) { onDismiss(); onTool(t.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(t.zh, style = MaterialTheme.typography.titleLarge, color = s.color, modifier = Modifier.width(76.dp), maxLines = 1)

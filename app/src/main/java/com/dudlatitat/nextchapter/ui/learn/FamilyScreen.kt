@@ -23,7 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -77,7 +77,7 @@ fun FamilyScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(720.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("Her family", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                 Text("家谱 · what to call everyone", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -217,7 +217,7 @@ private fun Quiz(vm: MainViewModel, onBack: () -> Unit) {
     LaunchedEffect(n) { if (n == 5) vm.markPlayed("family") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Text("Who's this? · 这是谁？", style = MaterialTheme.typography.titleLarge, color = Night.ink, modifier = Modifier.weight(1f))
             val asked = n + if (picked != null) 1 else 0
             if (asked > 0) Text("$right / $asked", style = MaterialTheme.typography.titleMedium, color = Night.sun)

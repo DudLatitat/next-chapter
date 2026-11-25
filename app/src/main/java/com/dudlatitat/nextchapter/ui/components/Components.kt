@@ -46,13 +46,15 @@ fun GlassCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(24.dp)
+    val press = rememberPress()
     Column(
         modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.pressScale(press) else Modifier)
             .clip(shape)
             .then(if (highlight) Modifier.background(Night.cardBrush) else Modifier.background(Night.card.copy(alpha = 0.85f)))
             .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.pressClickable(press, onClick = onClick) else Modifier)
             .padding(18.dp),
         content = content,
     )

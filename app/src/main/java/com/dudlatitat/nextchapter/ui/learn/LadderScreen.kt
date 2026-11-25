@@ -20,7 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -76,7 +76,7 @@ private fun Picker(state: AppState, onBack: () -> Unit, onOpen: (Prayer) -> Unit
     BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column {
                 Text("Prayer ladder", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                 Text("祷告 · learn it by heart, one rung at a time", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -159,7 +159,7 @@ private fun Climb(state: AppState, vm: MainViewModel, prayer: Prayer, onBack: ()
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("${prayer.title} · ${prayer.titleZh}", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 Text("Rung ${rung + 1} of ${Ladder.TOP + 1} · ${(Ladder.hiddenShare(lines.map { it.first }, rung) * 100).toInt()}% hidden", style = MaterialTheme.typography.labelMedium, color = Night.muted)

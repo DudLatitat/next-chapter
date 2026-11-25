@@ -26,7 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -81,21 +81,37 @@ import java.util.Locale
 
 private val dayFmt = DateTimeFormatter.ofPattern("MMM d", Locale.US)
 
-/** The Life tab: A+ study, the career path, and notes about the people who matter. */
+/** The Life tab: your week, A+ study and the career path. Sub-pages slide in and out. */
 @Composable
-fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, onStarted: () -> Unit = {}, startPage: String? = null, onPageStarted: () -> Unit = {}) {
-    var page by rememberSaveable { mutableStateOf<String?>(null) }
-    androidx.compose.runtime.LaunchedEffect(startAPlus) { if (startAPlus) { page = "aplus"; onStarted() } }
+fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, onStarted: () -> Unit = {}, startPage: String? = null, onPageStarted: () -> Unit = {}, onLeave: () -> Unit = {}) {
+    val pageState = rememberSaveable { mutableStateOf<String?>(null) }
+    var page by pageState
+    var fromOutside by rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(startAPlus) { if (startAPlus) { page = "aplus"; fromOutside = true; onStarted() } }
     androidx.compose.runtime.LaunchedEffect(startPage) { if (startPage != null) { page = startPage.takeIf { it != "timer" }; onPageStarted() } }
-    when {
-        page == "aplus" -> { APlusReview(state, vm, onBack = { page = null }); return }
-        page == "test" -> { PracticeTestScreen(vm, onBack = { page = null }); return }
-        page == "routine" -> { RoutineScreen(state, vm, onBack = { page = null }); return }
-        page?.startsWith("person:") == true -> {
-            val p = state.people.firstOrNull { it.id == page!!.removePrefix("person:") }
-            if (p != null) { PersonScreen(state, p, vm, onBack = { page = null }); return } else page = null
+    // Opened from a Today ring: closing it goes back to Today.
+    var last by remember { mutableStateOf(page) }
+    androidx.compose.runtime.LaunchedEffect(page) {
+        if (page == null && last != null && fromOutside) { fromOutside = false; onLeave() }
+        last = page
+    }
+    com.dudlatitat.nextchapter.ui.components.SubNav(page, isRoot = { it == null }, label = "life") { p ->
+        when {
+            p == "aplus" -> APlusReview(state, vm, onBack = { page = null })
+            p == "test" -> PracticeTestScreen(vm, onBack = { page = null })
+            p == "routine" -> RoutineScreen(state, vm, onBack = { page = null })
+            p?.startsWith("person:") == true -> {
+                val person = state.people.firstOrNull { it.id == p!!.removePrefix("person:") }
+                if (person != null) PersonScreen(state, person, vm, onBack = { page = null }) else androidx.compose.runtime.LaunchedEffect(Unit) { page = null }
+            }
+            else -> LifeHome(state, vm, pageState)
         }
     }
+}
+
+@Composable
+private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.compose.runtime.MutableState<String?>) {
+    var page by pageState
     var addingClass by remember { mutableStateOf(false) }
     var editingJob by remember { mutableStateOf<JobPosting?>(null) }
     var addingPerson by remember { mutableStateOf(false) }
@@ -231,7 +247,7 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("A+ · Core 1", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 Text("$done of $total", style = MaterialTheme.typography.labelMedium, color = Night.muted)
@@ -468,7 +484,7 @@ private fun PersonScreen(state: AppState, person: Person, vm: MainViewModel, onB
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Text(person.name, style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
         }
         GlassCard {
@@ -714,7 +730,7 @@ private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = leave) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text("A+ practice test", style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 Text(if (finished) "Finished" else "Question ${index + 1} of ${questions.size}", style = MaterialTheme.typography.labelMedium, color = Night.muted)

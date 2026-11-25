@@ -1,6 +1,9 @@
 package com.dudlatitat.nextchapter.ui.learn
 
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
@@ -29,7 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -63,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
 import com.dudlatitat.nextchapter.ui.components.HanziText
+import com.dudlatitat.nextchapter.ui.components.pressClick
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Card
 import com.dudlatitat.nextchapter.data.Deck
@@ -83,7 +87,7 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 @Composable
 fun LearnScreen(
     state: AppState, vm: MainViewModel, startReview: Boolean, onReviewStarted: () -> Unit, startRedo: Boolean = false, startTool: String? = null,
-    startDeck: String? = null, onDeckOpened: () -> Unit = {},
+    startDeck: String? = null, onDeckOpened: () -> Unit = {}, onLeave: () -> Unit = {},
 ) {
     var reviewing by rememberSaveable { mutableStateOf(false) }
     var redoing by rememberSaveable { mutableStateOf(false) }
@@ -104,32 +108,55 @@ fun LearnScreen(
         if (startRedo) { redoing = true; onReviewStarted() }
     }
 
-    when {
-        calibrating -> CalibrateScreen(vm, onDone = { calibrating = false })
-        reviewing -> Review(state, vm, onClose = { reviewing = false }, onCalibrate = { calibrating = true })
-        redoing -> Review(state, vm, onClose = { redoing = false }, onCalibrate = { calibrating = true }, practice = true)
-        drill != null -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = drill!!.split(",").map { it.toInt() }.toSet())
-        tool == "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
-        tool == "writing" -> WritingScreen(state, vm, onBack = { tool = null })
-        tool == "drive" -> DriveScreen(vm, onBack = { tool = null })
-        tool == "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
-        tool == "stories" -> StoriesScreen(state, vm, onBack = { tool = null })
-        tool == "build" -> BuildScreen(state, vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
-        tool == "culture" -> CultureScreen(vm, onBack = { tool = null })
-        tool == "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
-        tool == "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
-        tool == "callouts" -> CalloutScreen(state, vm, onBack = { tool = null })
-        tool == "dinner" -> DinnerScreen(state, vm, onBack = { tool = null })
-        tool == "numbers" -> NumbersScreen(state, vm, onBack = { tool = null })
-        tool == "family" -> FamilyScreen(state, vm, onBack = { tool = null })
-        tool == "prayer" -> LadderScreen(state, vm, onBack = { tool = null })
-        tool == "texts" -> TextingScreen(state, vm, onBack = { tool = null })
-        tool == "sprint" -> SprintScreen(state, vm, onBack = { tool = null })
-        openDeck != null -> DeckDetail(Decks.first { it.id == openDeck }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
-        else -> Overview(
-            state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
-            onRedo = { redoing = true }, onDrill = { a, b -> drill = "$a,$b" },
-        )
+    // Where we are, as one key: sub-screens slide in and out, the overview keeps its place.
+    val dest = when {
+        calibrating -> "calibrate"
+        reviewing -> "review"
+        redoing -> "redo"
+        drill != null -> "drill:$drill"
+        tool != null && tool != "lookup" -> "tool:$tool"
+        openDeck != null -> "deck:$openDeck"
+        else -> "overview"
+    }
+    // Opened from Today (a ring): closing the review or game goes back to Today.
+    var fromOutside by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(startReview, startRedo, startTool) { if (startReview || startRedo || (startTool != null && startTool != "add")) fromOutside = true }
+    var lastDest by remember { mutableStateOf(dest) }
+    LaunchedEffect(dest) {
+        if (dest == "overview" && lastDest != "overview" && fromOutside) { fromOutside = false; onLeave() }
+        lastDest = dest
+    }
+    com.dudlatitat.nextchapter.ui.components.SubNav(dest, isRoot = { it == "overview" }, label = "learn") { d ->
+        when {
+            d == "calibrate" -> CalibrateScreen(vm, onDone = { calibrating = false })
+            d == "review" -> Review(state, vm, onClose = { reviewing = false }, onCalibrate = { calibrating = true })
+            d == "redo" -> Review(state, vm, onClose = { redoing = false }, onCalibrate = { calibrating = true }, practice = true)
+            d.startsWith("drill:") -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = d.removePrefix("drill:").split(",").map { it.toInt() }.toSet())
+            d.startsWith("deck:") -> DeckDetail(Decks.first { it.id == d.removePrefix("deck:") }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
+            d.startsWith("tool:") -> when (d.removePrefix("tool:")) {
+                "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
+                "writing" -> WritingScreen(state, vm, onBack = { tool = null })
+                "drive" -> DriveScreen(vm, onBack = { tool = null })
+                "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
+                "stories" -> StoriesScreen(state, vm, onBack = { tool = null })
+                "build" -> BuildScreen(state, vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
+                "culture" -> CultureScreen(vm, onBack = { tool = null })
+                "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
+                "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
+                "callouts" -> CalloutScreen(state, vm, onBack = { tool = null })
+                "dinner" -> DinnerScreen(state, vm, onBack = { tool = null })
+                "numbers" -> NumbersScreen(state, vm, onBack = { tool = null })
+                "family" -> FamilyScreen(state, vm, onBack = { tool = null })
+                "prayer" -> LadderScreen(state, vm, onBack = { tool = null })
+                "texts" -> TextingScreen(state, vm, onBack = { tool = null })
+                "sprint" -> SprintScreen(state, vm, onBack = { tool = null })
+                else -> LaunchedEffect(Unit) { tool = null }
+            }
+            else -> Overview(
+                state, onReview = { reviewing = true }, onDeck = { openDeck = it }, onAdd = { adding = true }, onTool = { tool = it },
+                onRedo = { redoing = true }, onDrill = { a, b -> drill = "$a,$b" },
+            )
+        }
     }
 
     // 🔍 How do I say… opens over the Chinese tab (it's a quick look-up, not a screen).
@@ -142,8 +169,9 @@ private fun Overview(
     state: AppState, onReview: () -> Unit, onDeck: (String) -> Unit, onAdd: () -> Unit, onTool: (String) -> Unit,
     onRedo: () -> Unit, onDrill: (Int, Int) -> Unit,
 ) {
-    val doneToday = today().let { d -> state.cards.count { it.last == d } }
-    val queue = Srs.queue(state)
+    val day = today()
+    val doneToday = remember(state, day) { state.cards.count { it.last == day } }
+    val queue = remember(state, day) { Srs.queue(state, day) }
     var situation by remember { mutableStateOf<PracticeTools.Situation?>(null) }
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
     situation?.let { sit -> SituationSheet(sit, onDismiss = { situation = null }, onTool = onTool) }
@@ -239,8 +267,8 @@ private fun DeckTile(deck: Deck, state: AppState, modifier: Modifier, onClick: (
     val cards = state.cards.filter { it.deck == deck.id }
     val started = cards.count { !it.isNew }
     Column(
-        modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Night.ground2.copy(alpha = 0.5f))
-            .clickable(onClick = onClick).padding(10.dp),
+        modifier.pressClick(onClick = onClick).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Night.ground2.copy(alpha = 0.5f))
+            .padding(10.dp),
     ) {
         Text(deck.hanzi, fontSize = 15.sp, color = Night.sun, maxLines = 1)
         Text(deck.title, style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -284,7 +312,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Column(Modifier.weight(1f)) {
                     Text(deck.title, style = MaterialTheme.typography.headlineMedium, color = Night.ink)
                     Text("${deck.hanzi} · tap to listen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -361,6 +389,8 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     // The grade just made, for a few seconds: Undo puts the card back exactly as it was.
     var undo by remember { mutableStateOf<Pair<Card, Grade>?>(null) }
+    var lastGrade by remember { mutableStateOf(Grade.GOOD) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(undo) { if (undo != null) { kotlinx.coroutines.delay(4000); undo = null } }
 
     val card = queue.firstOrNull()?.let { id -> state.cards.firstOrNull { it.id == id } }
@@ -368,6 +398,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     fun advance(c: Card, g: Grade) {
         haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
         undo = c to g
+        lastGrade = g
         gradeCard(c, g)
         queue.removeAt(0)
         if (g == Grade.AGAIN) { queue.add(c.id); if (c.id !in missed) missed.add(c.id) } else done++
@@ -486,36 +517,58 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
         }
 
         Spacer(Modifier.height(16.dp))
-        GlassCard(Modifier.weight(1f), highlight = true, onClick = { shown = true }) {
+        // Each card arrives and leaves: a pass slides it off to the left, a miss drops it down
+        // (it's coming back later), and the next one glides in.
+        androidx.compose.animation.AnimatedContent(
+            card.id, Modifier.weight(1f),
+            transitionSpec = {
+                val M = com.dudlatitat.nextchapter.ui.components.Motion
+                val enter = androidx.compose.animation.slideInHorizontally(tween(240, easing = M.Emph)) { it / 4 } + fadeIn(tween(200))
+                if (lastGrade == Grade.AGAIN) {
+                    enter togetherWith (androidx.compose.animation.slideOutVertically(tween(200, easing = M.EmphAcc)) { it / 10 } + androidx.compose.animation.fadeOut(tween(160)))
+                } else {
+                    enter togetherWith (androidx.compose.animation.slideOutHorizontally(tween(200, easing = M.EmphAcc)) { -it / 3 } + androidx.compose.animation.fadeOut(tween(160)))
+                }
+            },
+            label = "card",
+        ) { cid ->
+        val c = state.cards.firstOrNull { it.id == cid } ?: return@AnimatedContent
+        // The leaving card keeps its answer showing; only the current one follows "shown".
+        val isShown = if (cid == card.id) shown else true
+        GlassCard(Modifier.fillMaxSize(), highlight = true, onClick = { if (cid == card.id) shown = true }) {
             // Centred when it fits; scrolls when a long phrase + pinyin + English don't (cover screen).
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                if (card.isNew) Pill("New phrase", Night.rose)
+                if (c.isNew) Pill("New phrase", Night.rose)
                 Spacer(Modifier.height(12.dp))
                 if (direction == Direction.READ) {
-                    HanziText(card.hanzi, 44f, weight = FontWeight.Medium)
+                    HanziText(c.hanzi, 44f, weight = FontWeight.Medium)
                 } else {
-                    Text(card.english, style = MaterialTheme.typography.headlineMedium, color = Night.ink, textAlign = TextAlign.Center)
+                    Text(c.english, style = MaterialTheme.typography.headlineMedium, color = Night.ink, textAlign = TextAlign.Center)
                 }
-                val reveal by animateFloatAsState(if (shown) 1f else 0f, tween(300), label = "reveal")
+                val reveal by animateFloatAsState(if (isShown) 1f else 0f, tween(260, easing = com.dudlatitat.nextchapter.ui.components.Motion.Emph), label = "reveal")
                 Spacer(Modifier.height(20.dp))
-                Column(Modifier.alpha(reveal), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (direction == Direction.SAY) HanziText(card.hanzi, 40f)
-                    PinyinText(card.pinyin, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-                    if (direction == Direction.READ) Text(card.english, style = MaterialTheme.typography.titleMedium, color = Night.muted, textAlign = TextAlign.Center)
+                Column(Modifier.graphicsLayer { alpha = reveal; translationY = (1f - reveal) * 8.dp.toPx() }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (direction == Direction.SAY) HanziText(c.hanzi, 40f)
+                    PinyinText(c.pinyin, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                    if (direction == Direction.READ) Text(c.english, style = MaterialTheme.typography.titleMedium, color = Night.muted, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(16.dp))
                 FlowRow(horizontalArrangement = Arrangement.Center) {
-                    TextButton(onClick = { vm.speaker.say(card.hanzi) }) {
+                    TextButton(onClick = { vm.speaker.say(c.hanzi) }) {
                         Icon(Icons.Rounded.PlayArrow, null, tint = Night.ink); Text("Listen", color = Night.ink)
                     }
-                    TextButton(onClick = { vm.speaker.say(card.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
-                    if (shown) TextButton(onClick = { speaking = true }) { Text("🎤 Say it", color = Night.sun) }
-                    if (shown && !practice) RealStar(state, card, vm, onUse = { vm.recordReal(card); advance(card, Grade.GOOD) })
+                    TextButton(onClick = { vm.speaker.say(c.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
+                    if (isShown) TextButton(onClick = { speaking = true }) { Text("🎤 Say it", color = Night.sun) }
+                    if (isShown && !practice && cid == card.id) RealStar(state, c, vm, onUse = {
+                        // Let the ★ burst play before the card moves on.
+                        vm.recordReal(c); scope.launch { kotlinx.coroutines.delay(450); if (queue.firstOrNull() == c.id) advance(c, Grade.GOOD) }
+                    })
                 }
-                if (!shown) Text("Tap to reveal", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                if (!isShown) Text("Tap to reveal", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
             }
+        }
         }
         Spacer(Modifier.height(14.dp))
         AnimatedVisibility(shown, enter = fadeIn()) {

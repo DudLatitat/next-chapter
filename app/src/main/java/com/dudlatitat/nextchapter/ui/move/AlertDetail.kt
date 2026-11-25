@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,7 +85,7 @@ fun AlertDetail(state: AppState, vm: MainViewModel, alert: FareAlert, onEdit: ()
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Column(Modifier.weight(1f)) {
                     Text("${alert.from} → ${alert.to.replace(",", "/")}", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                     Text("Leave ${md(alert.departStart)}–${md(alert.departEnd)} · stay ${alert.minDays}–${alert.maxDays} days · ≤ ${money(alert.maxPrice)}", style = MaterialTheme.typography.bodySmall, color = Night.muted)

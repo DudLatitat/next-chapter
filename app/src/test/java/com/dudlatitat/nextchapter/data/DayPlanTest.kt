@@ -61,3 +61,13 @@ class DayPlanTest {
         assertFalse(Stats.withRest(listOf(1), 6) > 0)
     }
 }
+
+class BestStreakTest {
+    @Test fun bestUsesTheRestDayRuleToo() {
+        val days = listOf(1L, 2, 3, 5, 6, 7) // one rest day (4)
+        assertEquals("the bug: best used to say 3 while the current streak said 6", 6, Stats.bestWithRest(days))
+        assertEquals(Stats.withRest(days, 7), Stats.bestWithRest(days))
+        assertEquals(3, Stats.bestWithRest(listOf(1L, 2, 3, 10, 11)))
+        assertEquals(0, Stats.bestWithRest(emptyList()))
+    }
+}

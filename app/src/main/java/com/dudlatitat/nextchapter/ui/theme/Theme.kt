@@ -156,6 +156,9 @@ fun StarryBackdrop(modifier: Modifier = Modifier.fillMaxSize()) {
         val start = System.nanoTime()
         while (true) {
             kotlinx.coroutines.delay(100)
+            // Waits for the next frame: in the background there are none, so the twinkle pauses
+            // instead of ticking 10 times a second for nothing.
+            androidx.compose.runtime.withFrameMillis { }
             t = (((System.nanoTime() - start) / 1e9 / 9.0) % 1.0 * 2 * PI).toFloat()
         }
     }

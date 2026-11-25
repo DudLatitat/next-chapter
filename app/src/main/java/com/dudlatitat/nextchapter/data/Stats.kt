@@ -38,6 +38,15 @@ object Stats {
      * Days in a row, where one missed day a week is a free rest day: it doesn't break the streak
      * (and doesn't count in it). Two missed days in a row, or two rest days within 7 days, end it.
      */
+    /**
+     * Your best streak ever, by the same rule as [withRest] (a rest day a week doesn't break it),
+     * so "best" can never be lower than the streak you're on.
+     */
+    fun bestWithRest(days: List<Long>): Int {
+        val sorted = days.distinct().sorted()
+        return sorted.maxOfOrNull { withRest(sorted, it) } ?: 0
+    }
+
     fun withRest(days: List<Long>, day: Long = today()): Int {
         val set = days.toSet()
         var d = if (day in set) day else day - 1

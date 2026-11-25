@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -116,7 +116,7 @@ fun SpotPicker(title: String, initial: Spot?, onSave: (Spot) -> Unit, onClose: (
         BackHandler(onBack = onClose)
         Column(Modifier.fillMaxSize().background(Night.ground2).padding(horizontal = 14.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+                IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Text(title, style = MaterialTheme.typography.titleLarge, color = Night.ink)
             }
             OutlinedTextField(

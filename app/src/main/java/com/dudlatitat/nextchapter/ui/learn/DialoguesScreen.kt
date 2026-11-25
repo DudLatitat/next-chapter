@@ -19,7 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,7 +62,7 @@ fun DialoguesScreen(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Un
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
                 Column {
                     Text("Dialogues · 对话", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
                     Text("Listen, then answer out loud", style = MaterialTheme.typography.bodySmall, color = Night.muted)
@@ -99,7 +99,7 @@ private fun Scene(d: Dialogue, vm: MainViewModel, onBack: () -> Unit, onCalibrat
 
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
                 Text(d.title, style = MaterialTheme.typography.titleLarge, color = Night.ink)
                 Text(d.setting, style = MaterialTheme.typography.bodySmall, color = Night.muted)

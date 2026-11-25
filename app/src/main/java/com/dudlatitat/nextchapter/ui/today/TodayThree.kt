@@ -35,6 +35,7 @@ import com.dudlatitat.nextchapter.data.DayPlan
 import com.dudlatitat.nextchapter.data.Ready
 import com.dudlatitat.nextchapter.ui.components.GlassCard
 import com.dudlatitat.nextchapter.ui.components.Pill
+import com.dudlatitat.nextchapter.ui.components.pressClick
 import com.dudlatitat.nextchapter.ui.theme.Night
 
 /**
@@ -46,8 +47,9 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun TodayThree(
     state: AppState, calm: Boolean, onItem: (DayPlan.Item) -> Unit, onPrayer: () -> Unit, onWeek: () -> Unit,
 ) {
-    val plan = DayPlan.today(state)
-    val streak = com.dudlatitat.nextchapter.data.Stats.streak(state)
+    val day = com.dudlatitat.nextchapter.data.today()
+    val plan = remember(state, day) { DayPlan.today(state, day) }
+    val streak = remember(state, day) { com.dudlatitat.nextchapter.data.Stats.streak(state, day) }
     val early = com.dudlatitat.nextchapter.data.Srs.streak(state.wakeDays)
     val titleColor by animateColorAsState(if (plan.finished) Night.jade else Night.ink, label = "threeTitle")
     GlassCard(highlight = true) {
@@ -105,7 +107,7 @@ private fun PlanRing(item: DayPlan.Item, breathe: Boolean, modifier: Modifier, o
         )
     } else remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     Column(
-        modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 6.dp, horizontal = 2.dp),
+        modifier.pressClick(onClick = onClick).padding(vertical = 6.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
