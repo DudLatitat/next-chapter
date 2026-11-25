@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,6 +62,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
+import com.dudlatitat.nextchapter.ui.components.HanziText
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Card
 import com.dudlatitat.nextchapter.data.Deck
@@ -298,7 +301,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
                 GlassCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(card.hanzi, fontSize = 22.sp, color = Night.ink)
+                            HanziText(card.hanzi, 22f, align = null)
                             PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
                             Text(card.english, style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                         }
@@ -330,6 +333,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
 /** Which side of the card you're quizzed on. */
 private enum class Direction { READ, SAY, LISTEN }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCalibrate: () -> Unit, practice: Boolean = false) {
     BackHandler(onBack = onClose)
@@ -448,7 +452,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     TextButton(onClick = { vm.speaker.say(card.hanzi, slow = true) }) { Text("Slow", color = Night.muted) }
                     if (picked != null) {
                         Spacer(Modifier.height(12.dp))
-                        Text(card.hanzi, fontSize = 36.sp, color = Night.ink)
+                        HanziText(card.hanzi, 36f)
                         PinyinText(card.pinyin, style = MaterialTheme.typography.titleLarge)
                     }
                 }
@@ -482,23 +486,25 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
 
         Spacer(Modifier.height(16.dp))
         GlassCard(Modifier.weight(1f), highlight = true, onClick = { shown = true }) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            // Centred when it fits; scrolls when a long phrase + pinyin + English don't (cover screen).
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 if (card.isNew) Pill("New phrase", Night.rose)
                 Spacer(Modifier.height(12.dp))
                 if (direction == Direction.READ) {
-                    Text(card.hanzi, fontSize = 44.sp, color = Night.ink, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+                    HanziText(card.hanzi, 44f, weight = FontWeight.Medium)
                 } else {
                     Text(card.english, style = MaterialTheme.typography.headlineMedium, color = Night.ink, textAlign = TextAlign.Center)
                 }
                 val reveal by animateFloatAsState(if (shown) 1f else 0f, tween(300), label = "reveal")
                 Spacer(Modifier.height(20.dp))
                 Column(Modifier.alpha(reveal), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (direction == Direction.SAY) Text(card.hanzi, fontSize = 40.sp, color = Night.ink, textAlign = TextAlign.Center)
+                    if (direction == Direction.SAY) HanziText(card.hanzi, 40f)
                     PinyinText(card.pinyin, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                     if (direction == Direction.READ) Text(card.english, style = MaterialTheme.typography.titleMedium, color = Night.muted, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(16.dp))
-                Row {
+                FlowRow(horizontalArrangement = Arrangement.Center) {
                     TextButton(onClick = { vm.speaker.say(card.hanzi) }) {
                         Icon(Icons.Rounded.PlayArrow, null, tint = Night.ink); Text("Listen", color = Night.ink)
                     }
@@ -507,6 +513,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
                     if (shown && !practice) RealStar(state, card, vm, onUse = { vm.recordReal(card); advance(card, Grade.GOOD) })
                 }
                 if (!shown) Text("Tap to reveal", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            }
             }
         }
         Spacer(Modifier.height(14.dp))
@@ -560,7 +567,7 @@ private fun SpeakSheet(card: Card, vm: MainViewModel, onCalibrate: () -> Unit, o
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(card.hanzi, fontSize = 34.sp, color = Night.ink, textAlign = TextAlign.Center)
+            HanziText(card.hanzi, 34f)
             PinyinText(card.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             TextButton(onClick = { vm.speaker.say(card.hanzi) }) { Icon(Icons.Rounded.PlayArrow, null, tint = Night.sun); Text(" Hear it first", color = Night.sun) }
             SpeakPanel(card.hanzi, card.pinyin, vm, onCalibrate = { onDismiss(); onCalibrate() })

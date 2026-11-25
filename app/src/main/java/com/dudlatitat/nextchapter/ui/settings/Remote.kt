@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.desktop.DesktopServer
+import com.dudlatitat.nextchapter.ui.components.HanziText
 import com.dudlatitat.nextchapter.desktop.PageState
 import com.dudlatitat.nextchapter.speech.Mark
 import com.dudlatitat.nextchapter.speech.verdict
@@ -191,7 +192,7 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                         if (s.shown) {
                             Spacer(Modifier.height(6.dp))
                             Text("You say", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                            Text(s.hanzi, fontSize = 30.sp, color = Night.sun, textAlign = TextAlign.Center)
+                            HanziText(s.hanzi, 30f, color = Night.sun)
                             PinyinText(s.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                         } else Text("Pick a reply: 1 or 2", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
@@ -227,7 +228,7 @@ private fun ColumnScope.RemoteBody(server: DesktopServer, vm: com.dudlatitat.nex
                             Text(s.hanzi, style = MaterialTheme.typography.bodyLarge, color = Night.sun, textAlign = TextAlign.Center)
                         } else if (s.shown) {
                             Spacer(Modifier.height(4.dp))
-                            Text(s.hanzi, fontSize = 40.sp, color = Night.sun, textAlign = TextAlign.Center)
+                            HanziText(s.hanzi, 40f, color = Night.sun)
                             PinyinText(s.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                         } else {
                             Text(if (s.view == "aplus") "Answer it in your head first" else "Say it out loud first", style = MaterialTheme.typography.bodySmall, color = Night.muted)

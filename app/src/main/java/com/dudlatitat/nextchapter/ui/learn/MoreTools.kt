@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.dudlatitat.nextchapter.MainViewModel
+import com.dudlatitat.nextchapter.ui.components.HanziText
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Culture
 import com.dudlatitat.nextchapter.data.Example
@@ -124,7 +125,7 @@ fun DriveScreen(vm: MainViewModel, onBack: () -> Unit) {
                         Text(c.english, style = MaterialTheme.typography.headlineSmall, color = Night.ink, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(10.dp))
                         if (s.phase == "chinese" || s.phase == "repeat") {
-                            Text(c.hanzi, fontSize = 36.sp, color = Night.ink, textAlign = TextAlign.Center)
+                            HanziText(c.hanzi, 36f)
                             PinyinText(c.pinyin, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                         } else {
                             Text(if (s.phase == "think") "Your turn: say it in Chinese…" else "Listen…", style = MaterialTheme.typography.titleMedium, color = Night.sun)

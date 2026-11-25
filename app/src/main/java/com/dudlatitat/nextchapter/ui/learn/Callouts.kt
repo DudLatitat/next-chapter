@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
+import com.dudlatitat.nextchapter.ui.components.HanziText
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Callouts
 import com.dudlatitat.nextchapter.data.Callouts.Verdict
@@ -183,7 +184,7 @@ fun CalloutScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                                 style = MaterialTheme.typography.titleMedium,
                                 color = when (v) { Verdict.GREAT -> Night.jade; Verdict.CLOSE -> Night.sun; Verdict.MISS -> Night.coral },
                             )
-                            Text(c.hanzi, fontSize = 34.sp, color = Night.ink, textAlign = TextAlign.Center)
+                            HanziText(c.hanzi, 34f)
                             PinyinText(c.pinyin, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                             Text(c.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                         }

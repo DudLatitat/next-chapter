@@ -152,6 +152,12 @@ tools/
   - Remote: view "game" card plus `HoldToTalk` (press records, release sends; offline check → `said`), Pause (`show`), Again (`play`), Skip (`grade` 4).
 - **1.99 (Fortnite callouts):** `Talk.fortniteCallouts` (15; battle-royale terms shared with PUBG 毒圈/舔包/倒地 from GamerSky/TapTap, otherwise plain Mandarin; 残血 flagged). `/api/callouts?game=fortnite`; Game mode has a 🪂 checkbox (`game:opts.fn`).
 - **1.100 (Comfort deck):** new deck `comfort` 安慰 (24 lines; Seed v15; `SeedTest`): being there, listening, 委屈/心疼, "not your fault", worth and belonging.
+- **1.101 (fixes from a user + developer review):**
+  - `ui/components/HanziText`: big Chinese now has its own line height (1.3×, `Sizes.lineHeight`) and steps down for long phrases (`Sizes.hanzi`, `SizesTest`). Before, 44sp characters sat on the theme's 24sp line height, so wrapped lines overlapped.
+  - HanziText is used on the review card, Listen, Say-it sheet, deck rows, Drive, Callouts, the remote, Today's tonight line and phrase row.
+  - The review card scrolls when long but stays centred (`BoxWithConstraints` + `heightIn(min)`). Its buttons are a `FlowRow`.
+  - **Streak bug:** finishing a game round (Callouts, Talk, Texts, Numbers, Sprint, a Prayer rung) now marks the day via `Stats.practiced` (`StreakPlayTest`). Before, an evening of only games broke 🔥.
+  - Review notes (retention ideas, not built yet): today's three; comeback cap and rest days; family/trip readiness; one journey XP; folding Practice to about 7 doors; ★ as the top reward; PC bests saved in AppState.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

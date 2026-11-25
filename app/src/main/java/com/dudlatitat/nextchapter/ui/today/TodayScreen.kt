@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.MainViewModel
+import com.dudlatitat.nextchapter.ui.components.HanziText
 import com.dudlatitat.nextchapter.data.APlus
 import com.dudlatitat.nextchapter.data.AppState
 import com.dudlatitat.nextchapter.data.Life
@@ -118,7 +119,7 @@ fun TodayScreen(
             GlassCard(highlight = true, onClick = { vm.speaker.say(t.hanzi) }) {
                 Text("Say this to ${state.herName.trim().ifEmpty { "her" }} tonight 💛", style = MaterialTheme.typography.labelMedium, color = Night.rose)
                 Spacer(Modifier.height(6.dp))
-                Text(t.hanzi + "  🔊", fontSize = 24.sp, color = Night.ink)
+                HanziText(t.hanzi + "  🔊", 24f, align = null)
                 PinyinText(t.pinyin, style = MaterialTheme.typography.bodyMedium)
                 Text(t.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
@@ -409,7 +410,7 @@ private fun PhraseRow(card: com.dudlatitat.nextchapter.data.Card, vm: MainViewMo
             Column(Modifier.weight(1f)) {
                 Text("Phrase of the day", style = MaterialTheme.typography.labelSmall, color = Night.muted)
                 // Pinyin under the characters, so long phrases don't squeeze it into a column.
-                Text(card.hanzi, fontSize = 22.sp, color = Night.ink)
+                HanziText(card.hanzi, 22f, align = null)
                 PinyinText(card.pinyin, style = MaterialTheme.typography.bodyMedium)
                 Text(card.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }

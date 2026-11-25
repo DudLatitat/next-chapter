@@ -18,6 +18,13 @@ object Stats {
     fun weekStart(day: LocalDate = LocalDate.now()): LocalDate = day.with(DayOfWeek.MONDAY)
 
     /** Days you practiced: finished a session, or answered at least one card. */
+    /**
+     * Marks [day] as practised. Finishing a review session does this, and so does finishing any game
+     * round (Callouts, Talk, Texts, Numbers, Sprint, a Prayer rung): playing counts for the streak.
+     */
+    fun practiced(s: AppState, day: Long = today()): AppState =
+        if (day in s.studyDays) s else s.copy(studyDays = (s.studyDays + day).takeLast(800))
+
     fun practiceDays(state: AppState): List<Long> =
         (state.studyDays + state.days.filterValues { it.reviews > 0 }.keys).distinct().sorted()
 
