@@ -145,6 +145,12 @@ fun TodayScreen(
                     com.dudlatitat.nextchapter.data.Pillars.Id.FAITH -> prayerOpen = true
                 }
             }
+            // The whole plan as one line: trips, exams, the move.
+            if (com.dudlatitat.nextchapter.data.Road.marks(state).isNotEmpty()) GlassCard(onClick = onOpenMove) {
+                Text("The road to 成都", style = MaterialTheme.typography.labelLarge, color = Night.muted)
+                Spacer(Modifier.height(8.dp))
+                com.dudlatitat.nextchapter.ui.components.RoadStrip(state)
+            }
         }
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
         if (!calm && com.dudlatitat.nextchapter.data.TonightLine.showing(state.tonight, today(), nowMin)) state.tonight?.let { t ->

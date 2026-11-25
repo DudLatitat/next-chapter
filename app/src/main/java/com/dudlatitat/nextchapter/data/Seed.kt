@@ -394,6 +394,19 @@ object Seed {
         b("Utilities", "水电费"), b("Insurance", "保险"), b("Fun & going out", "娱乐"), b("Other", "其他"),
     )
 
+    /**
+     * A rough starter month in a Sichuan city, in yuan, so "how long would my savings last" works
+     * on day one. Rough guesses to replace with your own numbers (the Money page says so).
+     */
+    val starterBudget: Map<String, Int> = mapOf(
+        "Rent" to 3000, "Food" to 2500, "Car & gas" to 800, "Phone & internet" to 150,
+        "Utilities" to 400, "Insurance" to 300, "Fun & going out" to 1000, "Other" to 500,
+    )
+
+    /** Fills only the lines still at 0, so nothing you typed is overwritten. */
+    fun withStarterBudget(budget: List<BudgetItem>): List<BudgetItem> =
+        budget.map { b -> if (b.rmb == 0) starterBudget[b.name]?.let { b.copy(rmb = it) } ?: b else b }
+
     private fun t(group: String, title: String) = MoveTask(id = "$group:$title", title = title, group = group)
 
     /** The degree step, named generically (the repo is public; the school is typed on the phone if wanted). */

@@ -213,6 +213,12 @@ tools/
   - Decks: "Your decks" (started) open, "More decks" folded. "How it's going" folded. Ready ladder pieces never show 0/N before starting ("Learn 5 family phrases", "★ Say 3 phrases for real").
   - Life: `data/ExamPlan` (`ExamPlanTest`: new cards a day to see every card a week before the exam, on track or not) as the exam row's subtitle; Faith row (prayer days → Prayer ladder via `LocalPlanNav`); Wins is a sheet (the page is gone); no "0 known" / "0 min".
   - The routine's 🌙 is a weekly count everywhere ("🌙 2 this week": Tonight's job, week strip, routine page, week widget). 🔥 is the only streak.
+- **1.114 (redesign build 4: Move):**
+  - `data/Road` (`RoadTest`): upcoming dated milestones (trips, A+ exam, cert dates not passed) up to the move; `ui/components/RoadStrip` draws them on one line (Move hero, and "The road to 成都" on Today).
+  - `data/Paperwork` (`PaperworkTest`): suggested start-by dates worked back from the move date for seeded steps (`leadMonths`, by step id); each checklist step shows "start by Feb 2028" / "start now"; Move shows the next step with Done.
+  - `data/Calls` (`CallsTest`, DST): good times to talk this week = your free time (weekday 7–10 pm, weekends 9 am–10 pm) × her usual waking hours (8 am–11 pm her time), in real zones; "Good times to talk" fold on Move.
+  - Money empty state: "Use a starter month" fills empty budget lines with rough yuan amounts (`Seed.starterBudget`, `withStarterBudget` never overwrites typed values) or "Enter my own".
+  - Deferred: merging the flight price tracker into Fare alerts.
 - **Local screenshots (dev only, not in the repo):** the Android SDK, Robolectric 4.14 + Roborazzi render the real app to PNG on the JVM (cover `w373dp` and inner `w884dp`) with a month of sample progress. Maven Central rate-limits the container, so Robolectric's `android-all-instrumented` jars come from Google's Maven Central mirror (`maven-central.storage-download.googleapis.com`) and run with `robolectric.offline`. The app also compiles locally this way before pushing.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 

@@ -145,7 +145,40 @@ private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.com
                 }
                 if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose, modifier = Modifier.padding(top = 6.dp))
                 androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Night.outline.copy(alpha = 0.5f))
-                Runway(state, onOpen = { page = "money" })
+                Runway(state, onOpen = { page = "money" }, onStarter = { vm.updatePlan { it.copy(budget = com.dudlatitat.nextchapter.data.Seed.withStarterBudget(it.budget)) } })
+            }
+        }
+
+        // Good times to talk this week (your free time × her waking hours, in real time zones).
+        item {
+            val zone = java.time.ZoneId.systemDefault()
+            val day = com.dudlatitat.nextchapter.data.today()
+            val windows = remember(day, zone) { com.dudlatitat.nextchapter.data.Calls.week(day, zone) }
+            val first = windows.firstOrNull()?.let { com.dudlatitat.nextchapter.data.Calls.describe(it, zone) }
+            com.dudlatitat.nextchapter.ui.components.Collapsible(
+                "move.calls", "Good times to talk", summary = first?.let { "${it.first} · ${it.second}" } ?: "This week",
+            ) {
+                windows.forEach { w ->
+                    val (mine, hers) = com.dudlatitat.nextchapter.data.Calls.describe(w, zone)
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(mine, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.ink, modifier = Modifier.weight(1f))
+                        Text(hers, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.rose)
+                    }
+                }
+                Text("Your evenings and weekends where she's usually awake (8 am–11 pm her time). Daylight saving is counted.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            }
+        }
+
+        // Paperwork: the next step to start, worked back from the move date.
+        com.dudlatitat.nextchapter.data.Paperwork.next(state)?.let { t ->
+            item {
+                com.dudlatitat.nextchapter.ui.components.ListGroup {
+                    com.dudlatitat.nextchapter.ui.components.ListRow(
+                        t.title, subtitle = "Next step · " + (com.dudlatitat.nextchapter.data.Paperwork.label(t, state.moveDate) ?: ""), divider = false,
+                        leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("证", Night.violet) },
+                        trailing = { com.dudlatitat.nextchapter.ui.components.GoChip("Done", Night.jade) { vm.toggleTask(t) } },
+                    )
+                }
             }
         }
 
@@ -313,6 +346,9 @@ private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewMode
                         color = if (task.done) Night.muted else Night.ink,
                         textDecoration = if (task.done) TextDecoration.LineThrough else null,
                     )
+                    com.dudlatitat.nextchapter.data.Paperwork.label(task, vm.state.value.moveDate)?.let { l ->
+                        Text(l, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = if (l == "start now") Night.sun else Night.muted)
+                    }
                     if (task.id in com.dudlatitat.nextchapter.data.Career.linkedTasks) {
                         Text("Linked to the Life tab", style = MaterialTheme.typography.labelSmall, color = Night.violet)
                     }
@@ -357,19 +393,8 @@ private fun Countdown(state: AppState, onTrip: () -> Unit, onMove: () -> Unit) {
             }
         }
         Spacer(Modifier.height(16.dp))
-        // The road: today → trip → move.
-        val frac = if (trip != null && move != null && move > 0) (trip.toFloat() / move).coerceIn(0.04f, 0.96f) else null
-        Box(Modifier.fillMaxWidth().height(14.dp), contentAlignment = Alignment.CenterStart) {
-            Box(Modifier.fillMaxWidth().height(4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(Night.outline))
-            if (frac != null) Box(Modifier.fillMaxWidth(frac).height(4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(Night.rose))
-            Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.ink))
-            if (frac != null) Box(Modifier.fillMaxWidth(frac), contentAlignment = Alignment.CenterEnd) {
-                Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.rose))
-            }
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                Box(Modifier.size(14.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.sun))
-            }
-        }
+        // The road: today → trips, exams → the move.
+        com.dudlatitat.nextchapter.ui.components.RoadStrip(state)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Today", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
@@ -383,17 +408,24 @@ private fun Countdown(state: AppState, onTrip: () -> Unit, onMove: () -> Unit) {
 }
 
 /** Twelve little lanterns, lit by how many months of life there your savings would cover. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Runway(state: AppState, onOpen: () -> Unit) {
+private fun Runway(state: AppState, onOpen: () -> Unit, onStarter: () -> Unit = {}) {
     val monthly = state.budget.sumOf { it.rmb }
     Column(Modifier.fillMaxWidth().pressClick(haptic = false, onClick = onOpen)) {
         Text("Life there · 生活费", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-        if (monthly <= 0 || state.saved <= 0) {
-            Text(
-                if (monthly <= 0) "Add your monthly costs there (Money → budget) to see how long your savings would last."
-                else "Add what you've saved (✏️ above) to light the lanterns.",
-                style = MaterialTheme.typography.bodySmall, color = Night.muted,
-            )
+        if (monthly <= 0) {
+            // Empty: one line, a starter to try, and your own numbers.
+            Text("What does a month there cost? Start from a rough Sichuan month and make it yours.", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.dudlatitat.nextchapter.ui.components.GoChip("Use a starter month", Night.jade, onStarter)
+                com.dudlatitat.nextchapter.ui.components.SecondaryButton("Enter my own", onOpen)
+            }
+            return@Column
+        }
+        if (state.saved <= 0) {
+            Text("Add what you've saved (✏️ above) to light the lanterns.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             return@Column
         }
         val months = Money.monthsCovered(state.saved, state.rate, monthly)
