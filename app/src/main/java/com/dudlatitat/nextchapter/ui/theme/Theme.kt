@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dudlatitat.nextchapter.R
 import kotlin.math.PI
@@ -34,7 +35,24 @@ import kotlin.random.Random
 // The same night-sea look as Two Skies: deep blue ground, glassy cards, Nunito for words and
 // Fraunces for titles and big numbers. Chinese falls back to the phone's own font.
 
+/**
+ * Spacing scale (4-point). Cards sit [card] apart; screens have a [gutter] at the sides
+ * (wider on the Fold's inner screen: see `screenGutter()`).
+ */
+object Space {
+    val xs = 4.dp
+    val s = 8.dp
+    val m = 12.dp
+    val l = 16.dp
+    val xl = 24.dp
+    val xxl = 32.dp
+    val card = 12.dp
+}
+
 object Night {
+    // Colour means an area of life (so a glance tells you what something is about):
+    // sun = Chinese / the main action · rose = her and the trips · violet = A+ and career ·
+    // jade = done / success · coral = urgent only.
     val groundTop = Color(0xFF2A3E78)
     val ground1 = Color(0xFF17214A)
     val ground2 = Color(0xFF0E1532)

@@ -89,7 +89,7 @@ fun MoveScreen(state: AppState, vm: MainViewModel) {
     val wide = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("The move", "搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity)) }
@@ -353,7 +353,7 @@ private fun Runway(state: AppState, onOpen: () -> Unit) {
                         Modifier.size(18.dp, 24.dp)
                             .background(Night.coral.copy(alpha = 0.12f + 0.75f * lit), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
                     )
-                    Text("${i + 1}", fontSize = 9.sp, color = if (lit > 0.5f) Night.ink else Night.muted)
+                    Text("${i + 1}", fontSize = 11.sp, color = if (lit > 0.5f) Night.ink else Night.muted)
                 }
             }
         }

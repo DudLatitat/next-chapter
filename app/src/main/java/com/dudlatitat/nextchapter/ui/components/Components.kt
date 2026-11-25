@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -110,15 +111,36 @@ fun Bar(progress: Float, color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** A pill-shaped chip. */
+/**
+ * A pill-shaped chip for status. Give it [onClick] and it becomes a button with a full 48dp
+ * touch target (the pill itself stays small).
+ */
 @Composable
-fun Pill(text: String, color: Color, modifier: Modifier = Modifier) {
+fun Pill(text: String, color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    val tap = if (onClick != null) Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onClick) else Modifier
     Text(
         text,
-        modifier = modifier.clip(RoundedCornerShape(50)).background(color.copy(alpha = 0.18f)).padding(horizontal = 10.dp, vertical = 4.dp),
+        modifier = modifier.then(tap).clip(RoundedCornerShape(50)).background(color.copy(alpha = if (onClick != null) 0.24f else 0.18f)).padding(horizontal = 10.dp, vertical = 4.dp),
         color = color,
         style = MaterialTheme.typography.labelMedium,
     )
+}
+
+/** The side margin of a screen: 16dp on the cover screen, 24dp on the wide inner screen. */
+@Composable
+fun screenGutter(): Dp = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 24.dp else 16.dp
+
+/** The Fold's wide inner screen (or any tablet-width window). */
+@Composable
+fun isWide(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
+
+/** Two columns side by side on the wide screen, each a stack of cards 12dp apart. */
+@Composable
+fun TwoPanes(left: @Composable () -> Unit, right: @Composable () -> Unit, leftWeight: Float = 1f) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
+        Column(Modifier.weight(leftWeight), verticalArrangement = Arrangement.spacedBy(12.dp)) { left() }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) { right() }
+    }
 }
 
 /** Title line at the top of a tab. */

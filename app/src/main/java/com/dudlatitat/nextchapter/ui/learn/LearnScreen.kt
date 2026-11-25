@@ -144,21 +144,16 @@ private fun Overview(
 ) {
     val doneToday = today().let { d -> state.cards.count { it.last == d } }
     val queue = Srs.queue(state)
+    var situation by remember { mutableStateOf<PracticeTools.Situation?>(null) }
+    val wide = com.dudlatitat.nextchapter.ui.components.isWide()
+    situation?.let { sit -> SituationSheet(sit, onDismiss = { situation = null }, onTool = onTool) }
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("Chinese", "学中文 · for real life there") }
-        // Said it for real ★: the count that matters most.
-        val real = state.realUses.map { it.id }.toSet().size
-        if (real > 0) item {
-            Text(
-                "★ $real phrase${if (real == 1) "" else "s"} used for real with her and her family",
-                style = MaterialTheme.typography.titleSmall, color = Night.sun,
-            )
-        }
-        item {
+        val hero: @Composable () -> Unit = {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -178,36 +173,28 @@ private fun Overview(
                     Spacer(Modifier.height(6.dp))
                     TextButton(onClick = onRedo) { Text("↻  Redo today ($doneToday)", color = Night.sun) }
                 }
+                // Said it for real ★: the count that matters most.
+                val real = state.realUses.map { it.id }.toSet().size
+                if (real > 0) Text(
+                    "★ $real phrase${if (real == 1) "" else "s"} used for real with her and her family",
+                    style = MaterialTheme.typography.bodyMedium, color = Night.sun,
+                )
+                Spacer(Modifier.height(10.dp))
+                SuggestedNext(state, onTool, onDeck)
             }
         }
-        // Practice tools right under the review card (always open), grouped by what you're doing.
-        item {
-            val groups = listOf(
-                "Play" to listOf(Triple("对话", "Talk", "dinner") to Night.rose, Triple("喊话", "Callouts", "callouts") to Night.coral, Triple("听价格", "Numbers", "numbers") to Night.sun),
-                "Texting" to listOf(Triple("微信", "Texts", "texts") to Night.jade, Triple("打字", "Sprint", "sprint") to Night.sun, Triple("查", "Look up", "lookup") to Night.violet),
-                "Family & faith" to listOf(Triple("家谱", "Her family", "family") to Night.rose, Triple("祷告", "Prayer", "prayer") to Night.violet),
-                "Speak & listen" to listOf(Triple("声调", "Tones", "tones") to Night.violet, Triple("对话", "Dialogues", "dialogues") to Night.jade, Triple("开车", "Drive", "drive") to Night.jade),
-                "Build & read" to listOf(Triple("造句", "Build", "build") to Night.jade, Triple("故事", "Stories", "stories") to Night.rose, Triple("语法", "Grammar", "grammar") to Night.violet),
-                "Write & go" to listOf(Triple("写字", "Writing", "writing") to Night.sun, Triple("救急", "Phrasebook", "phrasebook") to Night.rose, Triple("礼节", "Etiquette", "culture") to Night.sun),
-            )
-            GlassCard {
-                Text("Practice", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-                Spacer(Modifier.height(8.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    groups.forEach { (label, row) ->
-                        Text(label, style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { (t, color) -> ToolTile(t.first, t.second, color, Modifier.weight(1f)) { onTool(t.third) } }
-                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
-                    }
-                }
+        // Practice: four situations; each opens a sheet with its tools (all 17 are one tap deeper).
+        val practice: @Composable () -> Unit = {
+            Column {
+                SectionLabel("Practice")
+                Spacer(Modifier.height(4.dp))
+                SituationTiles(onOpen = { situation = it })
             }
         }
-        item {
+        val decks: @Composable () -> Unit = {
             val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
             val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
-            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all", defaultOpen = true) {
+            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all") {
                 // A grid of small tiles (2 across on the cover screen, 3 unfolded): far less scrolling.
                 val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 3 else 2
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -226,7 +213,7 @@ private fun Overview(
             }
         }
         // Ready for her family: the ladder of real situations, climbed from what you've done.
-        item {
+        val ready: @Composable () -> Unit = {
             com.dudlatitat.nextchapter.ui.today.ReadyLadder(state) { t ->
                 when {
                     t.startsWith("deck:") -> onDeck(t.removePrefix("deck:"))
@@ -236,6 +223,9 @@ private fun Overview(
                 }
             }
         }
+        // Unfolded: review and practice on the left, readiness and decks on the right.
+        if (wide) item { com.dudlatitat.nextchapter.ui.components.TwoPanes({ hero(); practice() }, { ready(); decks() }) }
+        else { item { hero() }; item { practice() }; item { decks() }; item { ready() } }
         // Then your tones and how it's going.
         item { WeakTones(state, onDrill) }
         item { SectionLabel("How it's going") }
@@ -289,7 +279,7 @@ private fun DeckDetail(deck: Deck, state: AppState, vm: MainViewModel, onBack: (
     val cards = state.cards.filter { it.deck == deck.id }
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
@@ -399,7 +389,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
 
     if (speaking && card != null) SpeakSheet(card, vm, onCalibrate, onDismiss = { speaking = false })
 
-    Column(Modifier.fillMaxSize().readable().padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().readable().padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close", tint = Night.ink) }
             Bar(done.toFloat() / total, Night.jade, Modifier.weight(1f))
@@ -624,20 +614,6 @@ fun AddPhraseDialog(initialHanzi: String = "", onDismiss: () -> Unit, onAdd: (St
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-
-@Composable
-private fun ToolTile(zh: String, title: String, color: Color, modifier: Modifier, onClick: () -> Unit) {
-    // A smaller cousin of GlassCard: four fit across even the Fold's cover screen.
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
-    Column(
-        modifier.clip(shape).background(Night.card.copy(alpha = 0.85f)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(zh, fontSize = 18.sp, color = color, maxLines = 1)
-        Text(title, fontSize = 12.sp, color = Night.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-    }
-}
-
 
 /** Accuracy for each tone lately, and a drill for the pair you mix up most. */
 @Composable

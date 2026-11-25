@@ -46,7 +46,7 @@ fun RealStar(state: AppState, card: Card, vm: MainViewModel, onUse: (() -> Unit)
                     if (uses > 0) "★" else "☆", fontSize = 22.sp, color = if (uses > 0) Night.sun else Night.muted,
                     modifier = Modifier.graphicsLayer { scaleX = pop.value; scaleY = pop.value },
                 )
-                if (uses > 1) Text("$uses", fontSize = 9.sp, color = Night.sun)
+                if (uses > 1) Text("$uses", fontSize = 11.sp, color = Night.sun)
             }
         }
     }

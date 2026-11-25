@@ -100,26 +100,36 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
     var editingJob by remember { mutableStateOf<JobPosting?>(null) }
     var addingPerson by remember { mutableStateOf(false) }
     var pickingExam by remember { mutableStateOf(false) }
+    val wide = com.dudlatitat.nextchapter.ui.components.isWide()
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("Life", "生活 · your evenings, your study, your path") }
-        // Your week first: it's what the evenings run on.
-        item { RoutineSummary(state, onOpen = { page = "routine" }) }
-        item { SectionLabel("A+ exam") }
-        item { APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" }) }
-        item { StudyTimer(state, vm) }
-
-        item { SectionLabel("Career path") }
-        item { CertPath(state, vm) }
-        item { Classes(state, vm, onAdd = { addingClass = true }) }
-        item { Jobs(state, onEdit = { editingJob = it }, onAdd = { editingJob = JobPosting("job:${System.currentTimeMillis()}", "") }) }
-        item { SectionLabel("Wins") }
-        item { com.dudlatitat.nextchapter.ui.progress.LifeWins(state) }
-
+        // Your week first: it's what the evenings run on. Unfolded: routine and A+ on the left,
+        // career and wins on the right.
+        val left: @Composable () -> Unit = {
+            RoutineSummary(state, onOpen = { page = "routine" })
+            SectionLabel("A+ exam")
+            APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" })
+            StudyTimer(state, vm)
+        }
+        val right: @Composable () -> Unit = {
+            SectionLabel("Career path")
+            CertPath(state, vm)
+            Classes(state, vm, onAdd = { addingClass = true })
+            Jobs(state, onEdit = { editingJob = it }, onAdd = { editingJob = JobPosting("job:${System.currentTimeMillis()}", "") })
+            SectionLabel("Wins")
+            com.dudlatitat.nextchapter.ui.progress.LifeWins(state)
+        }
+        if (wide) item {
+            com.dudlatitat.nextchapter.ui.components.TwoPanes(left, right)
+        } else {
+            item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { left() } }
+            item { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { right() } }
+        }
         item { Spacer(Modifier.height(8.dp)) }
     }
 
@@ -163,7 +173,19 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
                 color = if (days != null && days in 0..14) Night.coral else Night.sun,
             )
         }
-        Spacer(Modifier.height(6.dp))
+        weakest?.let { Text("Focus: ${APlus.domains.getValue(it).first} (${APlus.domains.getValue(it).second}% of the exam)", style = MaterialTheme.typography.bodySmall, color = Night.sun) }
+        Spacer(Modifier.height(10.dp))
+        Button(
+            onClick = onStart, enabled = queue.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Night.violet, contentColor = Night.ground2),
+        ) { Text(if (queue.isEmpty()) "All done for today ✓" else "Study ${queue.size} cards · about ${maxOf(1, queue.size / 4)} min") }
+        // The rest (domains, the practice test, cards a day) folds away: a glance card, not a dashboard.
+        var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+        TextButton(onClick = { details = !details }, contentPadding = PaddingValues(horizontal = 0.dp)) {
+            Text(if (details) "Less ▴" else "Domains, practice test, settings ▾", color = Night.muted)
+        }
+        androidx.compose.animation.AnimatedVisibility(details) { Column {
         // The five domains in one row: short name, a mini bar, how much you know.
         val short = mapOf(1 to "Mobile", 2 to "Network", 3 to "Hardware", 4 to "Cloud", 5 to "Fixes")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -171,20 +193,13 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
                 val s0 = strength[d] ?: 0f
                 val c = if (d == weakest) Night.sun else Night.jade
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(short.getValue(d), fontSize = 10.sp, color = if (d == weakest) Night.sun else Night.muted, maxLines = 1, softWrap = false)
+                    Text(short.getValue(d), fontSize = 11.sp, color = if (d == weakest) Night.sun else Night.muted, maxLines = 1, softWrap = false)
                     Bar(s0, c, Modifier.padding(vertical = 3.dp))
                     Text("${(s0 * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1)
                 }
             }
         }
-        weakest?.let { Text("Focus: ${APlus.domains.getValue(it).first} (${APlus.domains.getValue(it).second}% of the exam)", style = MaterialTheme.typography.labelSmall, color = Night.sun, modifier = Modifier.padding(top = 6.dp)) }
-        Spacer(Modifier.height(6.dp))
-        Button(
-            onClick = onStart, enabled = queue.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = MaterialTheme.colorScheme.onPrimary),
-        ) { Text(if (queue.isEmpty()) "All done for today ✓" else "Study ${queue.size} cards · about ${maxOf(1, queue.size / 4)} min") }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onTest, modifier = Modifier.fillMaxWidth()) {
             Text("📝 Practice test · 20 questions", color = Night.violet, maxLines = 1)
         }
@@ -200,6 +215,7 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
             TextButton(onClick = { vm.setAPlusPerDay(state.aplusPerDay - 2) }) { Text("−", color = Night.muted) }
             TextButton(onClick = { vm.setAPlusPerDay(state.aplusPerDay + 2) }) { Text("+", color = Night.muted) }
         }
+        } }
     }
 }
 
@@ -213,7 +229,7 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
     var shown by remember { mutableStateOf(false) }
     val card = queue.firstOrNull()?.let { id -> APlus.core1.firstOrNull { it.id == id } }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {
@@ -450,7 +466,7 @@ private fun PersonScreen(state: AppState, person: Person, vm: MainViewModel, onB
     var deletingPerson by remember { mutableStateOf(false) }
     val today = LocalDate.now()
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Text(person.name, style = MaterialTheme.typography.headlineSmall, color = Night.ink, modifier = Modifier.weight(1f))
@@ -696,7 +712,7 @@ private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         dismissButton = { TextButton(onClick = { confirmLeave = false; onBack() }) { Text("Leave", color = Night.coral) } },
     )
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = leave) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }
             Column(Modifier.weight(1f)) {

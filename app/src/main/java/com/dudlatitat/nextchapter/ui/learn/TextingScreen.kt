@@ -251,7 +251,7 @@ private fun Bubble(l: Line, avatar: String, help: Boolean, onPlay: () -> Unit) {
                         PinyinText(l.pinyin, style = MaterialTheme.typography.bodySmall)
                         Text(l.english, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }
-                    if (l.mine && l.hinted) Text("with a hint", fontSize = 10.sp, color = Color(0xFF335522))
+                    if (l.mine && l.hinted) Text("with a hint", fontSize = 11.sp, color = Color(0xFF335522))
                 }
             }
         }

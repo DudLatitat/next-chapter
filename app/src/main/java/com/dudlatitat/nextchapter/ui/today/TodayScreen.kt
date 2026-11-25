@@ -105,10 +105,9 @@ fun TodayScreen(
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(720.dp).padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
+    // Unfolded: the header and today's three on the left, this moment and the rest on the right.
+    val wide = com.dudlatitat.nextchapter.ui.components.isWide()
+    val top: @Composable () -> Unit = {
         Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayThree(
@@ -123,6 +122,8 @@ fun TodayScreen(
             },
             onPrayer = { prayerOpen = true }, onWeek = { onLifePage("routine") },
         )
+    }
+    val rest: @Composable () -> Unit = {
         NowCard(state, vm, part, minute, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.
         val nm = LocalTime.now().let { it.hour * 60 + it.minute }
@@ -144,7 +145,7 @@ fun TodayScreen(
             "today.more", "More today",
             summary = listOfNotNull(coming, com.dudlatitat.nextchapter.data.Body.pill(state, today()), if (monday) "last week" else null).joinToString(" · "),
         ) {
-            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable { bodyOpen = true })
+            Pill(com.dudlatitat.nextchapter.data.Body.pill(state, today()), Night.violet, onClick = { bodyOpen = true })
             if (coming != null) { Spacer(Modifier.height(10.dp)); com.dudlatitat.nextchapter.ui.life.ComingUpList(state, onOpenLife) }
             if (monday) {
                 Spacer(Modifier.height(12.dp))
@@ -153,6 +154,12 @@ fun TodayScreen(
             }
         }
 
+    }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable(if (wide) 1100.dp else 720.dp).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (wide) com.dudlatitat.nextchapter.ui.components.TwoPanes(top, rest, leftWeight = 1.1f) else { top(); rest() }
         Spacer(Modifier.height(8.dp))
     }
 
@@ -276,7 +283,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
                     val said = T.saidToday(state, today())
                     Pill(
                         if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}",
-                        Night.rose, Modifier.minimumInteractiveComponentSize().clip(RoundedCornerShape(50)).clickable(onClick = onTrip),
+                        Night.rose, onClick = onTrip,
                     )
                 }
                 if (atWork) {

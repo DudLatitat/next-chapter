@@ -168,7 +168,11 @@ tools/
   - `Header` (was Hero): greeting, both clocks, one line of countdowns (trip · ready % · move). The background follows her sky (`data/HerSky`, `HerSkyTest`). Trip-phrase and work pills only when they apply.
   - `TodayThree` is now three rings (phrases, a game, A+/tonight) built from `DayPlan` (`Item.ring`/`progress`), with the one 🔥 streak (practice days), a 🙏 chip and the week dots. The old `TodayRings` and the second (routine) streak on Today are gone; the routine streak lives in Life.
   - Body, Coming up and Monday's last week fold into "More today".
-  - Phases still to come: 2 Chinese tab (suggested tool + situation tiles), 3 shared style rules, 4 Fold two-pane + slimmer Life/Move.
+- **1.104 (UI overhaul phases 2–4):**
+  - Chinese tab (`ui/learn/Practice.kt`): the 17-tile grid became 4 situation tiles (Family & faith, Texting, Play & listen, Read & write; `PracticeTools.situations`) that open `SituationSheet`. The review card carries ★ and `SuggestedNext` (today's game, else the next readiness piece). Decks and the Ready ladder start folded. Dialogues is now 听对话 (it clashed with Talk 对话).
+  - Shared style: `theme/Space` (4-point scale), colour roles noted on `Night` (sun Chinese, rose her/trips, violet A+, jade done, coral urgent), `screenGutter()` (16dp cover, 24dp inner), `Pill(onClick=)` with a 48dp target, Collapsible uses an icon arrow, no text under 11sp (except the map credit).
+  - Wide screen: `isWide()` + `TwoPanes` (no new library). Today: header and rings left, Now and More right. Chinese: review and practice left, Ready and decks right. Life: routine and A+ left, career and wins right. Move already had 2-column checklist groups.
+  - A+ card slimmed: exam date, focus, Study button; domains, practice test and cards a day fold under "Domains, practice test, settings".
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

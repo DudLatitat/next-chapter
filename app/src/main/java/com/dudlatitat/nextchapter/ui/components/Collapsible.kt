@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,7 +59,7 @@ fun Collapsible(
     val turn by animateFloatAsState(if (open) 90f else 0f, label = "arrow")
     GlassCard(modifier, highlight = highlight) {
         Row(
-            Modifier.fillMaxWidth().clickable {
+            Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable {
                 open = !open
                 prefs.edit().putBoolean(key, open).apply()
             },
@@ -70,7 +72,7 @@ fun Collapsible(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            Text("▸", style = MaterialTheme.typography.titleMedium, color = Night.muted, modifier = Modifier.rotate(turn).padding(4.dp))
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.KeyboardArrowDown, if (open) "Close" else "Open", tint = Night.muted, modifier = Modifier.rotate(turn - 90f))
         }
         AnimatedVisibility(open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column {

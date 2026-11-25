@@ -79,7 +79,7 @@ fun TodayThree(
         // Small things under the rings: prayer, early starts, and the week of evenings.
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val prayed = com.dudlatitat.nextchapter.data.today() in state.prayedDays
-            Pill(if (prayed) "🙏 Prayed ✓" else "🙏 Pray", if (prayed) Night.jade else Night.sun, Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onPrayer))
+            Pill(if (prayed) "🙏 Prayed ✓" else "🙏 Pray", if (prayed) Night.jade else Night.sun, onClick = onPrayer)
             if (early > 0) Pill("☀️ $early early", Night.jade)
         }
         Spacer(Modifier.height(10.dp))
@@ -148,7 +148,6 @@ fun ReadyLadder(state: AppState, onPiece: (String) -> Unit) {
     com.dudlatitat.nextchapter.ui.components.Collapsible(
         "learn.ready", "准备好了吗 · Ready for her family",
         summary = if (next == null) "Every rung climbed ✓" else "${ladder.climbed}/${ladder.rungs.size} · next: ${next.title}",
-        defaultOpen = true,
     ) {
         // The ladder: one segment per rung, filled as you climb.
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -166,8 +165,8 @@ fun ReadyLadder(state: AppState, onPiece: (String) -> Unit) {
         Spacer(Modifier.height(6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             next.pieces.forEach { p ->
-                val mod = if (!p.done && p.tool != null) Modifier.clip(RoundedCornerShape(50)).clickable { onPiece(p.tool) } else Modifier
-                Pill((if (p.done) "✓ " else "") + p.label, if (p.done) Night.jade else Night.rose, mod)
+                val tool = p.tool
+                Pill((if (p.done) "✓ " else "") + p.label, if (p.done) Night.jade else Night.rose, onClick = if (!p.done && tool != null) ({ onPiece(tool) }) else null)
             }
         }
         if (ladder.climbed > 0) {
