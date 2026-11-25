@@ -33,6 +33,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -102,18 +104,22 @@ fun WeekDots(state: AppState, big: Boolean = false) {
     }
 }
 
-/** On the Life tab: this week's dots, the streak and tonight's job. Tap for the full routine. */
+/** On the Life tab: the one place the week lives. Nights in a row, early starts, the dots. */
 @Composable
 fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
     val streak = Routine.streak(state.routineChecks, today())
-    val job = Routine.jobOn(state, LocalDate.now())
+    val early = com.dudlatitat.nextchapter.data.Srs.streak(state.wakeDays)
     GlassCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Weekly routine · 每周", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.weight(1f))
-            if (streak > 0) Pill("🌙 $streak", Night.violet)
+            Column(Modifier.weight(1f)) {
+                Text("This week · 本周", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                Text("Tap to plan your evenings", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+            }
+            com.dudlatitat.nextchapter.ui.components.StatTile("🌙$streak", "nights", Night.violet)
+            Spacer(Modifier.width(14.dp))
+            com.dudlatitat.nextchapter.ui.components.StatTile("☀️$early", "early", Night.jade)
         }
-        Text("Tonight: ${Routine.text(job.task, state.herName)}", style = MaterialTheme.typography.bodySmall, color = Night.muted, maxLines = 1)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         WeekDots(state)
     }
 }
@@ -193,7 +199,7 @@ fun RoutineScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         Spacer(Modifier.height(8.dp))
     }
 
-    editing?.let { d -> EditDay(d, vm, onClose = { editing = null }) }
+    editing?.let { d -> EditDaySheet(state, d.dow, vm, onClose = { editing = null }) }
 }
 
 @Composable
@@ -204,48 +210,75 @@ private fun Legend(label: String, color: Color) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Edit the evenings, as a sheet: day chips across the top (hop between days; changes are saved
+ * as you hop), the job, its first step and bad-day minimum, when it starts and what Start opens.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EditDay(d: RoutineDay, vm: MainViewModel, onClose: () -> Unit) {
-    var task by remember { mutableStateOf(d.task) }
-    var step by remember { mutableStateOf(d.firstStep) }
-    var min by remember { mutableStateOf(d.minimum) }
-    var kind by remember { mutableStateOf(d.kind) }
-    var minutes by remember { mutableStateOf(d.minutes) }
+private fun EditDaySheet(state: AppState, startDow: Int, vm: MainViewModel, onClose: () -> Unit) {
+    var dow by remember { androidx.compose.runtime.mutableIntStateOf(startDow) }
+    val d = state.routine.firstOrNull { it.dow == dow } ?: return
+    var task by remember(dow) { mutableStateOf(d.task) }
+    var step by remember(dow) { mutableStateOf(d.firstStep) }
+    var min by remember(dow) { mutableStateOf(d.minimum) }
+    var kind by remember(dow) { mutableStateOf(d.kind) }
+    var minutes by remember(dow) { androidx.compose.runtime.mutableIntStateOf(d.minutes) }
     var picking by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(DayOfWeek.of(d.dow).getDisplayName(TextStyle.FULL, Locale.US)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(task, { task = it.take(70) }, label = { Text("The job") })
-                OutlinedTextField(step, { step = it.take(60) }, label = { Text("Tiny first step") }, singleLine = true)
-                OutlinedTextField(min, { min = it.take(60) }, label = { Text("Bad-day minimum") }, singleLine = true)
-                OutlinedButton(onClick = { picking = true }) { Text("Starts at ${clockLabel(minutes)}", color = Night.sun) }
-                Text("Start button opens", style = MaterialTheme.typography.labelMedium, color = Night.muted)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("aplus" to "A+ test", "aplus-review" to "Missed A+", "chinese" to "Chinese", "" to "Timer").forEach { (k, l) ->
-                        FilterChip(selected = kind == k, onClick = { kind = k }, label = { Text(l) })
-                    }
-                }
-                Text("Write {her} to use her name from Settings.", style = MaterialTheme.typography.labelSmall, color = Night.muted, textAlign = TextAlign.Start)
+    var note by remember { mutableStateOf<String?>(null) }
+    val valid = task.isNotBlank() && min.isNotBlank()
+    fun edited() = d.copy(task = task.trim(), firstStep = step.trim(), minimum = min.trim(), kind = kind, minutes = minutes)
+    fun saveIfChanged(): Boolean {
+        val e = edited()
+        if (valid && e != d) { vm.saveRoutineDay(e); return true }
+        return false
+    }
+    val dayName = { n: Int -> DayOfWeek.of(n).getDisplayName(TextStyle.SHORT, Locale.US) }
+    val todayDow = LocalDate.now().dayOfWeek.value
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { saveIfChanged(); onClose() },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Night.ground1,
+    ) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("Each evening · 每晚", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+            com.dudlatitat.nextchapter.ui.components.SegmentedChips(
+                state.routine.map { (dayName(it.dow) + if (it.dow == todayDow) " ·" else "") to (if (it.dow == todayDow) Night.rose else Night.violet) },
+                state.routine.indexOfFirst { it.dow == dow },
+                onSelect = { i -> if (saveIfChanged()) note = "Saved ${dayName(dow)} ✓"; dow = state.routine[i].dow },
+            )
+            note?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = Night.jade) }
+            OutlinedTextField(task, { task = it.take(70) }, label = { Text("The job") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(step, { step = it.take(60) }, label = { Text("Tiny first step") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(min, { min = it.take(60) }, label = { Text("Bad-day minimum") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            com.dudlatitat.nextchapter.ui.components.ListGroup {
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    "Starts at", subtitle = clockLabel(minutes), divider = false,
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("时", Night.sun) }, onClick = { picking = true },
+                )
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { vm.saveRoutineDay(d.copy(task = task.trim(), firstStep = step.trim(), minimum = min.trim(), kind = kind, minutes = minutes)); onClose() },
-                enabled = task.isNotBlank() && min.isNotBlank(),
-            ) { Text("Save", color = Night.sun) }
-        },
-        dismissButton = {
-            Row {
-                Routine.seed.firstOrNull { it.dow == d.dow }?.let { s ->
-                    TextButton(onClick = { task = s.task; step = s.firstStep; min = s.minimum; kind = s.kind; minutes = s.minutes }) { Text("Reset", color = Night.muted) }
+            Text("Start opens", style = MaterialTheme.typography.labelLarge, color = Night.muted)
+            val kinds = listOf("aplus" to "A+ test", "aplus-review" to "Missed A+", "chinese" to "Chinese", "" to "Timer")
+            com.dudlatitat.nextchapter.ui.components.SegmentedChips(
+                kinds.map { it.second to Night.sun }, kinds.indexOfFirst { it.first == kind }.coerceAtLeast(0), onSelect = { kind = kinds[it].first },
+            )
+            Text("Tip: write {her} and it shows her name from Settings.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
+            Spacer(Modifier.height(4.dp))
+            Button(
+                onClick = { if (valid) { vm.saveRoutineDay(edited()); onClose() } }, enabled = valid,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Night.sun, contentColor = Night.ground2),
+            ) { Text("Save ${dayName(dow)}", style = MaterialTheme.typography.titleMedium) }
+            Routine.seed.firstOrNull { it.dow == dow }?.let { seed ->
+                TextButton(onClick = { task = seed.task; step = seed.firstStep; min = seed.minimum; kind = seed.kind; minutes = seed.minutes }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("Reset ${dayName(dow)} to the default", color = Night.muted)
                 }
-                TextButton(onClick = onClose) { Text("Cancel", color = Night.muted) }
             }
-        },
-    )
+        }
+    }
     if (picking) {
         val picker = rememberTimePickerState(minutes / 60, minutes % 60, is24Hour = false)
         AlertDialog(
