@@ -114,7 +114,7 @@ fun LearnScreen(
         reviewing -> "review"
         redoing -> "redo"
         drill != null -> "drill:$drill"
-        tool != null && tool != "lookup" -> "tool:$tool"
+        tool != null -> "tool:$tool"
         openDeck != null -> "deck:$openDeck"
         else -> "overview"
     }
@@ -134,6 +134,7 @@ fun LearnScreen(
             d.startsWith("drill:") -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = d.removePrefix("drill:").split(",").map { it.toInt() }.toSet())
             d.startsWith("deck:") -> DeckDetail(Decks.first { it.id == d.removePrefix("deck:") }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
             d.startsWith("tool:") -> when (d.removePrefix("tool:")) {
+                "lookup" -> SearchScreen(state, vm, onBack = { tool = null }, onDeck = { tool = null; openDeck = it })
                 "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
                 "writing" -> WritingScreen(state, vm, onBack = { tool = null })
                 "drive" -> DriveScreen(vm, onBack = { tool = null })
@@ -160,7 +161,6 @@ fun LearnScreen(
     }
 
     // 🔍 How do I say… opens over the Chinese tab (it's a quick look-up, not a screen).
-    if (tool == "lookup") HowSaySheet(state, vm, onDismiss = { tool = null })
     if (adding) AddPhraseDialog(onDismiss = { adding = false }) { h, p, e -> vm.addCard(h, p, e); adding = false }
 }
 
@@ -181,6 +181,7 @@ private fun Overview(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ScreenTitle("Chinese", "学中文 · for real life there") }
+        item { SearchPill(onClick = { onTool("lookup") }) }
         val hero: @Composable () -> Unit = {
             GlassCard(highlight = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -36,4 +36,14 @@ object Lookup {
         val words = d?.search(query, Finder.common(corpus)).orEmpty()
         Result(phrases, words, d != null)
     }
+
+    /** The global search: many more results, pinyin with or without tones (see [Finder.search]). */
+    suspend fun searchAll(context: Context, state: AppState, query: String): Result = withContext(Dispatchers.Default) {
+        val corpus = Finder.corpus(state)
+        val phrases = Finder.search(query, corpus, limit = 40)
+        val d = dict(context)
+        val have = phrases.map { it.hanzi }.toSet()
+        val words = d?.search(query, Finder.common(corpus), limit = 12).orEmpty().filter { it.hanzi !in have }
+        Result(phrases, words, d != null)
+    }
 }

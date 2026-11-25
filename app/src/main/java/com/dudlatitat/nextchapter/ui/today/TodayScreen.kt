@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -108,7 +109,7 @@ fun TodayScreen(
     // Unfolded: the header and today's three on the left, this moment and the rest on the right.
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
     val top: @Composable () -> Unit = {
-        Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy)
+        Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy, onSearch = { onTool("lookup") })
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayThree(
             state, calm = part == Life.Part.CALL,
@@ -217,8 +218,9 @@ fun TodayScreen(
  * background is the colour of the sky in Chengdu right now (dawn rose, pale day, dusk, deep
  * night), fading as her day turns (`HerSky`).
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMETER") minute: Long, onSettings: () -> Unit, onOpenMove: () -> Unit, onTrip: () -> Unit) {
+private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMETER") minute: Long, onSettings: () -> Unit, onOpenMove: () -> Unit, onTrip: () -> Unit, onSearch: () -> Unit) {
     val now = ZonedDateTime.now()
     val her = Life.herTime(now)
     val hour = now.hour
@@ -247,6 +249,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
                 Text(helloZh, style = MaterialTheme.typography.titleMedium, color = Night.sun)
                 Text("$hello, Rudy", style = MaterialTheme.typography.titleLarge, color = Night.ink, maxLines = 2)
             }
+            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, "Search", tint = Night.ink.copy(alpha = 0.7f)) }
             IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Night.ink.copy(alpha = 0.7f)) }
         }
         Spacer(Modifier.height(10.dp))
@@ -279,7 +282,8 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
         val atWork = P.atWork(state, today(), nowMin)
         if (T.open(state, today()) || atWork) {
             Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Wraps onto a second line when there are several chips (it used to squeeze "I'm home" into a column).
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (T.open(state, today())) {
                     val said = T.saidToday(state, today())
                     Pill(
@@ -290,7 +294,7 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
                 if (atWork) {
                     Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
                     if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
-                        TextButton(onClick = { vm.arrivedHomeNow() }) { Text("I'm home 🏠", color = Night.sun) }
+                        Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() })
                     }
                 }
             }

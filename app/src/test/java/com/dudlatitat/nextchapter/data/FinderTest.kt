@@ -46,3 +46,25 @@ class FinderTest {
         assertTrue(d.search("").isEmpty())
     }
 }
+
+class GlobalSearchTest {
+    private val corpus = listOf(
+        Finder.Hit("你好", "nǐ hǎo", "hello", "phrase"),
+        Finder.Hit("你到家了吗？", "nǐ dào jiā le ma?", "are you home yet?", "phrase"),
+        Finder.Hit("妈妈", "māma", "mom", "phrase"),
+        Finder.Hit("我很累", "wǒ hěn lèi", "I'm really tired", "Texts"),
+    )
+
+    @Test fun pinyinWithOrWithoutTonesAndSpaces() {
+        for (q in listOf("nihao", "ni hao", "nǐ hǎo", "NIHAO")) assertEquals(q, "你好", Finder.search(q, corpus).firstOrNull()?.hanzi)
+        assertEquals("dao jia finds it mid-phrase", "你到家了吗？", Finder.search("dao jia", corpus).firstOrNull()?.hanzi)
+        // Only from the start of a syllable: "ao" must not match inside "hao" or "dao".
+        assertTrue(Finder.search("ao", corpus).none { it.hanzi == "你好" })
+    }
+
+    @Test fun charactersAndEnglish() {
+        assertEquals(listOf("你好", "你到家了吗？"), Finder.search("你", corpus).map { it.hanzi })
+        assertEquals("我很累", Finder.search("tired", corpus).first().hanzi)
+        assertTrue(Finder.search("   ", corpus).isEmpty())
+    }
+}

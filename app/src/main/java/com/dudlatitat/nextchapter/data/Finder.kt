@@ -59,6 +59,28 @@ object Finder {
         }.sortedByDescending { it.second }.take(limit).map { it.first }
     }
 
+    /**
+     * The global search (Chinese tab → 🔍): everything that matches, best first. Characters match
+     * inside a phrase; pinyin matches with or without tone marks and spaces, from the start of a
+     * syllable ("nihao", "ni hao", "nǐ hǎo" all find 你好); English uses [phrases]' word match.
+     */
+    fun search(query: String, corpus: List<Hit>, limit: Int = 40): List<Hit> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        if (han(q).isNotEmpty()) return corpus.filter { han(q) in han(it.hanzi) }.sortedBy { it.hanzi.length }.take(limit)
+        val pq = Talk.plain(q)
+        val byPinyin = if (pq.length >= 2 && q.all { it.isLetter() || it == ' ' || it == '\'' }) corpus.mapNotNull { h ->
+            val syl = h.pinyin.split(Regex("[\\s,.?!，。？！]+")).map { Talk.plain(it) }.filter { it.isNotEmpty() }
+            val joined = syl.joinToString("")
+            // Where each syllable-word starts in the joined string: a match must begin at one.
+            val starts = syl.runningFold(0) { acc, w -> acc + w.length }.dropLast(1).toSet()
+            val at = generateSequence(joined.indexOf(pq)) { i -> joined.indexOf(pq, i + 1).takeIf { it >= 0 } }.takeWhile { it >= 0 }.firstOrNull { it in starts }
+            if (at == null) null else h to (if (at == 0) 2.0 else 1.6) - joined.length * 0.005
+        } else emptyList()
+        val byEnglish = phrases(q, corpus, limit).mapIndexed { i, h -> h to 1.0 - i * 0.001 }
+        return (byPinyin + byEnglish).sortedByDescending { it.second }.map { it.first }.distinctBy { it.hanzi }.take(limit)
+    }
+
     /** Every 1–4 character piece of the app's phrases: the everyday words the dictionary should prefer. */
     fun common(corpus: List<Hit>): Set<String> {
         val out = HashSet<String>()
