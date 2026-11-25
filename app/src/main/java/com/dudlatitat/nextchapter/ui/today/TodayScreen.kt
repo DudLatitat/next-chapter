@@ -110,6 +110,14 @@ fun TodayScreen(
     ) {
         Hero(state, vm, part, minute, onSettings, onOpenMove, onBody = { bodyOpen = true }, onTrip = onStudy)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
+        TodayThree(state) { item ->
+            when (item.kind) {
+                com.dudlatitat.nextchapter.data.DayPlan.Kind.REVIEW -> if (Srs.queue(state).isEmpty()) onRedo() else onStudy()
+                com.dudlatitat.nextchapter.data.DayPlan.Kind.PLAY -> item.tool?.let(onTool)
+                com.dudlatitat.nextchapter.data.DayPlan.Kind.LIFE -> { if (item.tool == "aplus") onAPlus() else { jobOpen = true } }
+            }
+            Unit
+        }
         TodayRings(state, part, minute, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onPrayer = { prayerOpen = true }, onJob = { jobOpen = true }, onWeek = { onLifePage("routine") })
 
         NowCard(state, vm, part, minute, startJob, onPray = { prayerOpen = true }, onChinese = { if (Srs.queue(state).isEmpty()) onRedo() else onStudy() }, onAPlus = onAPlus, onDrive = { onTool("drive") })
@@ -226,7 +234,10 @@ private fun Hero(state: AppState, vm: MainViewModel, part: Life.Part, @Suppress(
         }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.clickable(onClick = onOpenMove), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            trip?.takeIf { it >= 0 }?.let { Pill("✈️ 成都 in ${friendlySpan(it)}", Night.rose) }
+            trip?.takeIf { it >= 0 }?.let {
+                // How ready you are for her family (Chinese tab → Ready ladder), right next to the countdown.
+                Pill("✈️ 成都 in ${friendlySpan(it)} · ready ${com.dudlatitat.nextchapter.data.Ready.family(state).percent}%", Night.rose)
+            }
             move?.takeIf { it >= 0 }?.let { Pill("搬家 ${friendlySpan(it)}", Night.sun) }
         }
         Spacer(Modifier.height(6.dp))

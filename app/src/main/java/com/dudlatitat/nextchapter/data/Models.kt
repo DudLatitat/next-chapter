@@ -286,4 +286,6 @@ data class AppState(
     /** Texting: best typing sprint (characters per minute) and best per chat thread. */
     val sprintBest: Int = 0,
     val textBest: Map<String, Int> = emptyMap(),
+    /** The last day each game was played (tool id → day), for today's plan's rotation. */
+    val played: Map<String, Long> = emptyMap(),
 )

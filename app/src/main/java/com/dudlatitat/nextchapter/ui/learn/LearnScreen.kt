@@ -225,6 +225,17 @@ private fun Overview(
                 }
             }
         }
+        // Ready for her family: the ladder of real situations, climbed from what you've done.
+        item {
+            com.dudlatitat.nextchapter.ui.today.ReadyLadder(state) { t ->
+                when {
+                    t.startsWith("deck:") -> onDeck(t.removePrefix("deck:"))
+                    t.startsWith("talk:") -> onTool("dinner")
+                    t.startsWith("texts:") -> onTool("texts")
+                    else -> onTool(t)
+                }
+            }
+        }
         // Then your tones and how it's going.
         item { WeakTones(state, onDrill) }
         item { SectionLabel("How it's going") }
@@ -342,7 +353,7 @@ private fun Review(state: AppState, vm: MainViewModel, onClose: () -> Unit, onCa
     // Saveable, so glancing at another tab (or folding the phone) keeps your place in the session.
     val queue = rememberSaveable(saver = idListSaver) {
         mutableStateListOf<String>().apply {
-            addAll(if (practice) today().let { d -> state.cards.filter { it.last == d }.shuffled().map { it.id } } else Srs.queue(state).map { it.id })
+            addAll(if (practice) today().let { d -> state.cards.filter { it.last == d }.shuffled().map { it.id } } else Srs.queue(state).take(com.dudlatitat.nextchapter.data.DayPlan.sessionLimit(state)).map { it.id })
         }
     }
     val startedAt = remember { System.currentTimeMillis() }

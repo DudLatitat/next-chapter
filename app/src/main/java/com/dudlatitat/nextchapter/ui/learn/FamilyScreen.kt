@@ -213,6 +213,8 @@ private fun Quiz(vm: MainViewModel, onBack: () -> Unit) {
     var picked by remember(n) { mutableStateOf<String?>(null) }
     val pop = remember(n) { Animatable(0.85f) }
     LaunchedEffect(n) { pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy)) }
+    // Five answered = one round played (for today's plan and the streak).
+    LaunchedEffect(n) { if (n == 5) vm.markPlayed("family") }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).readable().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Back", tint = Night.ink) }

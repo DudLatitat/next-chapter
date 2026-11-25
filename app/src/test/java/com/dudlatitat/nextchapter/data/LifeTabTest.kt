@@ -134,6 +134,7 @@ class LifeTabTest {
         // Finished sessions Fri–Sun (days 10–12), then a few reviews Mon and Tue without finishing.
         val s = AppState(studyDays = listOf(10, 11, 12), days = mapOf(13L to DayLog(reviews = 1), 14L to DayLog(reviews = 2)))
         assertEquals(5, Stats.streak(s, day = 14))
-        assertEquals(0, Stats.streak(s, day = 16)) // missed day 15
+        assertEquals("one missed day is a rest day", 5, Stats.streak(s, day = 16))
+        assertEquals(0, Stats.streak(s, day = 17)) // missed 15 and 16
     }
 }

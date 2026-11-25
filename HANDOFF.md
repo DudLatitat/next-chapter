@@ -158,6 +158,12 @@ tools/
   - The review card scrolls when long but stays centred (`BoxWithConstraints` + `heightIn(min)`). Its buttons are a `FlowRow`.
   - **Streak bug:** finishing a game round (Callouts, Talk, Texts, Numbers, Sprint, a Prayer rung) now marks the day via `Stats.practiced` (`StreakPlayTest`). Before, an evening of only games broke 🔥.
   - Review notes (retention ideas, not built yet): today's three; comeback cap and rest days; family/trip readiness; one journey XP; folding Practice to about 7 doors; ★ as the top reward; PC bests saved in AppState.
+- **1.102 (retention: today's three, comeback, readiness):**
+  - `data/DayPlan` (`DayPlanTest`): Today's three = about 10 reviews, one game (rotates to the one not played longest, via new `AppState.played` tool → day), one life item (A+ if due, else tonight's routine job). Card `ui/today/TodayThree.kt` under the Hero; one bar fills to "Done for today ✓".
+  - Every game save in `MainViewModel` goes through `DayPlan.played`; the family quiz calls `markPlayed("family")` after 5 answers.
+  - Comeback: 2+ missed days → "Welcome back", the review session is capped at 15 (most overdue first; `Srs.queue` already sorts by due). The cap is in `LearnScreen.Review` via `DayPlan.sessionLimit`.
+  - Rest day: `Stats.streak` now uses `Stats.withRest`: one missed day per 7 doesn't break 🔥 (and isn't counted). `Srs.streak` (early starts) is unchanged.
+  - `data/Ready` (`ReadyTest`): family ladder of 8 rungs (hello, video call, arrive, dinner, out and about, errands, WeChat, the big dinner) worked out from Talk scene bests (60% of chopsticks), Texts bests, Number ears 150+, learned deck cards (reps ≥ 2) and ★. Card `ReadyLadder` on the Chinese tab (pieces are tappable); "ready N%" on the Hero's trip pill.
 - **Ideas not built:** Core 2 (220-1202) cards; lunar birthdays (convert with ICU ChineseCalendar).
 
 ## Saved data: be careful

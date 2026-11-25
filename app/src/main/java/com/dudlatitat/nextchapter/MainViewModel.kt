@@ -64,14 +64,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun grade(card: Card, grade: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.grade(s, card.id, grade) }
     // Every finished game round also counts the day as practised (it used to break the 🔥 streak).
-    fun saveSprint(cpm: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.Stats.practiced(if (cpm <= s.sprintBest) s else s.copy(sprintBest = cpm)) }
-    fun saveTextThread(id: String, score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= (s.textBest[id] ?: 0)) s else s.copy(textBest = s.textBest + (id to score))) }
-    fun saveNumbersScore(score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= s.numbersBest) s else s.copy(numbersBest = score)) }
+    fun saveSprint(cpm: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(if (cpm <= s.sprintBest) s else s.copy(sprintBest = cpm)), "sprint") }
+    fun saveTextThread(id: String, score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= (s.textBest[id] ?: 0)) s else s.copy(textBest = s.textBest + (id to score))), "texts") }
+    fun saveNumbersScore(score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= s.numbersBest) s else s.copy(numbersBest = score)), "numbers") }
     fun setFamilyName(id: String, name: String) = store.edit { s ->
         val n = name.trim().take(30)
         s.copy(familyNames = if (n.isEmpty()) s.familyNames - id else s.familyNames + (id to n))
     }
-    fun climbPrayer(prayer: String, rung: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.Stats.practiced(s.copy(prayerSteps = com.dudlatitat.nextchapter.data.Ladder.climbed(s.prayerSteps, prayer, rung))) }
+    fun climbPrayer(prayer: String, rung: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(s.copy(prayerSteps = com.dudlatitat.nextchapter.data.Ladder.climbed(s.prayerSteps, prayer, rung))), "prayer") }
+    /** A game with no score of its own (the family quiz) still counts for today's plan and the streak. */
+    fun markPlayed(tool: String) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(s), tool) }
     fun recordReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.recordReal(s, card.id) }
     fun saidForReal(card: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.saidForReal(s, card.id) }
     fun ungrade(before: Card) = store.edit { s -> com.dudlatitat.nextchapter.data.CardEdits.ungrade(s, before) }
@@ -149,9 +151,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun updatePlan(change: (AppState) -> AppState) = store.edit(change)
 
     // ---- Daily rhythm (Today's morning card, evening plan, Sunday review) ----
-    fun saveCalloutScore(score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= s.calloutBest) s else s.copy(calloutBest = score)) }
+    fun saveCalloutScore(score: Int) = store.edit { s -> com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(if (score <= s.calloutBest) s else s.copy(calloutBest = score)), "callouts") }
     fun saveDinner(scene: String, chopsticks: Int) = store.edit { s ->
-        com.dudlatitat.nextchapter.data.Stats.practiced(if (chopsticks <= (s.dinnerBest[scene] ?: 0)) s else s.copy(dinnerBest = s.dinnerBest + (scene to chopsticks)))
+        com.dudlatitat.nextchapter.data.DayPlan.played(com.dudlatitat.nextchapter.data.Stats.practiced(if (chopsticks <= (s.dinnerBest[scene] ?: 0)) s else s.copy(dinnerBest = s.dinnerBest + (scene to chopsticks))), "dinner")
     }
     fun markEarlyStart() = store.edit { s -> if (today() in s.wakeDays) s else s.copy(wakeDays = com.dudlatitat.nextchapter.data.Life.addDay(s.wakeDays, today())) }
     fun prayed() = store.edit { s -> s.copy(prayedDays = com.dudlatitat.nextchapter.data.Life.addDay(s.prayedDays, today())) }

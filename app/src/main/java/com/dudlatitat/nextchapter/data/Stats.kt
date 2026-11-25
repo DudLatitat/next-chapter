@@ -32,7 +32,24 @@ object Stats {
      * Days in a row you practiced (ending today or yesterday). Any day you answered a card
      * counts, the same as the 12-week grid, not only days you finished a whole session.
      */
-    fun streak(state: AppState, day: Long = today()): Int = Srs.streak(practiceDays(state), day)
+    fun streak(state: AppState, day: Long = today()): Int = withRest(practiceDays(state), day)
+
+    /**
+     * Days in a row, where one missed day a week is a free rest day: it doesn't break the streak
+     * (and doesn't count in it). Two missed days in a row, or two rest days within 7 days, end it.
+     */
+    fun withRest(days: List<Long>, day: Long = today()): Int {
+        val set = days.toSet()
+        var d = if (day in set) day else day - 1
+        var n = 0
+        var lastRest: Long? = null
+        while (true) {
+            if (d in set) { n++; d--; continue }
+            val restOk = (lastRest == null || lastRest - d >= 7) && (d - 1) in set
+            if (restOk) { lastRest = d; d--; continue }
+            return n
+        }
+    }
 
     fun week(state: AppState, start: LocalDate): WeekStats {
         val from = start.toEpochDay()
