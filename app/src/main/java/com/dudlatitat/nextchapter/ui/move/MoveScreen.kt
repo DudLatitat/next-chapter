@@ -5,6 +5,7 @@ import com.dudlatitat.nextchapter.data.withNextTripDate
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -62,6 +63,7 @@ import com.dudlatitat.nextchapter.data.prettyDate
 import com.dudlatitat.nextchapter.data.savingsProgress
 import com.dudlatitat.nextchapter.ui.components.Bar
 import com.dudlatitat.nextchapter.ui.components.GlassCard
+import com.dudlatitat.nextchapter.ui.components.pressClick
 import com.dudlatitat.nextchapter.ui.components.ProgressRing
 import com.dudlatitat.nextchapter.ui.components.ScreenTitle
 import com.dudlatitat.nextchapter.ui.components.SectionLabel
@@ -102,28 +104,21 @@ private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenTitle("The move", "搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity)) }
+        // The countdown: the next trip big, and a line from today through the trip to the move.
+        item { Countdown(state, onTrip = { picking = DateField.TRIP }, onMove = { picking = DateField.MOVE }) }
 
-        // Dates
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DateCard("Move date", state.moveDate, Night.sun, Modifier.weight(1f)) { picking = DateField.MOVE }
-                DateCard("Next trip", state.nextTripDate(), Night.rose, Modifier.weight(1f)) { picking = DateField.TRIP }
-            }
-        }
-
-        // Flights, money, packing
+        // Flights, money, packing: three small doors.
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MoveTool("✈", "Flights", "机票", Modifier.weight(1f)) { page = "flights" }
-                MoveTool("¥", "Money", "人民币", Modifier.weight(1f)) { page = "money" }
-                MoveTool("🧳", "Packing", "${state.packing.count { it.done }}/${state.packing.size}", Modifier.weight(1f)) { page = "packing" }
+                MoveTool("机", "Flights", "机票", Night.rose, Modifier.weight(1f)) { page = "flights" }
+                MoveTool("钱", "Money", "人民币", Night.jade, Modifier.weight(1f)) { page = "money" }
+                MoveTool("包", "Packing", "${state.packing.count { it.done }}/${state.packing.size}", Night.sun, Modifier.weight(1f)) { page = "packing" }
             }
         }
 
-        // Savings, compact: amount and goal on one line, the plan underneath, quick-add chips.
+        // Savings, with what they mean there (the lanterns) in the same card.
         item {
-            GlassCard(highlight = true) {
+            GlassCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ProgressRing(state.savingsProgress(), 52.dp, Night.jade, stroke = 6.dp) {
                         Text("${(state.savingsProgress() * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = Night.ink)
@@ -140,18 +135,15 @@ private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.com
                     }
                     IconButton(onClick = { editingMoney = true }) { Icon(Icons.Rounded.Edit, "Edit", tint = Night.muted) }
                 }
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    listOf(50, 100, 500).forEach { n ->
-                        androidx.compose.material3.AssistChip(onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }, label = { Text("+$$n", color = Night.jade) })
-                    }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    listOf(50, 100, 500).forEach { n -> com.dudlatitat.nextchapter.ui.components.Pill("+$$n", Night.jade, onClick = { vm.updatePlan { it.copy(saved = it.saved + n) } }) }
                 }
-                if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose)
+                if (state.flightTarget > 0) Text("✈ Book LAX ⇄ CTU at ${money(state.flightTarget)} or less", style = MaterialTheme.typography.labelMedium, color = Night.rose, modifier = Modifier.padding(top = 6.dp))
+                androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Night.outline.copy(alpha = 0.5f))
+                Runway(state, onOpen = { page = "money" })
             }
         }
-
-        // Runway: what the savings mean there, in months of your own monthly budget (Money page).
-        item { Runway(state, onOpen = { page = "money" }) }
 
         // Checklist
         val done = state.tasks.count { it.done }
@@ -327,11 +319,61 @@ private fun TaskGroupCard(group: String, tasks: List<MoveTask>, vm: MainViewMode
 }
 
 @Composable
-private fun MoveTool(icon: String, title: String, sub: String, modifier: Modifier, onClick: () -> Unit) {
+private fun MoveTool(badge: String, title: String, sub: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier, onClick: () -> Unit) {
     GlassCard(modifier, onClick = onClick) {
-        Text(icon, style = MaterialTheme.typography.headlineSmall, color = Night.sun)
-        Text(title, style = MaterialTheme.typography.titleSmall, color = Night.ink)
-        Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        com.dudlatitat.nextchapter.ui.components.IconBadge(badge, color, 36.dp)
+        Spacer(Modifier.height(8.dp))
+        Text(title, style = MaterialTheme.typography.titleSmall, color = Night.ink, maxLines = 1)
+        Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted, maxLines = 1)
+    }
+}
+
+/**
+ * The next trip as a big number, and a line from today to the move with the trip marked on it,
+ * so the two dates read as one road. Tap the trip or the move to change its date.
+ */
+@Composable
+private fun Countdown(state: AppState, onTrip: () -> Unit, onMove: () -> Unit) {
+    val trip = daysUntil(state.nextTripDate())?.takeIf { it >= 0 }
+    val move = daysUntil(state.moveDate)?.takeIf { it >= 0 }
+    com.dudlatitat.nextchapter.ui.components.HeroCard(accent = Night.rose) {
+        Text("搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity), style = MaterialTheme.typography.labelLarge, color = Night.muted)
+        Spacer(Modifier.height(6.dp))
+        Column(Modifier.pressClick(onClick = onTrip)) {
+            if (trip != null) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(friendlySpan(trip), style = MaterialTheme.typography.displaySmall, color = Night.rose)
+                    Spacer(Modifier.width(10.dp))
+                    Text("to 成都 ✈", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.padding(bottom = 6.dp))
+                }
+                prettyDate(state.nextTripDate())?.let { Text("Next trip · $it", style = MaterialTheme.typography.bodySmall, color = Night.muted) }
+            } else {
+                Text("Set your next trip ✈", style = MaterialTheme.typography.titleLarge, color = Night.rose)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        // The road: today → trip → move.
+        val frac = if (trip != null && move != null && move > 0) (trip.toFloat() / move).coerceIn(0.04f, 0.96f) else null
+        Box(Modifier.fillMaxWidth().height(14.dp), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.fillMaxWidth().height(4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(Night.outline))
+            if (frac != null) Box(Modifier.fillMaxWidth(frac).height(4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(Night.rose))
+            Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.ink))
+            if (frac != null) Box(Modifier.fillMaxWidth(frac), contentAlignment = Alignment.CenterEnd) {
+                Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.rose))
+            }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Box(Modifier.size(14.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Night.sun))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Today", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
+            Text(
+                if (move != null) "搬家 ${friendlySpan(move)}" else "Set the move date",
+                style = MaterialTheme.typography.labelLarge, color = Night.sun,
+                modifier = Modifier.pressClick(onClick = onMove).padding(vertical = 6.dp),
+            )
+        }
     }
 }
 
@@ -339,7 +381,7 @@ private fun MoveTool(icon: String, title: String, sub: String, modifier: Modifie
 @Composable
 private fun Runway(state: AppState, onOpen: () -> Unit) {
     val monthly = state.budget.sumOf { it.rmb }
-    GlassCard(onClick = onOpen) {
+    Column(Modifier.fillMaxWidth().pressClick(haptic = false, onClick = onOpen)) {
         Text("Life there · 生活费", style = MaterialTheme.typography.labelSmall, color = Night.muted)
         if (monthly <= 0 || state.saved <= 0) {
             Text(
@@ -347,7 +389,7 @@ private fun Runway(state: AppState, onOpen: () -> Unit) {
                 else "Add what you've saved (✏️ above) to light the lanterns.",
                 style = MaterialTheme.typography.bodySmall, color = Night.muted,
             )
-            return@GlassCard
+            return@Column
         }
         val months = Money.monthsCovered(state.saved, state.rate, monthly)
         Text(

@@ -64,7 +64,10 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     if (micTest) { MicTestScreen(vm, onBack = { micTest = false }); return }
     var onComputer by remember { mutableStateOf(false) }
     if (onComputer) { OnComputerScreen(vm, onBack = { onComputer = false }); return }
-    BackHandler(onBack = onBack)
+    // Settings is a front page of five sections; back from a section goes to the front page.
+    var section by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val back: () -> Unit = { if (section != null) section = null else onBack() }
+    BackHandler(onBack = back)
     val context = LocalContext.current
     var pickingTime by remember { mutableStateOf(false) }
     var pickingRoutine by remember { mutableStateOf<String?>(null) }
@@ -102,11 +105,29 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
-            Text("Settings", style = MaterialTheme.typography.headlineMedium, color = Night.ink)
+        val titles = mapOf("her" to "You & her", "remind" to "Reminders", "learn" to "Learning & voice", "trip" to "Trip & computer", "backup" to "Backup")
+        com.dudlatitat.nextchapter.ui.components.SubHeader(
+            section?.let { titles[it] } ?: "Settings", onBack = back, zh = if (section == null) "设置" else null, handleBack = false,
+        )
+
+        // The front page: five sections, each with what it's set to now.
+        if (section == null) {
+            com.dudlatitat.nextchapter.ui.components.ListGroup {
+                val row = @Composable { id: String, badge: String, color: androidx.compose.ui.graphics.Color, sub: String, last: Boolean ->
+                    com.dudlatitat.nextchapter.ui.components.ListRow(
+                        titles.getValue(id), subtitle = sub, divider = !last,
+                        leading = { com.dudlatitat.nextchapter.ui.components.IconBadge(badge, color) }, onClick = { section = id },
+                    )
+                }
+                row("her", "她", Night.rose, listOf(state.herName, state.herCity).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { "Her name and city, work and home" }, false)
+                row("remind", "铃", Night.sun, if (state.reminderOn) "Practice reminder at ${timeLabel(state.reminderMinutes)} · never 7–8 pm" else "Practice reminder off · evening plan, wake time", false)
+                row("learn", "学", Night.jade, "${state.newPerDay} new phrases a day · voice · speaking check", false)
+                row("trip", "旅", Night.violet, "Trip mode · use on my computer", false)
+                row("backup", "存", Night.sun, "Save or restore everything", true)
+            }
         }
 
+        if (section == "her") {
         SectionLabel("You & her")
         GlassCard {
             var herName by remember { mutableStateOf(state.herName) }
@@ -119,6 +140,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
 
         WorkHomeCard(state, vm)
 
+        }
+        if (section == "remind") {
         SectionLabel("Reminders")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -192,6 +215,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        }
+        if (section == "learn") {
         SectionLabel("Learning")
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -235,6 +260,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        }
+        if (section == "trip") {
         SectionLabel("Trip mode")
         GlassCard {
             Text("Survival screen on Today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
@@ -252,6 +279,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             Text("Review and edit phrases on a big screen with a keyboard, over your home Wi-Fi. Pair once; it keeps working in the background while it's on.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
 
+        }
+        if (section == "backup") {
         SectionLabel("Backup")
         GlassCard {
             Text("Save everything to a file", style = MaterialTheme.typography.titleMedium, color = Night.ink)
@@ -263,6 +292,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
         // Which build this is, so screenshots and bug reports say it.
+        }
         val version = remember {
             try { context.packageManager.getPackageInfo(context.packageName, 0).versionName } catch (_: Exception) { null }
         }
