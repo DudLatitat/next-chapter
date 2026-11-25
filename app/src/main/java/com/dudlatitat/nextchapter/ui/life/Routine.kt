@@ -107,7 +107,7 @@ fun WeekDots(state: AppState, big: Boolean = false) {
 /** On the Life tab: the one place the week lives. Nights in a row, early starts, the dots. */
 @Composable
 fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
-    val streak = Routine.streak(state.routineChecks, today())
+    val streak = Routine.week(state.routineChecks, LocalDate.now()).count { Routine.isWin(it) }
     val early = com.dudlatitat.nextchapter.data.Srs.streak(state.wakeDays)
     GlassCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -115,7 +115,7 @@ fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
                 Text("This week · 本周", style = MaterialTheme.typography.titleMedium, color = Night.ink)
                 Text("Tap to plan your evenings", style = MaterialTheme.typography.bodySmall, color = Night.muted)
             }
-            com.dudlatitat.nextchapter.ui.components.StatTile("🌙$streak", "nights", Night.violet)
+            com.dudlatitat.nextchapter.ui.components.StatTile("🌙$streak", "this week", Night.violet)
             Spacer(Modifier.width(14.dp))
             com.dudlatitat.nextchapter.ui.components.StatTile("☀️$early", "early", Night.jade)
         }
@@ -129,7 +129,7 @@ fun RoutineSummary(state: AppState, onOpen: () -> Unit) {
 fun RoutineScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     var editing by remember { mutableStateOf<RoutineDay?>(null) }
-    val streak = Routine.streak(state.routineChecks, today())
+    val streak = Routine.week(state.routineChecks, LocalDate.now()).count { Routine.isWin(it) }
     val wins = Routine.week(state.routineChecks, LocalDate.now()).count { Routine.isWin(it) }
     val trial = Routine.inTrial(state.routineChecks, today())
     val sunday = LocalDate.now().dayOfWeek == DayOfWeek.SUNDAY
@@ -142,7 +142,7 @@ fun RoutineScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         GlassCard(highlight = true) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("This week", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-                Pill(if (streak > 0) "🌙 $streak ${if (streak == 1) "night" else "nights"} in a row" else "Fresh start ✨", Night.violet)
+                Pill(if (streak > 0) "🌙 $streak this week" else "Fresh week ✨", Night.violet)
             }
             Spacer(Modifier.height(12.dp))
             WeekDots(state, big = true)

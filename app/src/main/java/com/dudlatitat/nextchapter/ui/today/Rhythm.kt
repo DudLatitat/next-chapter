@@ -54,14 +54,15 @@ import com.dudlatitat.nextchapter.ui.theme.Night
 fun TonightJob(state: AppState, vm: MainViewModel, onStart: (RoutineDay) -> Unit, bare: Boolean = false, showRun: Boolean = true) {
     val job = Routine.jobOn(state, java.time.LocalDate.now())
     val checked = Routine.checkFor(state.routineChecks, today())
-    val streak = Routine.streak(state.routineChecks, today())
+    // The routine shows a weekly count (one streak in the app: 🔥). Misses never show.
+    val streak = Routine.week(state.routineChecks, java.time.LocalDate.now()).count { Routine.isWin(it) }
     val her = state.herName
     var changing by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     val body: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Tonight's job · 今晚", style = MaterialTheme.typography.labelMedium, color = Night.muted, modifier = Modifier.weight(1f))
-            if (showRun && streak > 0) Pill("🌙 $streak ${if (streak == 1) "night" else "nights"}", Night.violet)
+            if (showRun && streak > 0) Pill("🌙 $streak this week", Night.violet)
         }
         Spacer(Modifier.height(6.dp))
         Text(Routine.text(job.task, her), style = MaterialTheme.typography.titleLarge, color = Night.ink)

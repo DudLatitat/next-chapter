@@ -49,36 +49,30 @@ object PracticeTools {
 
     val situations = listOf(
         Situation(
-            "family", "家人", "Family & faith", "Dinner, her mom, manners, prayer", Night.rose, listOf(
-                t("dinner", "对话", "Talk", "Act out scenes: dinner, a taxi, her mom's call"),
+            "family", "家人", "Family & faith", "Her family, manners, prayer", Night.rose, listOf(
                 t("family", "家谱", "Her family", "Who's who, and how to greet them"),
                 t("culture", "礼节", "Etiquette", "Manners at her family's table"),
-                t("dialogues", "听对话", "Dialogues", "Listen to everyday conversations"),
                 t("prayer", "祷告", "Prayer", "Learn a prayer by heart, rung by rung"),
             ),
         ),
         Situation(
-            "texting", "微信", "Texting", "Chats, typing, how do I say…", Night.jade, listOf(
+            "talk", "对话", "Talk & text", "Scenes, chats, typing, phrasebook", Night.jade, listOf(
+                t("dinner", "对话", "Talk", "Act out scenes, or just listen"),
                 t("texts", "微信", "Texts", "Reply to WeChat chats"),
                 t("sprint", "打字", "Typing sprint", "Type pinyin fast"),
-                t("lookup", "查", "Look up", "How do I say…? English → Chinese"),
                 t("build", "造句", "Build", "Make your own sentences"),
+                t("phrasebook", "救急", "Phrasebook", "Emergency phrases to show or play"),
             ),
         ),
         Situation(
-            "play", "玩", "Play & listen", "Callouts, prices, tones, the car", Night.sun, listOf(
+            "play", "玩", "Play & drill", "Callouts, ears, tones, reading", Night.sun, listOf(
                 t("callouts", "喊话", "Callouts", "Game callouts, said out loud"),
                 t("numbers", "听价格", "Number ears", "Hear prices and times"),
                 t("tones", "声调", "Tones", "Hear and say the four tones"),
                 t("drive", "开车", "Drive", "Hands-free practice for the car"),
-            ),
-        ),
-        Situation(
-            "read", "读写", "Read & write", "Stories, grammar, characters", Night.violet, listOf(
                 t("stories", "故事", "Stories", "Short reads, tap any word"),
                 t("grammar", "语法", "Grammar", "Patterns in quick quizzes"),
                 t("writing", "写字", "Writing", "Write characters stroke by stroke"),
-                t("phrasebook", "救急", "Phrasebook", "Emergency phrases to show or play"),
             ),
         ),
     )

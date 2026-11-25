@@ -54,7 +54,7 @@ class WeekWidget : AppWidgetProvider() {
                 v.setTextViewText(dots[i], when (c) { CheckIn.DONE -> "✓"; CheckIn.MINIMUM -> "½"; else -> "" })
                 v.setTextColor(days[i], if (i == todayIndex) 0xFFFF8FB1.toInt() else 0xFFA9B1D6.toInt())
             }
-            val streak = Routine.streak(state.routineChecks, today())
+            val streak = Routine.week(state.routineChecks, java.time.LocalDate.now()).count { Routine.isWin(it) }
             v.setTextViewText(R.id.streak, if (streak > 0) "🌙 $streak" else "")
             val job = Routine.jobOn(state, now)
             v.setTextViewText(R.id.tonight, "Tonight: " + Routine.text(job.task, state.herName))

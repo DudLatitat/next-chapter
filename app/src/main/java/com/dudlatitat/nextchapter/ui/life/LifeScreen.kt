@@ -101,7 +101,6 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
             p == "test" -> PracticeTestScreen(vm, onBack = { page = null })
             p == "routine" -> RoutineScreen(state, vm, onBack = { page = null })
             p == "career" -> CareerPage(state, vm, onBack = { page = null })
-            p == "wins" -> WinsPage(state, onBack = { page = null })
             p?.startsWith("person:") == true -> {
                 val person = state.people.firstOrNull { it.id == p!!.removePrefix("person:") }
                 if (person != null) PersonScreen(state, person, vm, onBack = { page = null }) else androidx.compose.runtime.LaunchedEffect(Unit) { page = null }
@@ -117,6 +116,7 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
     var page by pageState
     var pickingExam by remember { mutableStateOf(false) }
     var bodyOpen by remember { mutableStateOf(false) }
+    var winsOpen by remember { mutableStateOf(false) }
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
     // Start opens the right place for tonight's job; anything else starts the study timer.
     val startJob: (com.dudlatitat.nextchapter.data.RoutineDay) -> Unit = { job ->
@@ -159,10 +159,19 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
                     "Body", subtitle = com.dudlatitat.nextchapter.data.Body.pill(state, com.dudlatitat.nextchapter.data.today()),
                     leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.mint) }, onClick = { bodyOpen = true },
                 )
-                val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
+                // Faith: prayer days and the prayer ladder (it lives on the Chinese tab).
+                val planNav = com.dudlatitat.nextchapter.ui.components.LocalPlanNav.current
+                val prayed = state.prayedDays.count { it in (com.dudlatitat.nextchapter.data.today() - 6)..com.dudlatitat.nextchapter.data.today() }
                 com.dudlatitat.nextchapter.ui.components.ListRow(
-                    "Wins", subtitle = "${all.count { it.done }} of ${all.size} milestones", divider = false,
-                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("赢", Night.sun) }, onClick = { page = "wins" },
+                    "Faith", subtitle = (if (prayed > 0) "Prayed $prayed of the last 7 days · " else "") + "learn a prayer by heart",
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("祷", Night.pearl) },
+                    onClick = { planNav(com.dudlatitat.nextchapter.data.DayPlan.Item(com.dudlatitat.nextchapter.data.DayPlan.Kind.PLAY, "Prayer", "", false, tool = "prayer")) },
+                )
+                val all = com.dudlatitat.nextchapter.data.Milestones.all(state)
+                val nextWin = all.firstOrNull { !it.done }
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    "Wins", subtitle = "${all.count { it.done }} milestones" + (nextWin?.let { " · next: ${it.emoji} ${it.title}" } ?: ""), divider = false,
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("赢", Night.sun) }, onClick = { winsOpen = true },
                 )
             }
         }
@@ -182,6 +191,18 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Night.ground1,
     ) { com.dudlatitat.nextchapter.ui.today.BodySheet(state, vm) }
+    // Wins in a sheet (it was a whole page holding one list).
+    if (winsOpen) androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = { winsOpen = false },
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Night.ground1,
+    ) {
+        Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text("Wins · 成就", style = MaterialTheme.typography.titleLarge, color = Night.ink)
+            Spacer(Modifier.height(10.dp))
+            com.dudlatitat.nextchapter.ui.progress.LifeWins(state)
+        }
+    }
 }
 
 /** Career: certs, classes and job postings, on their own page. */
@@ -205,19 +226,6 @@ private fun CareerPage(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
     editingJob?.let { j -> JobDialog(j, isNew = state.jobs.none { it.id == j.id }, vm, onDismiss = { editingJob = null }) }
 }
 
-/** Wins: milestones and what you've done, on their own page. */
-@Composable
-private fun WinsPage(state: AppState, onBack: () -> Unit) {
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item { com.dudlatitat.nextchapter.ui.components.SubHeader("Wins", onBack, zh = "成就") }
-        item { com.dudlatitat.nextchapter.ui.progress.LifeWins(state) }
-    }
-}
-
 // ---- A+ ----
 
 /**
@@ -234,7 +242,7 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
     var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     com.dudlatitat.nextchapter.ui.components.ListGroup {
         com.dudlatitat.nextchapter.ui.components.ListRow(
-            "A+ Core 1 · $known known",
+            if (known > 0) "A+ Core 1 · $known known" else "A+ Core 1",
             subtitle = if (queue.isEmpty()) "All done for today ✓" else "${queue.size} cards · about ${maxOf(1, queue.size / 4)} min" + (weakest?.let { " · focus ${APlus.domains.getValue(it).first}" } ?: ""),
             leading = {
                 ProgressRing(known / APlus.core1.size.toFloat(), 44.dp, Night.violet, stroke = 4.dp) {
@@ -244,12 +252,14 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
             trailing = if (queue.isEmpty()) ({ Text("✓", style = MaterialTheme.typography.titleLarge, color = Night.jade) }) else ({ com.dudlatitat.nextchapter.ui.components.GoChip("Study", Night.violet, onStart) }),
             onClick = if (queue.isEmpty()) null else onStart,
         )
+        val plan = remember(state) { com.dudlatitat.nextchapter.data.ExamPlan.of(state) }
         com.dudlatitat.nextchapter.ui.components.ListRow(
             when {
                 days == null -> "Set your exam date"
                 days < 0 -> "Exam date passed · set the next one"
                 else -> "Exam in ${friendlySpan(days)}"
             },
+            subtitle = plan?.line ?: if (days == null) "A date turns this into a plan" else null,
             titleColor = if (days != null && days in 0..14) Night.coral else Night.ink,
             leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("日", Night.sun) }, onClick = onPickExam,
         )
@@ -734,7 +744,8 @@ private fun StudyTimer(state: AppState, vm: MainViewModel) {
     if (!running && !open) {
         com.dudlatitat.nextchapter.ui.components.ListGroup {
             com.dudlatitat.nextchapter.ui.components.ListRow(
-                "Study timer · $subject", subtitle = "Today ${S.label(S.dayTotal(state))} · this week ${S.label(week.values.sum())}", divider = false,
+                "Study timer · $subject",
+                subtitle = if (week.values.sum() == 0) "Time your A+, school or Chinese study" else "Today ${S.label(S.dayTotal(state))} · this week ${S.label(week.values.sum())}", divider = false,
                 leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("时", Night.jade) },
                 trailing = { com.dudlatitat.nextchapter.ui.components.GoChip("▶ Start", Night.jade) { vm.startTimer(subject) } },
                 onClick = { open = true },

@@ -70,33 +70,29 @@ private data class Said(val beat: Dinner.Beat, val reply: Dinner.Reply?, val ver
 
 /** Practice → Dinner: a family dinner as a chat. They speak; you answer out loud. */
 @Composable
-fun DinnerScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
+fun DinnerScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onListen: () -> Unit = {}) {
     var scene by remember { mutableStateOf<Dinner.Scene?>(null) }
     val started = remember { System.currentTimeMillis() }
     DisposableEffect(Unit) { onDispose { vm.logSeconds(((System.currentTimeMillis() - started) / 1000).toInt()) } }
     val sc = scene
-    if (sc == null) ScenePicker(state, onBack, onPick = { scene = it })
+    if (sc == null) ScenePicker(state, onBack, onPick = { scene = it }, onListen = onListen)
     else Table(sc, vm, onBack = { scene = null })
 }
 
 @Composable
-private fun ScenePicker(state: AppState, onBack: () -> Unit, onPick: (Dinner.Scene) -> Unit) {
+private fun ScenePicker(state: AppState, onBack: () -> Unit, onPick: (Dinner.Scene) -> Unit, onListen: () -> Unit) {
     BackHandler(onBack = onBack)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Night.ink) }
-                Column {
-                    Text("Conversations", style = MaterialTheme.typography.headlineSmall, color = Night.ink)
-                    Text("对话 · run through real moments before they happen", style = MaterialTheme.typography.bodySmall, color = Night.muted)
-                }
+        item { com.dudlatitat.nextchapter.ui.components.SubHeader("Talk", onBack, zh = "对话 · real moments, before they happen", handleBack = false) }
+        item { Text("They talk; you answer out loud. Each clean answer earns 🥢🥢.", style = MaterialTheme.typography.bodyMedium, color = Night.muted) }
+        // Just listening (no answering): the everyday dialogues live here now.
+        item(key = "listen") {
+            com.dudlatitat.nextchapter.ui.components.ListGroup {
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    "Listen mode", subtitle = "Everyday dialogues to hear, no answering", divider = false,
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("听", Night.jade) }, onClick = onListen,
+                )
             }
-        }
-        item {
-            Text(
-                "They talk; you answer out loud. Pick either reply: each clean answer earns 🥢🥢. Tips on what's polite come along the way. On the computer, the Talk tab has the same scenes.",
-                style = MaterialTheme.typography.bodyMedium, color = Night.muted,
-            )
         }
         // Every conversation, grouped: her family first, then daily life, calls with her, gaming.
         com.dudlatitat.nextchapter.data.Talk.Group.entries.forEach { g ->

@@ -30,7 +30,8 @@ object DayPlan {
     )
 
     const val REVIEWS = 10
-    const val COMEBACK_CAP = 15
+    /** After a break: an easy few, not a pile (the rest come back over the next days). */
+    const val COMEBACK_CAP = 5
 
     /** Days since you last practised (0 = today, 1 = yesterday); null if never. */
     fun daysAway(s: AppState, day: Long = today()): Long? = Stats.practiceDays(s).lastOrNull()?.let { day - it }
@@ -39,7 +40,20 @@ object DayPlan {
     fun missed(s: AppState, day: Long = today()): Int = daysAway(s, day)?.let { if (it >= 3) (it - 1).toInt() else 0 } ?: 0
 
     /** How many cards a review session holds: everything normally, capped after a break. */
-    fun sessionLimit(s: AppState, day: Long = today()): Int = if (missed(s, day) > 0) COMEBACK_CAP else Int.MAX_VALUE
+    fun sessionLimit(s: AppState, day: Long = today()): Int = sessionSize(s, day)
+
+    /** Today's slice of reviews: 10 (or an easy 5 after a break), never more than is due. */
+    fun slice(s: AppState, day: Long = today()): Int {
+        val reviewedToday = s.days[day]?.reviews ?: 0
+        val due = Srs.queue(s, day).size
+        return minOf(if (missed(s, day) > 0) COMEBACK_CAP else REVIEWS, reviewedToday + due).coerceAtLeast(0)
+    }
+
+    /** How many cards a session holds: what's left of today's slice, or "keep going: 10 more" after it. */
+    fun sessionSize(s: AppState, day: Long = today()): Int {
+        val left = slice(s, day) - (s.days[day]?.reviews ?: 0)
+        return if (left > 0) left else REVIEWS
+    }
 
     /** The game for today: the one played longest ago (never-played first); ties broken by the day. */
     fun pickGame(s: AppState, day: Long = today()): String {
@@ -55,7 +69,7 @@ object DayPlan {
         val caughtUp = due == 0
         val review = Item(
             Kind.REVIEW,
-            when { caughtUp && reviewedToday == 0 -> "Reviews: all caught up"; miss > 0 -> "Welcome back: $goal phrases"; else -> "Review $goal phrases" },
+            when { caughtUp && reviewedToday == 0 -> "Reviews: all caught up"; miss > 0 -> "Welcome back: an easy $goal"; else -> "Review $goal phrases" },
             if (reviewedToday >= goal || caughtUp) "Done ✓" else "${minOf(reviewedToday, goal)}/$goal · about ${maxOf(1, goal / 2)} min",
             done = reviewedToday >= goal || caughtUp,
             ring = "Phrases",

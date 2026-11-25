@@ -135,7 +135,7 @@ fun LearnScreen(
             d.startsWith("deck:") -> DeckDetail(Decks.first { it.id == d.removePrefix("deck:") }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
             d.startsWith("tool:") -> when (d.removePrefix("tool:")) {
                 "lookup" -> { val nav = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current; LaunchedEffect(Unit) { tool = null; nav.openSearch() } }
-                "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
+                "dialogues" -> DialoguesScreen(vm, onBack = { tool = "dinner" }, onCalibrate = { calibrating = true })
                 "writing" -> WritingScreen(state, vm, onBack = { tool = null })
                 "drive" -> DriveScreen(vm, onBack = { tool = null })
                 "grammar" -> GrammarScreen(state, vm, onBack = { tool = null })
@@ -145,7 +145,7 @@ fun LearnScreen(
                 "tones" -> ToneTrainer(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
                 "phrasebook" -> PhrasebookScreen(state, vm, onBack = { tool = null })
                 "callouts" -> CalloutScreen(state, vm, onBack = { tool = null })
-                "dinner" -> DinnerScreen(state, vm, onBack = { tool = null })
+                "dinner" -> DinnerScreen(state, vm, onBack = { tool = null }, onListen = { tool = "dialogues" })
                 "numbers" -> NumbersScreen(state, vm, onBack = { tool = null })
                 "family" -> FamilyScreen(state, vm, onBack = { tool = null })
                 "prayer" -> LadderScreen(state, vm, onBack = { tool = null })
@@ -185,19 +185,29 @@ private fun Overview(
         item { val nav = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current; SearchPill(onClick = nav.openSearch) }
         val hero: @Composable () -> Unit = {
             com.dudlatitat.nextchapter.ui.components.HeroCard {
-                val fresh = queue.count { it.isNew }
+                // Today's slice, never the backlog: "6 for today", then "Keep going? 10 more".
+                val slice = remember(state, day) { com.dudlatitat.nextchapter.data.DayPlan.slice(state, day) }
+                val reviewed = state.days[day]?.reviews ?: 0
+                val left = (slice - reviewed).coerceAtLeast(0)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        if (queue.isEmpty()) {
-                            Text("All caught up ✓", style = MaterialTheme.typography.headlineSmall, color = Night.jade)
-                            Text("New phrases arrive tomorrow", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
-                        } else {
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text("${queue.size}", style = MaterialTheme.typography.displaySmall, color = Night.sun)
-                                Spacer(Modifier.width(8.dp))
-                                Text("waiting", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.padding(bottom = 6.dp))
+                        when {
+                            queue.isEmpty() -> {
+                                Text("All caught up ✓", style = MaterialTheme.typography.headlineSmall, color = Night.jade)
+                                Text("New phrases arrive tomorrow", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                             }
-                            Text("${queue.size - fresh} to remember · $fresh new", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                            left > 0 -> {
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text("$left", style = MaterialTheme.typography.displaySmall, color = Night.sun)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("for today", style = MaterialTheme.typography.titleMedium, color = Night.ink, modifier = Modifier.padding(bottom = 6.dp))
+                                }
+                                Text("about ${maxOf(1, left / 2)} min", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                            }
+                            else -> {
+                                Text("Today's done ✓", style = MaterialTheme.typography.headlineSmall, color = Night.jade)
+                                Text("Keep going? 10 more, if you feel like it.", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                            }
                         }
                     }
                     // Never a dead end: caught up, the big button plays today's game instead.
@@ -208,7 +218,7 @@ private fun Overview(
                         colors = ButtonDefaults.buttonColors(containerColor = if (queue.isEmpty()) Night.rose else Night.sun, contentColor = Night.ground2),
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
-                        Text(if (queue.isEmpty()) " Play" else " Practice", style = MaterialTheme.typography.titleMedium)
+                        Text(when { queue.isEmpty() -> " Play"; left > 0 -> " Practice"; else -> " 10 more" }, style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 val real = state.realUses.map { it.id }.toSet().size
@@ -232,23 +242,30 @@ private fun Overview(
         }
         val decks: @Composable () -> Unit = {
             val visible = Decks.filter { d -> d.id != "mine" || state.cards.any { it.deck == "mine" } }
-            val started = visible.count { d -> state.cards.any { it.deck == d.id && !it.isNew } }
-            Collapsible("learn.decks", "Decks · ${visible.size}", summary = "$started started · tap to see them all") {
-                // A grid of small tiles (2 across on the cover screen, 3 unfolded): far less scrolling.
-                val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 3 else 2
+            val (started, rest) = visible.partition { d -> state.cards.any { it.deck == d.id && !it.isNew } }
+            val cols = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) 3 else 2
+            val grid: @Composable (List<Deck>) -> Unit = { list ->
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    visible.chunked(cols).forEach { row ->
+                    list.chunked(cols).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { deck -> DeckTile(deck, state, Modifier.weight(1f)) { onDeck(deck.id) } }
                             repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
+            }
+            // The decks you're in, open; the rest wait folded (no wall of "0/293").
+            Collapsible("learn.decks2", "Your decks · ${started.size}", summary = started.joinToString(" · ") { it.hanzi }.ifEmpty { "Tap to start one" }, defaultOpen = true) {
+                if (started.isNotEmpty()) grid(started)
                 TextButton(onClick = onAdd) {
                     Icon(Icons.Rounded.Add, null, tint = Night.sun)
                     Spacer(Modifier.width(4.dp))
                     Text("Add phrase", color = Night.sun)
                 }
+            }
+            if (rest.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Collapsible("learn.moredecks", "More decks · ${rest.size}", summary = "Start one when you're ready") { grid(rest) }
             }
         }
         // Ready for her family: the ladder of real situations, climbed from what you've done.
@@ -267,9 +284,15 @@ private fun Overview(
         else { item { hero() }; item { practice() }; item { ready() }; item { decks() } }
         // Then your tones and how it's going.
         // "How it's going" at a reading width (stretched across the inner screen, its grid and stats scattered).
-        item { com.dudlatitat.nextchapter.ui.components.Centered { WeakTones(state, onDrill) } }
-        item { com.dudlatitat.nextchapter.ui.components.Centered { SectionLabel("How it's going") } }
-        item { com.dudlatitat.nextchapter.ui.components.Centered { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) } }
+        item {
+            com.dudlatitat.nextchapter.ui.components.Centered {
+                Collapsible("learn.progress", "How it's going", summary = "Your week, tones and the last 12 weeks") {
+                    WeakTones(state, onDrill)
+                    Spacer(Modifier.height(12.dp))
+                    com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck)
+                }
+            }
+        }
     }
 }
 

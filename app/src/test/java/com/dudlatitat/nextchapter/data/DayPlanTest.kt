@@ -40,14 +40,14 @@ class DayPlanTest {
         val back = AppState(cards = due(60, overdueBy = 5), studyDays = listOf(d - 3), newPerDay = 0)
         assertEquals(2, DayPlan.missed(back, d))
         assertEquals(DayPlan.COMEBACK_CAP, DayPlan.sessionLimit(back, d))
-        assertEquals("Welcome back: 15 phrases", DayPlan.today(back, d).items[0].title)
+        assertEquals("Welcome back: an easy 5", DayPlan.today(back, d).items[0].title)
         // One missed day (a rest day) is no comeback.
         val rest = back.copy(studyDays = listOf(d - 2))
         assertEquals(0, DayPlan.missed(rest, d))
-        assertEquals(Int.MAX_VALUE, DayPlan.sessionLimit(rest, d))
+        assertEquals("a normal day: today's 10", 10, DayPlan.sessionLimit(rest, d))
         // Capped sessions take the most overdue first.
         val first = Srs.queue(back, d).take(DayPlan.sessionLimit(back, d))
-        assertEquals(15, first.size)
+        assertEquals(5, first.size)
         assertTrue(first.zipWithNext().all { (a, b) -> a.due <= b.due })
     }
 
@@ -69,5 +69,20 @@ class BestStreakTest {
         assertEquals(Stats.withRest(days, 7), Stats.bestWithRest(days))
         assertEquals(3, Stats.bestWithRest(listOf(1L, 2, 3, 10, 11)))
         assertEquals(0, Stats.bestWithRest(emptyList()))
+    }
+}
+
+class SliceTest {
+    private val d = 20_500L
+    private fun due(n: Int) = (0 until n).map { Card("daily:c$it", "字$it", "zì", "w", "daily", firstSeen = 1, due = d - it, interval = 3, reps = 2) }
+
+    @Test fun aSessionIsTodaysSliceThenTenMore() {
+        val s = AppState(cards = due(57), studyDays = listOf(d - 1), newPerDay = 0)
+        assertEquals("57 due, but today's slice is 10", 10, DayPlan.sessionSize(s, d))
+        val after4 = s.copy(days = mapOf(d to DayLog(reviews = 4)))
+        assertEquals("what's left of the slice", 6, DayPlan.sessionSize(after4, d))
+        val done = s.copy(days = mapOf(d to DayLog(reviews = 10)))
+        assertEquals("keep going: 10 more", 10, DayPlan.sessionSize(done, d))
+        assertEquals("never more than is due", 3, DayPlan.slice(AppState(cards = due(3), studyDays = listOf(d - 1), newPerDay = 0), d))
     }
 }

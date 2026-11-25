@@ -30,7 +30,8 @@ object Ready {
 
     private fun deck(s: AppState, id: String, n: Int, name: String): Piece {
         val got = s.cards.count { it.deck == id && learned(it) }
-        return Piece("$name phrases ${minOf(got, n)}/$n", got >= n, "deck:$id")
+        // No zeros before you start: "Learn 5 family phrases", then "Family phrases 3/5".
+        return Piece(if (got == 0) "Learn $n ${name.lowercase()} phrases" else "$name phrases ${minOf(got, n)}/$n", got >= n, "deck:$id")
     }
 
     private fun scene(s: AppState, id: String): Piece {
@@ -59,7 +60,7 @@ object Ready {
         Rung("feast", "The big dinner", "大餐", listOf(
             scene(s, "after"),
             card(s, "trip:我敬您一杯", "The toast · 我敬您一杯"),
-            Piece("★ Said for real ${minOf(s.realUses.size, 3)}/3", s.realUses.size >= 3),
+            Piece(if (s.realUses.isEmpty()) "★ Say 3 phrases for real" else "★ Said for real ${minOf(s.realUses.size, 3)}/3", s.realUses.size >= 3),
         )),
     ))
 }
