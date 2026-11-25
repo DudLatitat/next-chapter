@@ -55,7 +55,7 @@ object Career {
 
     /** Seed task ids in Move → what ticks them in Life. */
     val linkedTasks = mapOf(
-        "School & certs:Finish the AS in CIS at SAC" to "classes",
+        Seed.AS_ID to "classes",
         "School & certs:Pass CompTIA A+" to "aplus",
         "School & certs:Pass CompTIA Network+" to "netplus",
         "School & certs:Pass CompTIA Security+" to "secplus",

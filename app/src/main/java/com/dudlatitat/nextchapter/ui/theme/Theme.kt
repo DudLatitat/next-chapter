@@ -71,6 +71,10 @@ object Night {
     val jade = Color(0xFF4FB3A9)
     val violet = Color(0xFF8E94F2)
     val coral = Color(0xFFFF6B6B)
+    /** Faith (prayer, Sunday). */
+    val pearl = Color(0xFFE8E3D3)
+    /** Health (body, routine nights). */
+    val mint = Color(0xFF9BE3C0)
 
     val ground = Brush.verticalGradient(0f to groundTop, 0.25f to ground1, 0.6f to ground2, 1f to groundBottom)
     val cardBrush = Brush.verticalGradient(listOf(cardTop, cardBottom))
@@ -83,6 +87,12 @@ val Nunito = FontFamily(
     Font(R.font.nunito_bold, FontWeight.Bold),
     Font(R.font.nunito_extrabold, FontWeight.ExtraBold),
 )
+
+/** JetBrains Mono (OFL, subset): numbers, times, money and the status line only. */
+val Mono = FontFamily(Font(R.font.jbmono_medium, FontWeight.Medium), Font(R.font.jbmono_medium, FontWeight.Normal))
+
+/** Mono text for readouts (status line, timers, counts): tabular digits, a touch of tracking. */
+val MonoStyle = androidx.compose.ui.text.TextStyle(fontFamily = Mono, fontWeight = FontWeight.Medium, fontSize = 13.sp, letterSpacing = 0.2.sp)
 
 val Fraunces = FontFamily(
     Font(R.font.fraunces_light, FontWeight.Light),

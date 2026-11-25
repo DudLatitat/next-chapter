@@ -202,7 +202,7 @@ data class AppState(
     val routineChecks: List<RoutineCheck> = emptyList(),
     val routineReviews: Map<String, RoutineReview> = emptyMap(),
     /** Wake time (early starts count before it plus 30 min), "you're home" and wind-down notifications. */
-    val wakeMinutes: Int = 7 * 60 + 30,
+    val wakeMinutes: Int = 6 * 60 + 30,
     val homeMinutes: Int = 17 * 60 + 45,
     val windDownMinutes: Int = 23 * 60 + 30,
     /** Work & home (Settings): on/off, the two saved spots (on this phone only) and the arrivals noticed. */

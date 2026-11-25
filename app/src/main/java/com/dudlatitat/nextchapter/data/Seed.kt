@@ -2,7 +2,7 @@ package com.dudlatitat.nextchapter.data
 
 /** The starter phrases and move checklist. Bump [VERSION] when adding more: new ones get merged in. */
 object Seed {
-    const val VERSION = 15
+    const val VERSION = 16
 
     /**
      * Starter cards that were replaced (the 1v4 Identity V callouts, swapped for 加页手记 ones in v5).
@@ -396,6 +396,22 @@ object Seed {
 
     private fun t(group: String, title: String) = MoveTask(id = "$group:$title", title = title, group = group)
 
+    /** The degree step, named generically (the repo is public; the school is typed on the phone if wanted). */
+    const val AS_TITLE = "Finish the AS degree in CIS"
+    const val AS_ID = "School & certs:$AS_TITLE"
+    /** Older builds named the college in this step's id and title; [migrateTasks] renames it. */
+    private const val LEGACY_AS_PREFIX = "School & certs:Finish the AS in CIS at "
+
+    /**
+     * Renames the old degree step to the generic one, keeping whether it's done (and any title
+     * you edited). Drops a duplicate if both somehow exist. Pure, tested in SeedTest.
+     */
+    fun migrateTasks(tasks: List<MoveTask>): List<MoveTask> {
+        val old = tasks.firstOrNull { it.id.startsWith(LEGACY_AS_PREFIX) } ?: return tasks
+        val renamed = old.copy(id = AS_ID, title = if (old.title == old.id.substringAfter(":")) AS_TITLE else old.title)
+        return tasks.filterNot { it.id == AS_ID }.map { if (it === old) renamed else it }
+    }
+
     val tasks = listOf(
         t("Documents", "Passport valid well past the move date"),
         t("Documents", "Research the visa for living with a Chinese spouse"),
@@ -406,7 +422,7 @@ object Seed {
         t("Money", "Emergency fund set aside"),
         t("Money", "Card that works with Alipay / WeChat Pay"),
         t("Money", "Plan for US bank accounts after moving"),
-        t("School & certs", "Finish the AS in CIS at SAC"),
+        t("School & certs", AS_TITLE),
         t("School & certs", "Pass CompTIA A+"),
         t("School & certs", "Pass CompTIA Network+"),
         t("School & certs", "Pass CompTIA Security+"),

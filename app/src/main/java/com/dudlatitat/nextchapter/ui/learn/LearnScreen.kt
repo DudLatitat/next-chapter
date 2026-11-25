@@ -134,7 +134,7 @@ fun LearnScreen(
             d.startsWith("drill:") -> ToneTrainer(vm, onBack = { drill = null }, onCalibrate = { calibrating = true }, focus = d.removePrefix("drill:").split(",").map { it.toInt() }.toSet())
             d.startsWith("deck:") -> DeckDetail(Decks.first { it.id == d.removePrefix("deck:") }, state, vm, onBack = { openDeck = null }, onAdd = { adding = true })
             d.startsWith("tool:") -> when (d.removePrefix("tool:")) {
-                "lookup" -> SearchScreen(state, vm, onBack = { tool = null }, onDeck = { tool = null; openDeck = it })
+                "lookup" -> { val nav = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current; LaunchedEffect(Unit) { tool = null; nav.openSearch() } }
                 "dialogues" -> DialoguesScreen(vm, onBack = { tool = null }, onCalibrate = { calibrating = true })
                 "writing" -> WritingScreen(state, vm, onBack = { tool = null })
                 "drive" -> DriveScreen(vm, onBack = { tool = null })
@@ -178,7 +178,11 @@ private fun Overview(
         contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { SearchPill(onClick = { onTool("lookup") }, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            val facts = remember(state, day) { com.dudlatitat.nextchapter.data.Status.chinese(state, day) }
+            com.dudlatitat.nextchapter.ui.components.TabHeader("Chinese", "中文", facts.map { com.dudlatitat.nextchapter.ui.components.Fact(it) })
+        }
+        item { val nav = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current; SearchPill(onClick = nav.openSearch) }
         val hero: @Composable () -> Unit = {
             com.dudlatitat.nextchapter.ui.components.HeroCard {
                 val fresh = queue.count { it.isNew }
@@ -262,9 +266,10 @@ private fun Overview(
         if (wide) item { com.dudlatitat.nextchapter.ui.components.TwoPanes({ hero(); practice() }, { ready(); decks() }) }
         else { item { hero() }; item { practice() }; item { ready() }; item { decks() } }
         // Then your tones and how it's going.
-        item { WeakTones(state, onDrill) }
-        item { SectionLabel("How it's going") }
-        item { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) }
+        // "How it's going" at a reading width (stretched across the inner screen, its grid and stats scattered).
+        item { com.dudlatitat.nextchapter.ui.components.Centered { WeakTones(state, onDrill) } }
+        item { com.dudlatitat.nextchapter.ui.components.Centered { SectionLabel("How it's going") } }
+        item { com.dudlatitat.nextchapter.ui.components.Centered { com.dudlatitat.nextchapter.ui.progress.ChineseProgress(state, onOpenDeck = onDeck) } }
     }
 }
 

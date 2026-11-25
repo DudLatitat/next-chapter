@@ -264,8 +264,9 @@ fun StoriesScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             val pct = if (words.isEmpty()) 0 else words.count { it in knownWords }.times(100) / words.size
             GlassCard(onClick = { open = st.id }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(st.hanzi, fontSize = 22.sp, color = Night.rose, modifier = Modifier.widthIn(min = 92.dp))
+                    // The Chinese title sits above the English one (side by side, long titles ran into each other).
                     Column(Modifier.weight(1f)) {
+                        Text(st.hanzi, fontSize = 20.sp, color = Night.rose, maxLines = 1)
                         Text(st.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
                         Text("Level ${st.level} · you've studied $pct% of its words", style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }

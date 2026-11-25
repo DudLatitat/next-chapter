@@ -1268,7 +1268,9 @@ const TERMINAL_LAB = { id: "terminal", title: "Command line tickets", icon: "ðŸ’
   blurb: "Fix real help-desk tickets on a pretend Windows PC: ipconfig, ping, sfc, chkdskâ€¦ plus Port Rush." };
 function loadLabs() {
   if (!labsLoaded) labsLoaded = Promise.all(LAB_FILES.map((f) => new Promise((ok) => {
-    const sc = document.createElement("script"); sc.src = `/lab/${f}.js`; sc.onload = sc.onerror = ok; document.head.appendChild(sc);
+    // async = false: added scripts run in the order they're added, so the labs always list in
+    // LAB_FILES order (before, they registered in whatever order they finished downloading).
+    const sc = document.createElement("script"); sc.async = false; sc.src = `/lab/${f}.js`; sc.onload = sc.onerror = ok; document.head.appendChild(sc);
   })));
   return labsLoaded;
 }

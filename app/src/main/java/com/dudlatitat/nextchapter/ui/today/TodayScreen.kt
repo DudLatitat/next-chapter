@@ -109,7 +109,7 @@ fun TodayScreen(
     // Unfolded: the header and today's three on the left, this moment and the rest on the right.
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
     val top: @Composable () -> Unit = {
-        Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy, onSearch = { onTool("lookup") })
+        Header(state, vm, minute, onSettings, onOpenMove, onTrip = onStudy, onSearch = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current.openSearch)
         if (state.tripModeOn()) TripModeCard(state, vm, onPhrasebook)
         TodayThree(
             state, calm = part == Life.Part.CALL,

@@ -79,6 +79,7 @@ fun SearchScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onDeck:
     val context = LocalContext.current
     var q by rememberSaveable { mutableStateOf("") }
     var result by remember { mutableStateOf<Lookup.Result?>(null) }
+    var doneFor by remember { mutableStateOf("") }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
@@ -86,6 +87,7 @@ fun SearchScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onDeck:
         if (q.isBlank()) { result = null; return@LaunchedEffect }
         delay(200)
         result = Lookup.searchAll(context, state, q)
+        doneFor = q
         open = null
     }
     val byHanzi = remember(state.cards) { state.cards.associateBy { it.hanzi } }
@@ -138,7 +140,11 @@ fun SearchScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onDeck:
             }
             return@LazyColumn
         }
-        if (r == null) return@LazyColumn
+        // Typing: a quiet "Searching…" instead of a blank flash.
+        if (r == null || doneFor != q) {
+            item(key = "busy") { Text("Searching…", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.muted, modifier = Modifier.padding(16.dp)) }
+            return@LazyColumn
+        }
         val mine = r.phrases.filter { it.hanzi in byHanzi }
         val lines = r.phrases.filter { it.hanzi !in byHanzi }
         fun section(key: String, title: String, n: Int) = item(key = "h:$key") {
@@ -179,9 +185,9 @@ fun SearchScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onDeck:
             }
         }
         if (r.phrases.isEmpty() && r.words.isEmpty()) item(key = "none") {
-            Text(
-                "Nothing yet for \"$q\". Try one key word (\"tired\", \"tomorrow\"), or pinyin without tones.",
-                style = MaterialTheme.typography.bodyMedium, color = Night.muted, modifier = Modifier.padding(12.dp),
+            com.dudlatitat.nextchapter.ui.components.EmptyState(
+                "查", Night.sun, "Nothing for \"$q\" yet. Try one key word, or pinyin without tones.",
+                button = "Clear search", onClick = { q = "" },
             )
         }
         if (!r.hasDict) item(key = "nodict") { Text("(The word dictionary isn't in this build; phrases still work.)", style = MaterialTheme.typography.labelSmall, color = Night.muted) }

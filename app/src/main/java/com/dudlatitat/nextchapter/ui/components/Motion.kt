@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
@@ -81,7 +84,7 @@ fun <T> SubNav(target: T, isRoot: (T) -> Boolean, label: String, content: @Compo
         transitionSpec = { if (isRoot(targetState)) Motion.pop() else Motion.push() },
         label = label,
     ) { t ->
-        if (isRoot(t)) holder.SaveableStateProvider("root") { content(t) } else content(t)
+        if (isRoot(t)) holder.SaveableStateProvider("root") { content(t) } else ReadableWidth { content(t) }
     }
 }
 
@@ -145,5 +148,24 @@ fun SubHeader(
             if (zh != null) Text(zh, style = MaterialTheme.typography.labelMedium, color = Night.muted, maxLines = 1)
         }
         actions()
+    }
+}
+
+/**
+ * Sub-screens never stretch across the wide inner screen: they're centred, at most 680dp wide
+ * (a comfortable reading width). No effect on the cover screen.
+ */
+@Composable
+fun ReadableWidth(max: androidx.compose.ui.unit.Dp = 680.dp, content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().widthIn(max = max)) { content() }
+    }
+}
+
+/** A centred block at most [max] wide (for items inside a full-width list). */
+@Composable
+fun Centered(max: androidx.compose.ui.unit.Dp = 760.dp, content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        androidx.compose.foundation.layout.Box(Modifier.widthIn(max = max)) { content() }
     }
 }

@@ -130,6 +130,10 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         contentPadding = PaddingValues(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item {
+            val facts = remember(state) { com.dudlatitat.nextchapter.data.Status.life(state) }
+            com.dudlatitat.nextchapter.ui.components.TabHeader("Life", "生活", facts.map { f -> com.dudlatitat.nextchapter.ui.components.Fact(f, onClick = if (f.startsWith("🌙")) ({ page = "routine" }) else null) })
+        }
         // Tonight first (the one job), then the week; A+, the timer, career and wins after.
         // Unfolded: tonight and the week on the left, the rest on the right.
         val left: @Composable () -> Unit = {
@@ -742,7 +746,8 @@ private fun StudyTimer(state: AppState, vm: MainViewModel) {
             S.subjects.forEach { sub -> FilterChip(selected = subject == sub, onClick = { subject = sub }, label = { Text(sub) }) }
         } else Text("Studying ${state.timerSubject}", style = MaterialTheme.typography.bodyMedium, color = Night.ink)
         Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Wraps onto a second line on the narrow cover screen (three buttons used to squeeze "Close" into "Clos/e").
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Button(
                 onClick = { if (running) vm.stopTimer() else vm.startTimer(subject) },
                 colors = ButtonDefaults.buttonColors(containerColor = if (running) Night.coral else Night.jade, contentColor = Night.ground2),

@@ -72,8 +72,9 @@ fun DialoguesScreen(vm: MainViewModel, onBack: () -> Unit, onCalibrate: () -> Un
         items(Dialogues.all, key = { it.id }) { d ->
             GlassCard(onClick = { open = d.id }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(d.hanzi, fontSize = 22.sp, color = Night.jade, modifier = Modifier.widthIn(min = 92.dp))
+                    // The Chinese name sits above the English one (side by side, long names ran into each other).
                     Column(Modifier.weight(1f)) {
+                        Text(d.hanzi, fontSize = 20.sp, color = Night.jade, maxLines = 1)
                         Text(d.title, style = MaterialTheme.typography.titleMedium, color = Night.ink)
                         Text(d.setting, style = MaterialTheme.typography.bodySmall, color = Night.muted)
                     }

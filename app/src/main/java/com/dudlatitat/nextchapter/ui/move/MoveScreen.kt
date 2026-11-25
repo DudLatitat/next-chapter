@@ -105,6 +105,10 @@ private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // The countdown: the next trip big, and a line from today through the trip to the move.
+        item {
+            val facts = remember(state) { com.dudlatitat.nextchapter.data.Status.move(state) }
+            com.dudlatitat.nextchapter.ui.components.TabHeader("Move", "搬家", facts.map { f -> com.dudlatitat.nextchapter.ui.components.Fact(f, onClick = if (f.endsWith("runway")) ({ page = "money" }) else null) })
+        }
         item { Countdown(state, onTrip = { picking = DateField.TRIP }, onMove = { picking = DateField.MOVE }) }
 
         // Flights, money, packing: three small doors.
@@ -337,7 +341,8 @@ private fun Countdown(state: AppState, onTrip: () -> Unit, onMove: () -> Unit) {
     val trip = daysUntil(state.nextTripDate())?.takeIf { it >= 0 }
     val move = daysUntil(state.moveDate)?.takeIf { it >= 0 }
     com.dudlatitat.nextchapter.ui.components.HeroCard(accent = Night.rose) {
-        Text("搬到中国 · " + com.dudlatitat.nextchapter.data.Life.moveTo(state.herCity), style = MaterialTheme.typography.labelLarge, color = Night.muted)
+        // The big number is the next trip, so it's labelled as that (the move is the far end of the road below).
+        Text("Next trip · 下次见面", style = MaterialTheme.typography.labelLarge, color = Night.muted)
         Spacer(Modifier.height(6.dp))
         Column(Modifier.pressClick(onClick = onTrip)) {
             if (trip != null) {

@@ -10,6 +10,41 @@ I'm Rudy (Dudster). This is my private app for the road to China: learning Chine
 
 This app exists to make my life better in every way, not only my Chinese. Learning the language, the move to China, my relationship and her family, my career and studies, my money, my faith and my daily routine all count. When you suggest ideas, think about the whole of my life, as long as it fits the rules below.
 
+**Main goal (Nov 2026):** help me live the best life I can and make the most of the next 3 years until I move to Chengdu, so I arrive ready: able to talk with her family, working in IT with the certs to show it, financially safe, healthy and rested, grounded in my faith, and closer to her than ever. Each day the app shows me one small next step and how far I've come; it never shows a backlog.
+
+Six pillars, each with one forward-looking number on Today: 话 talking with her family (Ready ladder rung), 业 career (A+ readiness, certs), 钱 money runway (months saved), 身 health and routine (nights this week, early starts), 祷 faith (prayer days), 心 us (next trip, calls, occasions).
+
+## App rules (every feature)
+
+The app must feel welcoming, inviting and stress-free. Full brief: `docs/DESIGN.md`.
+
+1. Today shows today's slice, never the backlog ("10 for today", not "57 waiting"). The rest appears only after the slice: "Keep going? 10 more".
+2. Never show missed days. Past misses look like unplanned days; no red, no "you missed".
+3. One streak only (🔥 practice days, rest-day rule). Everything else is a weekly count ("4 nights this week").
+4. No zeros until something is started: "18 steps · start with passport", not "0/18".
+5. One primary (filled) button per screen; everything else is a row, chip or text button.
+6. Offers, not debts: "Got 5 minutes?", "Not tonight". Never "overdue", "Skip today", "Bad day?".
+7. Quiet hours: during her call (7–8 pm) the app asks nothing (no cards, claims, pop-ups or notifications). After wind-down, no Start buttons.
+8. Empty state = one friendly line + one button. Setup explanations live behind "How this works".
+9. Comebacks are welcomed, never audited ("Welcome back. Here's an easy 5.").
+10. New things start folded; Today shows at most ~7 items above the fold.
+11. Every number has a reason and a tap target; at most three numbers per card.
+12. Each feature has one home tab; other tabs link to it, they don't copy its card.
+13. Nothing depends on Yuling, and nothing personal (names, schools, places, money) goes in code.
+
+## Design rules (every page)
+
+- **Look:** frosted night-sea glass everywhere (`FrostCard`: translucent fill, light top edge, soft border, fine grain; no blur on scrolling content), plus a terminal accent only in the monospace status line under each tab header and in the A+/IT Lab areas. "Glass effects" can be turned off for solid cards.
+- **Type:** Fraunces for titles and the one big number, Nunito for text, JetBrains Mono (bundled, OFL) for numbers, times, money and the status line, never for sentences or Chinese. Minimum 11sp. Chinese uses `HanziText`.
+- **Colour means a pillar:** sun = Chinese and the one main button; rose = her, calls, trips; violet = career/A+; jade = done and money; pearl = faith; mint = health; coral only for real deadlines ≤3 days, never for "missed".
+- **Page anatomy:** tab pages = `TabHeader` (title, 🔍 ⚙) → mono status strip (≤3 tappable facts) → one `HeroCard` → lists (`ListGroup`/`ListRow`) → folded extras. Sub-pages = `SubHeader` (← title · 中文, one labelled action), no repeated title overline, no footers. Quick edits in sheets, lists in sub-pages.
+- **Spacing:** the `Space` 4-pt scale; card padding 16, 12 between cards, 24 between groups; gutters from `screenGutter()`.
+- **Unfolded:** reading content capped with `readable()`; two panes only when both have similar content; lists of 6+ become grids; never stretch one row across 884dp. Short content is centred with actions in the thumb zone.
+- **Components:** use the kit (`Kit.kt`, `Motion.kt`, `Components.kt`), not one-off layouts. Icons are character badges (`IconBadge`, registry in `Glyphs.kt`, no two features share a character); emoji only in copy and celebrations.
+- **Taps:** ≥48dp; buttons say what they do ("Start test", "+ Flight"); › means it navigates, a labelled chip means it acts; no long-press-only actions; deletes get undo.
+- **Motion:** only `Motion.kt` (push/pop, fade-through, press feedback); one breathing element per screen at most; respect reduce-motion.
+- **PC page:** the same colours, fonts (bundled in assets) and header/status-strip pattern; terminal look only in IT Lab.
+
 ## The app
 
 - **Tabs** (each answers one question): Today (what now: hero, breathing rings, this week's routine, one Now card), Chinese (practice: review, practice tools, decks, tones, how it's going), Life (getting better: weekly routine, A+ exam, career, wins) and Move (the plan: dates, flights, money, packing, savings, checklist). Extras: two widgets (phrase, weekly routine), reminders, Work & home, Use on my computer (the phone serves a desktop page on the home Wi-Fi while that screen is open), WeChat quick-add, backup.

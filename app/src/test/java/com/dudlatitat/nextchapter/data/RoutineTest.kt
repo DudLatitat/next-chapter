@@ -105,7 +105,7 @@ class RoutineTest {
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
         val old = json.decodeFromString<AppState>("""{"newPerDay":5}""")
         assertEquals(Routine.seed, old.routine)
-        assertEquals(7 * 60 + 30, old.wakeMinutes)
+        assertEquals("wake default is 6:30 (the goal)", 6 * 60 + 30, old.wakeMinutes)
         // And a check-in survives a save/load round trip.
         val saved = old.copy(routineChecks = listOf(RoutineCheck(d, CheckIn.MINIMUM)))
         assertEquals(saved.routineChecks, json.decodeFromString<AppState>(json.encodeToString(saved)).routineChecks)

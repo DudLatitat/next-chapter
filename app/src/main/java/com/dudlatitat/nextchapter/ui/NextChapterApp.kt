@@ -77,6 +77,7 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         confirmButton = { androidx.compose.material3.TextButton(onClick = { vm.seeMilestones(fresh.map { it.id }) }) { Text("太好了!") } },
     )
     var settings by rememberSaveable { mutableStateOf(false) }
+    var searching by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(openStudy) {
         if (openStudy) { settings = false; startReview = true; tab = Tab.LEARN; onStudyOpened() }
@@ -129,6 +130,8 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     val claim = androidx.compose.runtime.remember(state, day) { com.dudlatitat.nextchapter.data.Payoff.claimDue(state, day) }
     val callTime = com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now())
 
+    val appNav = androidx.compose.runtime.remember { com.dudlatitat.nextchapter.ui.components.AppNav(openSearch = { searching = true }, openSettings = { settings = true }) }
+    androidx.compose.runtime.CompositionLocalProvider(com.dudlatitat.nextchapter.ui.components.LocalAppNav provides appNav) {
     com.dudlatitat.nextchapter.ui.components.ProvidePlanNav(planNav) {
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
@@ -191,12 +194,23 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
                 ) { },
             ) {
                 StarryBackdrop()
-                SettingsScreen(state, vm, onBack = { settings = false })
+                com.dudlatitat.nextchapter.ui.components.ReadableWidth { SettingsScreen(state, vm, onBack = { settings = false }) }
+            }
+        }
+        // Search opens over whatever tab you're on (that tab stays highlighted underneath).
+        androidx.compose.animation.AnimatedVisibility(
+            searching,
+            enter = androidx.compose.animation.fadeIn(tween(200)) + androidx.compose.animation.slideInVertically(tween(280, easing = com.dudlatitat.nextchapter.ui.components.Motion.Emph)) { it / 12 },
+            exit = androidx.compose.animation.fadeOut(tween(160)),
+        ) {
+            Box(Modifier.fillMaxSize().clickable(interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { }) {
+                StarryBackdrop()
+                com.dudlatitat.nextchapter.ui.components.ReadableWidth { com.dudlatitat.nextchapter.ui.learn.SearchScreen(state, vm, onBack = { searching = false }, onDeck = { searching = false; startDeck = it; tab = Tab.LEARN }) }
             }
         }
         // All three done: the once-a-day moment, on Today (where the rings are), never during her call.
         androidx.compose.animation.AnimatedVisibility(
-            claim && tab == Tab.TODAY && !settings && !callTime,
+            claim && tab == Tab.TODAY && !settings && !searching && !callTime,
             enter = androidx.compose.animation.fadeIn(tween(500)),
             exit = androidx.compose.animation.fadeOut(tween(400)) + androidx.compose.animation.scaleOut(tween(400), targetScale = 1.05f),
         ) {
@@ -204,4 +218,5 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
         }
     }
     }
+}
 }

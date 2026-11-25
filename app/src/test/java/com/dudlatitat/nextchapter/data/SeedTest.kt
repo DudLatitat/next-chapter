@@ -46,3 +46,19 @@ class SeedTest {
         assertEquals(24, Seed.cards.count { it.deck == "comfort" })
     }
 }
+
+class TaskMigrationTest {
+    @Test fun theOldDegreeStepIsRenamedAndKeepsItsTick() {
+        val legacyId = "School & certs:Finish the AS in CIS at " + "XYZ" // any college name
+        val old = listOf(MoveTask(legacyId, legacyId.substringAfter(":"), "School & certs", done = true), MoveTask("Money:Open a savings account", "Open a savings account", "Money"))
+        val out = Seed.migrateTasks(old)
+        assertEquals(listOf(Seed.AS_ID, "Money:Open a savings account"), out.map { it.id })
+        assertTrue("still done", out[0].done)
+        assertEquals(Seed.AS_TITLE, out[0].title)
+        // An edited title is kept; nothing to do when there's no old step.
+        assertEquals("My degree", Seed.migrateTasks(listOf(old[0].copy(title = "My degree")))[0].title)
+        assertEquals(old.drop(1), Seed.migrateTasks(old.drop(1)))
+        // The seeded list itself never names a college.
+        assertTrue(Seed.tasks.none { it.id.startsWith("School & certs:Finish the AS in CIS at ") })
+    }
+}

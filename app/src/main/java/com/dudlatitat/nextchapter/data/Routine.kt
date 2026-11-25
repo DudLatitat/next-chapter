@@ -40,9 +40,9 @@ object Routine {
     /** Seeded schedule (editable in Life → Weekly routine). Personal details are typed on the phone, not here. */
     val seed = listOf(
         RoutineDay(1, "A+ practice questions", "Open the A+ practice test", "10 questions", kind = "aplus"),
-        RoutineDay(2, "20-min walk + Chinese with {her}", "Shoes on, step outside", "Learn 1 sentence from {her}", kind = "chinese"),
+        RoutineDay(2, "20-min walk + 10 min of Chinese", "Shoes on, step outside", "Say 1 sentence for {her} out loud", kind = "chinese"),
         RoutineDay(3, "A+ practice questions", "Open the A+ practice test", "10 questions", kind = "aplus"),
-        RoutineDay(4, "20-min walk + Chinese with {her}", "Shoes on, step outside", "Learn 1 sentence from {her}", kind = "chinese"),
+        RoutineDay(4, "20-min walk + 10 min of Chinese", "Shoes on, step outside", "Say 1 sentence for {her} out loud", kind = "chinese"),
         RoutineDay(5, "A+ review of missed questions", "Open your missed A+ cards", "Review 5 missed questions", kind = "aplus-review"),
         RoutineDay(6, "Walk or gym (morning) + 1 hour on your side project", "Lay out what you need for it", "One small step on it", minutes = 10 * 60),
         RoutineDay(7, "Rest · 15-min weekly plan + lunch prep", "Open this week's review", "Plan next week only", minutes = 17 * 60),

@@ -78,7 +78,7 @@ class LifeTabTest {
     }
 
     private val moveTasks = listOf(
-        MoveTask("School & certs:Finish the AS in CIS at SAC", "Finish the AS", "School & certs"),
+        MoveTask(Seed.AS_ID, Seed.AS_TITLE, "School & certs"),
         MoveTask("School & certs:Pass CompTIA A+", "Pass CompTIA A+", "School & certs"),
         MoveTask("School & certs:Pass CompTIA Network+", "Pass CompTIA Network+", "School & certs"),
         MoveTask("Documents:Passport", "Passport", "Documents", done = true),
@@ -92,11 +92,11 @@ class LifeTabTest {
         s = Career.sync(s.copy(certs = Career.certs(s).map { if (it.id == "aplus2") it.copy(status = "passed") else it }))
         assertTrue(s.tasks.first { it.id.endsWith("A+") }.done)
         // The degree ticks itself only once classes are listed and all done.
-        assertTrue(!s.tasks.first { it.id.contains("AS in CIS") }.done)
+        assertTrue(!s.tasks.first { it.id == Seed.AS_ID }.done)
         s = Career.sync(s.copy(classes = listOf(SchoolClass("c1", "CIS 101", done = true), SchoolClass("c2", "CIS 102"))))
-        assertTrue(!s.tasks.first { it.id.contains("AS in CIS") }.done)
+        assertTrue(!s.tasks.first { it.id == Seed.AS_ID }.done)
         s = Career.sync(s.copy(classes = s.classes.map { it.copy(done = true) }))
-        assertTrue(s.tasks.first { it.id.contains("AS in CIS") }.done)
+        assertTrue(s.tasks.first { it.id == Seed.AS_ID }.done)
         // Unlinked steps are left alone.
         assertTrue(s.tasks.first { it.id == "Documents:Passport" }.done)
     }
@@ -111,7 +111,7 @@ class LifeTabTest {
         assertTrue(!undone.tasks.first { it.id.endsWith("Network+") }.done)
         // Not linked → Move handles it; degree with no classes listed → Move handles it too.
         assertNull(Career.tickFromMove(s, "Documents:Passport", true))
-        assertNull(Career.tickFromMove(s, "School & certs:Finish the AS in CIS at SAC", true))
+        assertNull(Career.tickFromMove(s, Seed.AS_ID, true))
     }
 
     @Test fun aDayWithReviewsCountsEvenIfTheSessionWasntFinished() {

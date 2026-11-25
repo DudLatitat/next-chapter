@@ -53,7 +53,7 @@ class Store private constructor(context: Context) {
         val haveTasks = s.tasks.map { it.id }.toSet()
         return s.copy(
             cards = Seed.merge(s.cards),
-            tasks = s.tasks + Seed.tasks.filter { it.id !in haveTasks },
+            tasks = Seed.migrateTasks(s.tasks).let { t -> t + Seed.tasks.filter { seed -> seed.id !in t.map { it.id }.toSet() } },
             packing = s.packing.ifEmpty { Seed.packing },
             budget = s.budget.ifEmpty { Seed.budget },
             seeded = Seed.VERSION,
