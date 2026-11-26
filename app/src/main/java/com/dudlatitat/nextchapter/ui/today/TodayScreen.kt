@@ -140,15 +140,13 @@ fun TodayScreen(
                     com.dudlatitat.nextchapter.data.Pillars.Id.TALK -> onOpenChinese()
                     com.dudlatitat.nextchapter.data.Pillars.Id.CAREER -> onOpenLife()
                     com.dudlatitat.nextchapter.data.Pillars.Id.MONEY, com.dudlatitat.nextchapter.data.Pillars.Id.US -> onOpenMove()
-                    com.dudlatitat.nextchapter.data.Pillars.Id.HEALTH -> onLifePage("routine")
+                    com.dudlatitat.nextchapter.data.Pillars.Id.HEALTH -> bodyOpen = true // weight, calories (routine lives on Life)
                     com.dudlatitat.nextchapter.data.Pillars.Id.FAITH -> prayerOpen = true
                 }
             }
             // The whole plan as one line: trips, exams, the move.
             if (com.dudlatitat.nextchapter.data.Road.marks(state).isNotEmpty()) GlassCard(onClick = onOpenMove) {
-                Text("The road to 成都", style = MaterialTheme.typography.labelLarge, color = Night.muted)
-                Spacer(Modifier.height(8.dp))
-                com.dudlatitat.nextchapter.ui.components.RoadStrip(state)
+                com.dudlatitat.nextchapter.ui.components.RoadCard(state)
             }
         }
         // Tonight's sentence (starred in 造句 Build), 6–7 pm: right before her call, never during it.

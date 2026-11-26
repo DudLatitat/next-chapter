@@ -38,6 +38,36 @@ object Road {
         return out.map { it.coerceIn(0f, 1f) }
     }
 
+    /** "3 years, 1 month" (or "5 months", "12 days") from [day] to [end]; calendar-true via java.time. */
+    fun left(day: Long, end: Long): String {
+        if (end <= day) return "here"
+        val p = java.time.Period.between(java.time.LocalDate.ofEpochDay(day), java.time.LocalDate.ofEpochDay(end))
+        fun n(v: Int, w: String) = "$v $w" + if (v == 1) "" else "s"
+        return when {
+            p.years > 0 -> n(p.years, "year") + if (p.months > 0) ", " + n(p.months, "month") else ""
+            p.months > 0 -> n(p.months, "month")
+            else -> n(p.days, "day")
+        }
+    }
+
+    /** New Year's Days between [day] and [end], with their share of the way (for ticks on the line). */
+    fun yearTicks(day: Long, end: Long): List<Pair<Int, Float>> {
+        if (end <= day) return emptyList()
+        val first = java.time.LocalDate.ofEpochDay(day).year + 1
+        val last = java.time.LocalDate.ofEpochDay(end).year
+        return (first..last).map { y ->
+            val d = java.time.LocalDate.of(y, 1, 1).toEpochDay()
+            y to ((d - day).toFloat() / (end - day)).coerceIn(0f, 1f)
+        }.filter { it.second in 0.1f..0.88f }
+    }
+
+    /** "Fri · Jan 15" for a row's second line (adds the year when it isn't this year). */
+    fun weekdayDate(day: Long, today: Long): String {
+        val d = java.time.LocalDate.ofEpochDay(day)
+        val pat = if (d.year == java.time.LocalDate.ofEpochDay(today).year) "EEE · MMM d" else "EEE · MMM d, yyyy"
+        return d.format(java.time.format.DateTimeFormatter.ofPattern(pat, java.util.Locale.US))
+    }
+
     /** "Mar 3" style, for labels. */
     fun short(day: Long): String = java.time.LocalDate.ofEpochDay(day).format(java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US))
 }
