@@ -225,6 +225,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun addStudy(subject: String, minutes: Int) = store.edit { s ->
         s.copy(study = com.dudlatitat.nextchapter.data.Study.add(s.study, com.dudlatitat.nextchapter.data.StudySession(today(), subject, minutes)))
     }
+    /** Saves a practice exam (exam-bank questions); counts as tonight's A+ job like the old tests. */
+    fun saveExam(r: com.dudlatitat.nextchapter.data.PracticeExam.Result, asked: List<String>, mode: String, core: Int, seconds: Int) = store.edit { s ->
+        val R = com.dudlatitat.nextchapter.data.Routine
+        val job = R.jobOn(s, java.time.LocalDate.now())
+        val checks = if (job.kind == "aplus" && R.checkFor(s.routineChecks, today()) == null)
+            R.withCheck(s.routineChecks, com.dudlatitat.nextchapter.data.RoutineCheck(today(), com.dudlatitat.nextchapter.data.CheckIn.DONE))
+        else s.routineChecks
+        s.copy(routineChecks = checks, tests = (s.tests + com.dudlatitat.nextchapter.data.TestResult(today(), r.right, r.total, seconds, r.missed, asked, mode, core)).takeLast(100))
+    }
     /** Saves a practice test; missed cards come back in your A+ reviews today. */
     fun saveTest(score: Int, total: Int, seconds: Int, missed: List<String>) = store.edit { s ->
         var aplus = s.aplus

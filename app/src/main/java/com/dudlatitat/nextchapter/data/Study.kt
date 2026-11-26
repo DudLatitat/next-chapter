@@ -10,7 +10,15 @@ data class StudySession(val day: Long, val subject: String, val minutes: Int)
 
 /** One A+ practice test: how it went, and which cards you missed. */
 @Serializable
-data class TestResult(val day: Long, val score: Int, val total: Int, val seconds: Int, val missed: List<String> = emptyList())
+data class TestResult(
+    val day: Long, val score: Int, val total: Int, val seconds: Int, val missed: List<String> = emptyList(),
+    /** Every question asked (exam-bank ids), so a later right answer clears an old miss. */
+    val asked: List<String> = emptyList(),
+    /** "quick" or "drill" (empty for tests from before the exam bank). */
+    val mode: String = "",
+    /** Which A+ core (0 for older tests). */
+    val core: Int = 0,
+)
 
 /** The study timer and log (A+, school, Chinese…). */
 object Study {
