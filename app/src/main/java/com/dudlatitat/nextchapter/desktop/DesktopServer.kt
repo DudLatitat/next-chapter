@@ -10,6 +10,7 @@ import com.dudlatitat.nextchapter.data.Grade
 import com.dudlatitat.nextchapter.data.Pinyin
 import com.dudlatitat.nextchapter.data.Srs
 import com.dudlatitat.nextchapter.data.Stats
+import com.dudlatitat.nextchapter.data.nextTripDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +30,15 @@ import java.net.Socket
 
 @Serializable data class DCard(val id: String, val hanzi: String, val pinyin: String, val english: String, val deck: String, val isNew: Boolean, val custom: Boolean, val known: Boolean, val voice: String, val real: Int = 0)
 @Serializable data class DDeck(val id: String, val title: String, val hanzi: String, val count: Int, val started: Int)
+/** The PC Home view: today's three, the pillars, her time and the call, the road, what's coming. */
+@Serializable data class DItem(val kind: String, val title: String, val detail: String, val done: Boolean, val tool: String? = null)
+@Serializable data class DPillar(val glyph: String, val name: String, val value: String)
+@Serializable data class DMark(val label: String, val date: String, val kind: String, val at: Float)
+@Serializable data class DOccasion(val name: String, val greeting: String, val pinyin: String, val english: String, val days: Long)
+@Serializable data class DHome(
+    val three: List<DItem>, val streak: Int, val pillars: List<DPillar>, val herName: String, val herTime: String, val herPart: String,
+    val callLine: String, val trip: Long?, val road: List<DMark>, val examLine: String?, val occasions: List<DOccasion>, val now: String,
+)
 @Serializable data class DSummary(val due: Int, val fresh: Int, val streak: Int, val known: Int, val decks: List<DDeck>)
 @Serializable data class PairIn(val code: String)
 @Serializable data class PairOut(val token: String)
@@ -245,6 +255,29 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 }
                 val q = Srs.queue(s)
                 ok(json.encodeToString(DSummary(q.count { !it.isNew }, q.count { it.isNew }, Stats.streak(s), s.cards.count { it.isKnown }, decks)))
+            }
+            "GET /api/home" -> {
+                val d = com.dudlatitat.nextchapter.data.today()
+                val now = java.time.ZonedDateTime.now()
+                val her = com.dudlatitat.nextchapter.data.Life.herTime(now)
+                val hm = java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.US)
+                val plan = com.dudlatitat.nextchapter.data.DayPlan.today(s, d)
+                val marks = com.dudlatitat.nextchapter.data.Road.marks(s, d)
+                val end = marks.lastOrNull()?.day ?: d
+                ok(json.encodeToString(DHome(
+                    three = plan.items.map { DItem(it.kind.name, it.title, it.detail, it.done, it.tool) },
+                    streak = Stats.streak(s, d),
+                    pillars = com.dudlatitat.nextchapter.data.Pillars.all(s, d).map { DPillar(it.glyph, it.name, it.value) },
+                    herName = s.herName.trim().ifEmpty { "Her" }, herTime = her.format(hm),
+                    herPart = com.dudlatitat.nextchapter.data.NowPlan.herPart(now),
+                    callLine = com.dudlatitat.nextchapter.data.NowPlan.callLine(now.hour * 60 + now.minute),
+                    trip = com.dudlatitat.nextchapter.data.daysUntil(s.nextTripDate())?.takeIf { it >= 0 },
+                    road = marks.map { DMark(it.label, com.dudlatitat.nextchapter.data.Road.short(it.day), it.kind.name, it.at(d, end)) },
+                    examLine = com.dudlatitat.nextchapter.data.ExamPlan.of(s, d)?.let { "A+ exam in ${it.daysLeft}d · ${it.line}" },
+                    occasions = com.dudlatitat.nextchapter.data.Occasions.upcoming(java.time.LocalDate.ofEpochDay(d), com.dudlatitat.nextchapter.data.Occasions.Table)
+                        .map { DOccasion(it.occasion.name, it.occasion.greeting, it.occasion.pinyin, it.occasion.english, it.daysAway) },
+                    now = now.format(hm),
+                )))
             }
             "GET /api/queue" -> ok(json.encodeToString(Srs.queue(s).map { DCardOf(it) }))
             "GET /api/cards" -> {

@@ -167,6 +167,20 @@ fun TodayScreen(
         // What's coming and (Mondays) last week, as one quiet list.
         val monday = java.time.LocalDate.now().dayOfWeek == java.time.DayOfWeek.MONDAY && state.studyDays.isNotEmpty()
         val coming = com.dudlatitat.nextchapter.ui.life.comingUpSummary(state)
+        // Festivals and special days in the next three weeks, with the greeting to say (tap to hear it).
+        val occasions = remember(minute / 1440) { com.dudlatitat.nextchapter.data.Occasions.upcoming(java.time.LocalDate.now(), com.dudlatitat.nextchapter.data.Occasions.Table) }
+        if (!calm && occasions.isNotEmpty()) com.dudlatitat.nextchapter.ui.components.ListGroup {
+            occasions.take(2).forEachIndexed { i, u ->
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    u.occasion.name + if (u.daysAway == 0L) " · today 🎉" else " in ${u.daysAway} ${if (u.daysAway == 1L) "day" else "days"}",
+                    subtitle = "${u.occasion.greeting} · ${u.occasion.pinyin} · ${u.occasion.english}",
+                    divider = i < minOf(occasions.size, 2) - 1,
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge(u.occasion.zh.take(1), Night.rose) },
+                    trailing = { Text("🔊", style = MaterialTheme.typography.titleMedium) },
+                    onClick = { vm.speaker.say(u.occasion.greeting) },
+                )
+            }
+        }
         if (!calm && (coming != null || monday)) com.dudlatitat.nextchapter.ui.components.ListGroup {
             if (coming != null) com.dudlatitat.nextchapter.ui.components.ListRow(
                 "Coming up", subtitle = coming, divider = monday,

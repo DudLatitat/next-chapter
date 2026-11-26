@@ -331,6 +331,29 @@
     body::before, body::after { opacity: .8; }
     .pc:hover { transform: none; }
   }
+  /* ---- Home: what matters today, at a glance ---- */
+  .home { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 18px; max-width: 1180px; margin: 18px auto 0; }
+  @media (max-width: 900px) { .home { grid-template-columns: 1fr; } }
+  .home .glass { padding: 20px 22px; }
+  .home h4 { margin: 0 0 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .01em; }
+  .hero-time { font-size: 44px; font-weight: 600; line-height: 1.1; }
+  .her { color: var(--rose); margin-top: 4px; }
+  .status { margin-top: 10px; color: var(--muted); font-size: 13px; }
+  .status b { color: var(--ink); font-weight: 500; }
+  .quest { display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-radius: 14px; cursor: pointer; }
+  .quest:hover { background: rgba(255,255,255,.04); }
+  .badge { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-family: var(--zh); font-size: 18px; flex: none; }
+  .quest .t { font-weight: 600; } .quest .d { color: var(--muted); font-size: 13px; }
+  .quest.done .t { color: var(--muted); text-decoration: line-through; }
+  .quest kbd { margin-left: auto; }
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pillar { display: flex; gap: 10px; align-items: center; }
+  .pillar .v { font-weight: 500; } .pillar .n { color: var(--muted); font-size: 12px; }
+  .road { position: relative; height: 18px; margin: 10px 6px 6px; }
+  .road::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); }
+  .road i { position: absolute; top: 3px; width: 11px; height: 11px; border-radius: 50%; transform: translateX(-50%); }
+  .occ { padding: 8px 0; border-top: 1px solid var(--line); } .occ:first-of-type { border-top: 0; }
 </style>
 </head>
 <body>
@@ -453,7 +476,7 @@ function showPair(message) {
 }
 
 // ---- Shell ----
-const VIEWS = ["phrases", "review", "aplus", "sky", "terminal", "talk"]; // the phone remote sends a tab as its index here
+const VIEWS = ["phrases", "review", "aplus", "sky", "terminal", "talk", "home"]; // the phone remote sends a tab as its index here (new views go at the end)
 let view = VIEWS.includes(ls.get("nc-view")) ? ls.get("nc-view") : "phrases", summary = null;
 const deckName = (id) => (summary?.decks.find((d) => d.id === id) || {}).title || id;
 async function start() {
@@ -462,14 +485,15 @@ async function start() {
   $("#app").innerHTML = `
     <header>
       <div class="brand"><span class="zh">新篇章</span><span class="en">Next Chapter</span></div>
-      <nav aria-label="Pages"><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="talk" title="G then C">Talk 对话</button><button data-v="terminal" title="G then T">IT Lab</button></nav>
+      <nav aria-label="Pages"><button data-v="home" title="G then H">Home</button><button data-v="phrases" title="G then P">Phrases</button><button data-v="review" title="G then R">Review</button><button data-v="aplus" title="G then A">A+</button><button data-v="sky" title="G then S">Sky ✦</button><button data-v="talk" title="G then C">Talk 对话</button><button data-v="terminal" title="G then T">IT Lab</button></nav>
       <div class="stats"><span class="remote-dot" id="rdot" title="Phone remote connected"></span><span id="stats"></span>
         <button class="icon help" id="help" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button></div>
     </header>
     <main id="main"></main>`;
   document.querySelectorAll("nav button").forEach((b) => b.onclick = () => go(b.dataset.v));
   $("#help").onclick = toggleHelp;
-  go(view);
+  // Opens on Home: what matters today, then wherever you go from there.
+  go("home");
   listen();
 }
 function go(v) {
@@ -479,7 +503,7 @@ function go(v) {
   document.querySelectorAll("nav button").forEach((b) => { b.classList.toggle("on", b.dataset.v === view); b.toggleAttribute("aria-current", b.dataset.v === view); });
   renderStats(); clearInterval(skyTimer); djStop(); if (typeof sprintStop === "function") { sprintStop(); if (sp) sp.running = false; gameStop(); }
   // If loading fails because the phone is away, remember it so the page reloads this view when it's back.
-  watch(({ review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab, talk: renderTalk }[view] || renderPhrases)());
+  watch(({ home: renderHome, review: renderReview, aplus: renderAPlus, sky: renderSky, terminal: renderLab, talk: renderTalk }[view] || renderPhrases)());
 }
 function watch(p) {
   return Promise.resolve(p).then(() => { stale = false; }, (e) => { stale = true; if (!e?.quiet) toast(e?.message || "Couldn't load that", true); });
@@ -488,6 +512,49 @@ function renderStats() {
   const due = summary.due + summary.fresh;
   $("#stats").innerHTML = `<span class="pill sun">🔥 ${summary.streak}-day streak</span> <span class="pill">${summary.known} known</span> ${due ? `<span class="pill">${due} to review</span>` : ""}`;
 }
+// ---- Home ----
+const KIND_COLOR = { REVIEW: "var(--sun)", PLAY: "var(--rose)", LIFE: "var(--violet)", TRIP: "var(--rose)", EXAM: "var(--violet)", CERT: "var(--violet)", MOVE: "var(--sun)" };
+async function renderHome() {
+  const h = await api("/api/home");
+  const badge = (it) => ({ REVIEW: "字", PLAY: "玩", LIFE: it.tool === "aplus" ? "考" : "晚" })[it.kind];
+  const keyOf = { REVIEW: "R", PLAY: "P", LIFE: "A" }; // G starts the "go to" shortcuts, so play is P
+  const pillarColors = ["var(--sun)", "var(--violet)", "var(--jade)", "#9be3c0", "#e8e3d3", "var(--rose)"];
+  $("#main").innerHTML = `<div class="home">
+    <div style="display:grid;gap:18px">
+      <div class="glass">
+        <div class="hero-time mono">${esc(h.now)}</div>
+        <div class="her">${esc(h.herName)} ${esc(h.herTime)} · ${esc(h.herPart)} in Chengdu</div>
+        <div class="status mono">▸ <b>${esc(h.callLine)}</b>${h.trip != null ? ` · ✈ <b>${h.trip}d</b>` : ""} · 🔥 <b>${h.streak}</b></div>
+      </div>
+      <div class="glass"><h4>今日三件 · Today's three</h4>
+        ${h.three.map((it) => `<div class="quest ${it.done ? "done" : ""}" data-kind="${it.kind}" data-tool="${esc(it.tool || "")}">
+          <span class="badge" style="background:color-mix(in srgb, ${KIND_COLOR[it.kind]} 20%, transparent);color:${KIND_COLOR[it.kind]}">${it.done ? "✓" : badge(it)}</span>
+          <div><div class="t">${esc(it.title)}</div><div class="d">${esc(it.detail)}</div></div>${it.done ? "" : `<kbd>${keyOf[it.kind]}</kbd>`}</div>`).join("")}
+      </div>
+      ${h.road.length ? `<div class="glass"><h4>The road to 成都</h4>
+        <div class="road">${h.road.map((m) => `<i title="${esc(m.label + " " + m.date)}" style="left:${(m.at * 100).toFixed(1)}%;background:${KIND_COLOR[m.kind]}"></i>`).join("")}</div>
+        <div class="mono muted" style="font-size:13px">${h.road.slice(0, 4).map((m) => `${esc(m.label)} ${esc(m.date)}`).join(" · ")}</div></div>` : ""}
+    </div>
+    <div style="display:grid;gap:18px;align-content:start">
+      <div class="glass"><h4>Your three years</h4><div class="pillars">
+        ${h.pillars.map((p, i) => `<div class="pillar"><span class="badge" style="background:color-mix(in srgb, ${pillarColors[i]} 18%, transparent);color:${pillarColors[i]}">${esc(p.glyph)}</span>
+          <div><div class="v mono">${esc(p.value)}</div><div class="n">${esc(p.name)}</div></div></div>`).join("")}
+      </div></div>
+      ${h.examLine ? `<div class="glass"><h4>A+</h4><div>${esc(h.examLine)}</div></div>` : ""}
+      ${h.occasions.length ? `<div class="glass"><h4>Coming up</h4>${h.occasions.map((o) => `<div class="occ"><b>${esc(o.name)}</b> <span class="muted">in ${o.days}d</span>
+        <div class="zh" style="font-size:20px">${esc(o.greeting)}</div><div class="muted">${esc(o.pinyin)} · ${esc(o.english)}</div></div>`).join("")}</div>` : ""}
+    </div></div>`;
+  const open = (kind, tool) => {
+    if (kind === "REVIEW") go("review");
+    else if (kind === "LIFE" && tool === "aplus") go("aplus");
+    else if (kind === "PLAY" && ["dinner", "texts", "sprint", "callouts"].includes(tool)) go("talk");
+    else toast("That one's on your phone today 📱");
+  };
+  document.querySelectorAll(".quest").forEach((q) => q.onclick = () => open(q.dataset.kind, q.dataset.tool));
+  homeKeys = (k) => { const it = h.three.find((x) => keyOf[x.kind] === k.toUpperCase() && !x.done); if (it) { open(it.kind, it.tool); return true; } return false; };
+}
+let homeKeys = null;
+
 async function refreshSummary() { summary = await api("/api/summary"); if ($("#stats")) renderStats(); }
 
 // Tell the phone remote what's on screen.
@@ -497,7 +564,8 @@ function report(card, shown, left) {
 
 // ---- Keyboard: shortcuts everywhere, never while typing ----
 const KEYS = [
-  ["Anywhere", [["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Talk", "G C"], ["IT Lab", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Anywhere", [["Home", "G H"], ["Phrases", "G P"], ["Review", "G R"], ["A+", "G A"], ["Sky", "G S"], ["Talk", "G C"], ["IT Lab", "G T"], ["Add a phrase", "N"], ["Search phrases", "/"], ["This help", "?"], ["Close a dialog", "Esc"]]],
+  ["Home", [["Today's three: review · play · A+", "R · P · A"]]],
   ["Review and A+", [["Show the answer", "Space"], ["Again · Hard", "1 · 2"], ["Good · Easy", "3 · 4"], ["Play the phrase", "P"]]],
   ["Terminal dojo", [["Start typing in the terminal", "Enter"], ["Leave the terminal (shortcuts work again)", "Esc"], ["Earlier commands", "↑ ↓"], ["Answer the ticket question", "1 2 3 4"],
     ["Show a hint", "H"], ["Port Rush: start · skip one", "Enter"]]],
@@ -529,7 +597,7 @@ document.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (chord && Date.now() - chord < 1500) {
     chord = 0;
-    const to = { p: "phrases", r: "review", a: "aplus", s: "sky", t: "terminal", c: "talk" }[k];
+    const to = { h: "home", p: "phrases", r: "review", a: "aplus", s: "sky", t: "terminal", c: "talk" }[k];
     if (to) { e.preventDefault(); go(to); return; }
   }
   chord = 0;
@@ -538,6 +606,7 @@ document.addEventListener("keydown", (e) => {
   if (k === "n") { e.preventDefault(); editor(null); return; }
   if (view === "terminal") { if (labOpen === "terminal") djKey(e, k); else if (curLab()?.key) curLab().key(e); return; }
   if (view === "talk") { talkKey(e, k); return; }
+  if (view === "home" && homeKeys && !chord && /^[rpa]$/i.test(k) && homeKeys(k)) { e.preventDefault(); return; }
   if (view === "aplus" && aq.length) {
     if (e.code === "Space") { e.preventDefault(); aReveal(); } else if ("1234".includes(e.key)) aGrade(+e.key);
     return;
@@ -896,10 +965,12 @@ async function renderTalk() {
 }
 function talkList() {
   talkOpen = null; tk = null; textOpen = null; tx = null; sprintStop(); sprintOn = false; sp = null; gameStop();
-  const groups = [...new Set(talkScenes.map((s) => s.groupTitle))];
+  // Scenes with no lines yet (a chat that only lives in Texts) aren't listed: they'd open empty.
+  const shown = talkScenes.filter((s) => s.beats && s.beats.length);
+  const groups = [...new Set(shown.map((s) => s.groupTitle))];
   $("#main").innerHTML = `<div class="talk"><h2 style="margin:6px 0 2px">Talk · 对话</h2>
     <p class="muted" style="margin:0">They speak, you answer. Say it into your phone (🎤 on the remote) or type pinyin or characters.</p>
-    ${groups.map((g) => `<div class="tgroup">${esc(g)}</div><div class="tscenes">${talkScenes.filter((s) => s.groupTitle === g).map((s) => {
+    ${groups.map((g) => `<div class="tgroup">${esc(g)}</div><div class="tscenes">${shown.filter((s) => s.groupTitle === g).map((s) => {
       const best = talkBest(s.id);
       return `<button class="tscene glass" data-s="${esc(s.id)}"><span class="ti">${s.icon}</span><span><div class="tt">${esc(s.title)}</div>
         <div class="tz">${esc(s.hanzi)}</div><div class="tag">${s.beats.length} lines${best ? ` · best ${best}/${s.beats.length * 2}` : ""}</div></span></button>`;
