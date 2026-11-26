@@ -343,14 +343,14 @@ class DesktopServer(private val context: Context, private val store: Store, val 
                 val strength = APlus.strength(s)
                 val reviews = s.aplus.associateBy { it.id }
                 val queue = APlus.queue(s).map { DAQ(it.id, it.domain, it.q, it.a, reviews[it.id]?.firstSeen == null) }
-                val domains = APlus.domains.map { (n, v) -> DDomain(n, v.first, v.second, strength[n] ?: 0f) }
+                val domains = APlus.domains(s).map { (n, v) -> DDomain(n, v.first, v.second, strength[n] ?: 0f) }
                 val day = com.dudlatitat.nextchapter.data.today()
                 val done = s.aplus.count { it.last == day && it.due > day }
-                ok(json.encodeToString(DAPlus(s.aplusExam, done, domains, APlus.weakest(s), queue)))
+                ok(json.encodeToString(DAPlus(APlus.examDate(s), done, domains, APlus.weakest(s), queue)))
             }
             "POST /api/aplus/grade" -> {
                 val g = try { json.decodeFromString<GradeIn>(body) } catch (_: Exception) { return bad(400, "Bad grade") }
-                if (APlus.core1.none { it.id == g.id }) return bad(404, "No such card")
+                if (APlus.find(g.id) == null) return bad(404, "No such card")
                 val grade = Grade.entries.getOrNull(g.grade - 1) ?: return bad(400, "Grade is 1–4")
                 store.edit { APlus.graded(it, g.id, grade) }
                 ok(json.encodeToString(Msg(true)))

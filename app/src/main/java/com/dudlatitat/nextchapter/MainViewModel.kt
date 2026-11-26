@@ -171,7 +171,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     // ---- Life tab: A+, career, people ----
     fun gradeAPlus(id: String, g: Grade) = store.edit { s -> com.dudlatitat.nextchapter.data.APlus.graded(s, id, g) }
-    fun setAPlusExam(iso: String?) = store.edit { it.copy(aplusExam = iso) }
+    /** The exam date for the A+ core you're on (shared with its tile on Career path). */
+    fun setAPlusExam(iso: String?) = store.edit { s -> com.dudlatitat.nextchapter.data.Career.withDate(s, if (com.dudlatitat.nextchapter.data.APlus.core(s) == 2) "aplus2" else "aplus1", iso) }
+    fun setCertDate(id: String, iso: String?) = store.edit { com.dudlatitat.nextchapter.data.Career.withDate(it, id, iso) }
+    fun setCertPassed(id: String, passed: Boolean) = store.edit { com.dudlatitat.nextchapter.data.Career.withPassed(it, id, passed) }
+    fun setCertStudying(id: String, on: Boolean) = store.edit { com.dudlatitat.nextchapter.data.Career.withStudying(it, id, on) }
     fun setAPlusPerDay(n: Int) = store.edit { it.copy(aplusPerDay = n.coerceIn(3, 30)) }
     fun cycleCert(id: String) = store.edit { s ->
         val certs = com.dudlatitat.nextchapter.data.Career.certs(s)

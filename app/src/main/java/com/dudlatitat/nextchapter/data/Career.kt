@@ -88,6 +88,51 @@ object Career {
         return sync(state.copy(certs = certs))
     }
 
+    // ---- Status that follows what you do ----
+
+    private fun rank(st: String) = statuses.indexOf(st).coerceAtLeast(0)
+
+    /** A cert's exam date (A+ Core 1 also reads the older A+ exam date). */
+    fun dateOf(s: AppState, c: CertStep): String? = c.date ?: if (c.id == "aplus1") s.aplusExam else null
+
+    /** A+ cards of a core you've started ("c1:" / "c2:"). */
+    private fun studied(s: AppState, prefix: String) = s.aplus.any { it.id.startsWith(prefix) && it.firstSeen != null }
+
+    /**
+     * What the tile shows: "passed" only when you said so; otherwise the further of what you set and
+     * what the app sees (an exam date means booked; A+ cards reviewed means studying).
+     */
+    fun effective(s: AppState, c: CertStep): String {
+        if (c.status == "passed") return "passed"
+        val seen = when {
+            dateOf(s, c) != null -> "booked"
+            c.id == "aplus1" && studied(s, "c1:") -> "studying"
+            c.id == "aplus2" && studied(s, "c2:") -> "studying"
+            else -> "planned"
+        }
+        return statuses[maxOf(rank(c.status), rank(seen))]
+    }
+
+    fun status(s: AppState, id: String): String = certs(s).firstOrNull { it.id == id }?.let { effective(s, it) } ?: "planned"
+
+    private fun edit(s: AppState, id: String, f: (CertStep) -> CertStep): AppState =
+        sync(s.copy(certs = certs(s).map { if (it.id == id) f(it) else it }))
+
+    /** Sets (or clears) a cert's exam date. Core 1's is also kept in the older A+ date so nothing reads a stale one. */
+    fun withDate(s: AppState, id: String, iso: String?): AppState =
+        edit(s, id) { it.copy(date = iso) }.let { if (id == "aplus1") it.copy(aplusExam = iso) else it }
+
+    /** "I passed 🎉" (or undo: back to studying). Passing Core 1 moves A+ study to Core 2. */
+    fun withPassed(s: AppState, id: String, passed: Boolean): AppState =
+        edit(s, id) { it.copy(status = if (passed) "passed" else "studying") }
+
+    /** For certs without cards (Network+, Security+): "I'm studying this" on or off. */
+    fun withStudying(s: AppState, id: String, on: Boolean): AppState =
+        edit(s, id) { it.copy(status = if (on) "studying" else "planned") }
+
+    /** The first cert not passed yet: what Career path calls "next". */
+    fun next(s: AppState): CertStep? = certs(s).firstOrNull { effective(s, it) != "passed" }
+
     /** Postings to remind about today: 3 days and 1 day before the deadline. */
     fun remindToday(state: AppState, today: LocalDate): List<JobPosting> =
         deadlinesSoon(state, today, 3).filter { it.second == 3L || it.second == 1L }.map { it.first }

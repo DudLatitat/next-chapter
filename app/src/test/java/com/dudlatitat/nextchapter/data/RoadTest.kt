@@ -33,3 +33,18 @@ class RoadLeftTest {
         org.junit.Assert.assertEquals("Thu · Dec 31", Road.weekdayDate(d("2026-12-31"), d("2026-11-26")))
     }
 }
+
+class RoadPastTest {
+    private fun d(s: String) = java.time.LocalDate.parse(s).toEpochDay()
+    @org.junit.Test fun pastTripsStartTheRoad() {
+        val today = d("2026-11-26")
+        val s = AppState(moveDate = "2029-11-26", trips = listOf(Trip("a", "2025-11-26"), Trip("b", "2026-05-01"), Trip("c", "2027-01-15")))
+        org.junit.Assert.assertEquals(listOf(d("2025-11-26"), d("2026-05-01")), Road.past(s, today))
+        org.junit.Assert.assertEquals(d("2025-11-26"), Road.start(s, today))
+        // One year done of four: today sits a quarter of the way along.
+        org.junit.Assert.assertEquals(0.25f, Road.share(today, Road.start(s, today), d("2029-11-26")), 0.01f)
+        org.junit.Assert.assertEquals(today, Road.start(AppState(), today))
+        // Upcoming marks are unchanged.
+        org.junit.Assert.assertEquals(listOf(Road.Kind.TRIP, Road.Kind.MOVE), Road.marks(s, today).map { it.kind })
+    }
+}

@@ -47,8 +47,8 @@ object PracticeTest {
     const val PASS = 0.75f
 
     /** How many questions each domain gets, in proportion to its share of the exam (largest remainder). */
-    fun perDomain(n: Int): Map<Int, Int> {
-        val shares = APlus.domains.mapValues { it.value.second * n / 100.0 }
+    fun perDomain(n: Int, core: Int = 1): Map<Int, Int> {
+        val shares = APlus.domainsOf(core).mapValues { it.value.second * n / 100.0 }
         val base = shares.mapValues { it.value.toInt() }.toMutableMap()
         var left = n - base.values.sum()
         shares.entries.sortedByDescending { it.value - it.value.toInt() }.forEach { if (left > 0) { base[it.key] = base.getValue(it.key) + 1; left-- } }
@@ -59,9 +59,9 @@ object PracticeTest {
      * Builds a test. Wrong options are other answers from the same domain, so they sound
      * plausible (a port among ports, a RAID level among RAID levels).
      */
-    fun build(n: Int = 20, random: Random = Random.Default): List<Question> =
-        perDomain(n).flatMap { (d, count) ->
-            val pool = APlus.core1.filter { it.domain == d }
+    fun build(n: Int = 20, random: Random = Random.Default, core: Int = 1): List<Question> =
+        perDomain(n, core).flatMap { (d, count) ->
+            val pool = APlus.cardsOf(core).filter { it.domain == d }
             pool.shuffled(random).take(count).map { card ->
                 val wrong = pool.filter { it.id != card.id && it.a != card.a }.shuffled(random).take(3).map { it.a }
                 val options = (wrong + card.a).shuffled(random)

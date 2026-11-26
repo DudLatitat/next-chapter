@@ -17,8 +17,11 @@ object Road {
         val move = parse(s.moveDate)
         val end = move ?: Long.MAX_VALUE
         val out = mutableListOf<Mark>()
-        parse(s.aplusExam)?.let { out += Mark(it, "A+ exam", Kind.EXAM) }
-        Career.certs(s).forEach { c -> parse(c.date)?.takeIf { c.status != "passed" }?.let { out += Mark(it, c.name.substringBefore(" ("), Kind.CERT) } }
+        Career.certs(s).forEach { c ->
+            parse(Career.dateOf(s, c))?.takeIf { c.status != "passed" }?.let {
+                out += Mark(it, c.name.substringBefore(" (").let { n -> if (c.id.startsWith("aplus")) "$n exam" else n }, if (c.id.startsWith("aplus")) Kind.EXAM else Kind.CERT)
+            }
+        }
         s.trips.forEach { t -> parse(t.depart)?.let { out += Mark(it, "Trip ✈", Kind.TRIP) } }
         val upcoming = out.filter { it.day in day..end }.distinctBy { it.day to it.kind }.sortedBy { it.day }
         return upcoming + listOfNotNull(move?.takeIf { it >= day }?.let { Mark(it, "成都", Kind.MOVE) })
@@ -67,6 +70,16 @@ object Road {
         val pat = if (d.year == java.time.LocalDate.ofEpochDay(today).year) "EEE · MMM d" else "EEE · MMM d, yyyy"
         return d.format(java.time.format.DateTimeFormatter.ofPattern(pat, java.util.Locale.US))
     }
+
+    /** Trips you've already taken (departure days before today), oldest first. */
+    fun past(s: AppState, day: Long = today()): List<Long> =
+        s.trips.mapNotNull { parse(it.depart) }.filter { it < day }.distinct().sorted()
+
+    /** Where the drawn road starts: your first trip, or today when there's none yet. */
+    fun start(s: AppState, day: Long = today()): Long = past(s, day).firstOrNull() ?: day
+
+    /** A day's share of the road from [start] to [end], 0–1. */
+    fun share(x: Long, start: Long, end: Long): Float = if (end <= start) 1f else ((x - start).toFloat() / (end - start)).coerceIn(0f, 1f)
 
     /** "Mar 3" style, for labels. */
     fun short(day: Long): String = java.time.LocalDate.ofEpochDay(day).format(java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US))

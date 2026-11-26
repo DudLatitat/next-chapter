@@ -27,8 +27,8 @@ class ExamPlanTest {
         assertNull("exam passed", ExamPlan.of(AppState(aplusExam = exam(-1)), d, total = 140))
         // Inside the last week: everything left needs seeing now, capped at 30 a day.
         assertEquals(30, ExamPlan.of(AppState(aplusExam = exam(3)), d, total = 140)!!.newPerDay)
-        val allSeen = AppState(aplusExam = exam(20), aplus = (1..140).map { Review("q$it", firstSeen = d - 5, interval = 8) })
-        val p = ExamPlan.of(allSeen, d, total = 140)!!
+        val allSeen = AppState(aplusExam = exam(20), aplus = APlus.core1.map { Review(it.id, firstSeen = d - 5, interval = 8) })
+        val p = ExamPlan.of(allSeen, d, total = APlus.core1.size)!!
         assertEquals(0, p.unseen); assertEquals(100, p.readyPct)
         assertTrue(p.line.startsWith("Every card seen"))
     }

@@ -64,6 +64,14 @@ import com.dudlatitat.nextchapter.data.People
 import com.dudlatitat.nextchapter.data.Person
 import com.dudlatitat.nextchapter.data.PersonDate
 import com.dudlatitat.nextchapter.data.daysUntil
+import com.dudlatitat.nextchapter.data.prettyDate
+import com.dudlatitat.nextchapter.data.parseDate
+import com.dudlatitat.nextchapter.data.CertStep
+import com.dudlatitat.nextchapter.data.APlus2
+import com.dudlatitat.nextchapter.data.Road
+import com.dudlatitat.nextchapter.ui.components.pressClick
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.ExperimentalMaterial3Api
 import com.dudlatitat.nextchapter.data.friendlySpan
 import com.dudlatitat.nextchapter.data.today
 import com.dudlatitat.nextchapter.ui.components.Bar
@@ -98,7 +106,7 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
     com.dudlatitat.nextchapter.ui.components.SubNav(page, isRoot = { it == null }, label = "life") { p ->
         when {
             p == "aplus" -> APlusReview(state, vm, onBack = { page = null })
-            p == "test" -> PracticeTestScreen(vm, onBack = { page = null })
+            p == "test" -> PracticeTestScreen(vm, APlus.core(state), onBack = { page = null })
             p == "routine" -> RoutineScreen(state, vm, onBack = { page = null })
             p == "career" -> CareerPage(state, vm, onBack = { page = null })
             p?.startsWith("person:") == true -> {
@@ -115,6 +123,7 @@ fun LifeScreen(state: AppState, vm: MainViewModel, startAPlus: Boolean = false, 
 private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.compose.runtime.MutableState<String?>) {
     var page by pageState
     var pickingExam by remember { mutableStateOf(false) }
+    var passingExam by remember { mutableStateOf(false) }
     var bodyOpen by remember { mutableStateOf(false) }
     var winsOpen by remember { mutableStateOf(false) }
     val wide = com.dudlatitat.nextchapter.ui.components.isWide()
@@ -146,18 +155,15 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         }
         val right: @Composable () -> Unit = {
             SectionLabel("A+ exam")
-            APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" })
+            APlusCard(state, vm, onStart = { page = "aplus" }, onPickExam = { pickingExam = true }, onTest = { page = "test" }, onPassed = { passingExam = true })
             StudyTimer(state, vm)
+            BodyGlance(state) { bodyOpen = true }
             SectionLabel("Your path")
             com.dudlatitat.nextchapter.ui.components.ListGroup {
-                val next = com.dudlatitat.nextchapter.data.Career.certs(state).firstOrNull { it.status != "passed" }
+                val next = com.dudlatitat.nextchapter.data.Career.next(state)?.let { it.copy(status = com.dudlatitat.nextchapter.data.Career.effective(state, it)) }
                 com.dudlatitat.nextchapter.ui.components.ListRow(
-                    "Career path", subtitle = next?.let { "Next: ${it.name} · ${it.status}" } ?: "Certs, classes and job postings",
+                    "Career path", subtitle = next?.let { "Next: ${it.name.substringBefore(" (")} · ${it.status}" } ?: "Certs, classes and job postings",
                     leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("业", Night.violet) }, onClick = { page = "career" },
-                )
-                com.dudlatitat.nextchapter.ui.components.ListRow(
-                    "Body", subtitle = com.dudlatitat.nextchapter.data.Body.pill(state, com.dudlatitat.nextchapter.data.today()),
-                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.mint) }, onClick = { bodyOpen = true },
                 )
                 // Faith: prayer days and the prayer ladder (it lives on the Chinese tab).
                 val planNav = com.dudlatitat.nextchapter.ui.components.LocalPlanNav.current
@@ -184,7 +190,8 @@ private fun LifeHome(state: AppState, vm: MainViewModel, pageState: androidx.com
         item { Spacer(Modifier.height(8.dp)) }
     }
 
-    if (pickingExam) PickDate(state.aplusExam, onDismiss = { pickingExam = false }) { vm.setAPlusExam(it); pickingExam = false }
+    if (pickingExam) PickDate(APlus.examDate(state), onDismiss = { pickingExam = false }) { vm.setAPlusExam(it); pickingExam = false }
+    if (passingExam) PassedDialog(state, vm, if (APlus.core(state) == 2) "aplus2" else "aplus1") { passingExam = false }
     // Body lives here now (Today stays about the day, not the scale).
     if (bodyOpen) androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = { bodyOpen = false },
@@ -233,19 +240,20 @@ private fun CareerPage(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
  * domains with cards-a-day folded in the last row.
  */
 @Composable
-private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, onPickExam: () -> Unit, onTest: () -> Unit) {
+private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, onPickExam: () -> Unit, onTest: () -> Unit, onPassed: () -> Unit) {
     val queue = APlus.queue(state)
     val strength = APlus.strength(state)
     val weakest = APlus.weakest(state)
-    val known = state.aplus.count { it.interval >= 7 }
-    val days = daysUntil(state.aplusExam)
+    val known = APlus.known(state)
+    val days = daysUntil(APlus.examDate(state))
+    val exam = APlus.examName(state)
     var details by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     com.dudlatitat.nextchapter.ui.components.ListGroup {
         com.dudlatitat.nextchapter.ui.components.ListRow(
-            if (known > 0) "A+ Core 1 · $known known" else "A+ Core 1",
-            subtitle = if (queue.isEmpty()) "All done for today ✓" else "${queue.size} cards · about ${maxOf(1, queue.size / 4)} min" + (weakest?.let { " · focus ${APlus.domains.getValue(it).first}" } ?: ""),
+            if (known > 0) "$exam · $known known" else exam,
+            subtitle = if (queue.isEmpty()) "All done for today ✓" else "${queue.size} cards · about ${maxOf(1, queue.size / 4)} min" + (weakest?.let { " · focus ${APlus.domains(state).getValue(it).first}" } ?: ""),
             leading = {
-                ProgressRing(known / APlus.core1.size.toFloat(), 44.dp, Night.violet, stroke = 4.dp) {
+                ProgressRing(known / APlus.deck(state).size.toFloat(), 44.dp, Night.violet, stroke = 4.dp) {
                     Text("考", style = MaterialTheme.typography.titleMedium, color = Night.violet)
                 }
             },
@@ -256,12 +264,15 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
         com.dudlatitat.nextchapter.ui.components.ListRow(
             when {
                 days == null -> "Set your exam date"
-                days < 0 -> "Exam date passed · set the next one"
+                days < 0 -> "How did the exam go?"
+                days == 0L -> "Exam day. You've got this 💪"
                 else -> "Exam in ${friendlySpan(days)}"
             },
             subtitle = plan?.line ?: if (days == null) "A date turns this into a plan" else null,
             titleColor = if (days != null && days in 0..14) Night.coral else Night.ink,
             leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("日", Night.sun) }, onClick = onPickExam,
+            // On exam day or after: the one place to say you passed (it also lives on Career path).
+            trailing = if (days != null && days <= 0) ({ com.dudlatitat.nextchapter.ui.components.GoChip("I passed 🎉", Night.jade, onPassed) }) else null,
         )
         val last = state.tests.lastOrNull()
         com.dudlatitat.nextchapter.ui.components.ListRow(
@@ -278,9 +289,10 @@ private fun APlusCard(state: AppState, vm: MainViewModel, onStart: () -> Unit, o
         androidx.compose.animation.AnimatedVisibility(details) {
             Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
                 // The five domains in one row: short name, a mini bar, how much you know.
-                val short = mapOf(1 to "Mobile", 2 to "Network", 3 to "Hardware", 4 to "Cloud", 5 to "Fixes")
+                val short = if (APlus.core(state) == 2) mapOf(1 to "Systems", 2 to "Security", 3 to "Fixes", 4 to "Procedures")
+                    else mapOf(1 to "Mobile", 2 to "Network", 3 to "Hardware", 4 to "Cloud", 5 to "Fixes")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    APlus.domains.forEach { (d, _) ->
+                    APlus.domains(state).forEach { (d, _) ->
                         val s0 = strength[d] ?: 0f
                         val c = if (d == weakest) Night.sun else Night.jade
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -309,7 +321,7 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
     val total = remember { queue.size }
     var done by remember { mutableIntStateOf(0) }
     var shown by remember { mutableStateOf(false) }
-    val card = queue.firstOrNull()?.let { id -> APlus.core1.firstOrNull { it.id == id } }
+    val card = queue.firstOrNull()?.let { id -> APlus.find(id) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp)) {
         Row(Modifier.padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -332,7 +344,7 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
         }
         Spacer(Modifier.height(10.dp))
         GlassCard(highlight = true, onClick = { shown = true }, modifier = Modifier.animateContentSize()) {
-            Text(APlus.domains.getValue(card.domain).first, style = MaterialTheme.typography.labelMedium, color = Night.violet)
+            Text(APlus.domainName(card), style = MaterialTheme.typography.labelMedium, color = Night.violet)
             Spacer(Modifier.height(10.dp))
             Text(card.q, style = MaterialTheme.typography.headlineSmall, color = Night.ink)
             Spacer(Modifier.height(16.dp))
@@ -367,35 +379,185 @@ private fun APlusReview(state: AppState, vm: MainViewModel, onBack: () -> Unit) 
     }
 }
 
+// ---- Body ----
+
+/** 身体 · Body at a glance: your weight (and goal), this week's change, today's calories as a ring. Tap to log. */
+@Composable
+private fun BodyGlance(state: AppState, onOpen: () -> Unit) {
+    val day = com.dudlatitat.nextchapter.data.today()
+    val B = com.dudlatitat.nextchapter.data.Body
+    val w = B.latest(state.weights)
+    val eaten = B.caloriesOn(state.calorieAdds, day)
+    val target = state.calorieTarget
+    GlassCard(onClick = onOpen) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.dudlatitat.nextchapter.ui.components.IconBadge("身", Night.mint, 44.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                if (w == null) {
+                    Text("Body", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("Weight and meals, a tap or two a day", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                } else {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("${B.lbs(w.lb)} lb", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle.copy(fontSize = 20.sp), color = Night.ink)
+                        state.goalWeight?.let { Text("  → ${B.lbs(it)}", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.violet, modifier = Modifier.padding(bottom = 2.dp)) }
+                    }
+                    val wk = B.weekChange(state.weights)
+                    val trend = wk?.let { " · " + (if (it <= 0) "−" else "+") + B.lbs(kotlin.math.abs(it)) + "/wk" } ?: ""
+                    Text(
+                        (if (w.day == day) "Today ✓" else "Tap to log today") + trend,
+                        style = MaterialTheme.typography.bodySmall, color = if (w.day == day) Night.mint else Night.muted, maxLines = 1,
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            // Today's food as a ring (no ring without a target: just the number).
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (target > 0) ProgressRing((eaten / target.toFloat()).coerceIn(0f, 1f), 52.dp, if (eaten > target) Night.sun else Night.mint, stroke = 4.dp) {
+                    Text(B.cal(eaten), style = com.dudlatitat.nextchapter.ui.theme.MonoStyle.copy(fontSize = 11.sp), color = Night.ink, maxLines = 1)
+                } else Text(B.cal(eaten), style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.ink)
+                Text(if (target > 0) "of ${B.cal(target)}" else "cal today", style = MaterialTheme.typography.labelSmall, color = Night.muted, maxLines = 1)
+            }
+        }
+    }
+}
+
 // ---- Career ----
 
 private fun certColor(status: String) = when (status) { "studying" -> Night.violet; "booked" -> Night.sun; "passed" -> Night.jade; else -> Night.muted }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Certifications: each tile shows where it really is (an exam date means booked; reviewing A+
+ * cards means studying; passed only when you say so). Tap a tile for its date and "I passed".
+ */
 @Composable
 private fun CertPath(state: AppState, vm: MainViewModel) {
     val certs = Career.certs(state)
+    var open by remember { mutableStateOf<String?>(null) }
+    val today = com.dudlatitat.nextchapter.data.today()
     GlassCard {
-        Text("Certifications · ${certs.count { it.status == "passed" }}/${certs.size} passed", style = MaterialTheme.typography.titleMedium, color = Night.ink)
-        Text("Tap one to move it along: planned → studying → booked → passed", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        val passed = certs.count { Career.effective(state, it) == "passed" }
+        Text(if (passed == 0) "Certifications" else "Certifications · $passed/${certs.size} passed", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+        Text("They follow what you do. Tap one for its exam date.", style = MaterialTheme.typography.bodySmall, color = Night.muted)
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             certs.chunked(2).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { c ->
-                        val color = certColor(c.status)
+                        val st = Career.effective(state, c)
+                        val color = certColor(st)
+                        val date = Career.dateOf(state, c)?.let { parseDate(it) }
+                        // The A+ core you're on shows how ready you are.
+                        val active = c.id == (if (APlus.core(state) == 2) "aplus2" else "aplus1") && st != "passed"
                         Column(
-                            Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                                .background(color.copy(alpha = 0.12f)).clickable { vm.cycleCert(c.id) }.padding(10.dp),
+                            Modifier.weight(1f).heightIn(min = 76.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                .background(color.copy(alpha = 0.12f)).pressClick { open = c.id }.padding(10.dp),
                         ) {
                             Text(c.name.substringBefore(" ("), style = MaterialTheme.typography.labelLarge, color = Night.ink, maxLines = 1)
-                            Text((if (c.status == "passed") "✓ " else "") + c.status, style = MaterialTheme.typography.labelSmall, color = color)
+                            Text(
+                                when {
+                                    st == "passed" -> "✓ passed"
+                                    st == "booked" && date != null -> "booked · " + Road.short(date.toEpochDay())
+                                    else -> st
+                                },
+                                style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1,
+                            )
+                            if (active && APlus.started(state)) Text("${APlus.readyPct(state)}% ready", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle.copy(fontSize = 11.sp), color = Night.muted)
+                            else if (st == "booked" && date != null && date.toEpochDay() >= today) Text("in ${date.toEpochDay() - today}d", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle.copy(fontSize = 11.sp), color = Night.muted)
                         }
                     }
                 }
             }
         }
     }
+    open?.let { id -> certs.firstOrNull { it.id == id }?.let { c -> CertSheet(state, vm, c) { open = null } } }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CertSheet(state: AppState, vm: MainViewModel, c: CertStep, onClose: () -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    var passing by remember { mutableStateOf(false) }
+    val st = Career.effective(state, c)
+    val name = c.name.substringBefore(" (")
+    val days = daysUntil(Career.dateOf(state, c))
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Night.ground1,
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text(name, style = MaterialTheme.typography.titleLarge, color = Night.ink)
+            Text(c.name.substringAfter(" (", "").removeSuffix(")").ifEmpty { "CompTIA" } + " · " + st, style = MaterialTheme.typography.bodySmall, color = certColor(st))
+            Spacer(Modifier.height(12.dp))
+            com.dudlatitat.nextchapter.ui.components.ListGroup {
+                com.dudlatitat.nextchapter.ui.components.ListRow(
+                    when { days == null -> "Set the exam date"; days < 0 -> "Exam was ${prettyDate(Career.dateOf(state, c))}"; days == 0L -> "Exam today 💪"; else -> "Exam in ${friendlySpan(days)}" },
+                    subtitle = if (days == null) "Booking it marks this \"booked\"" else prettyDate(Career.dateOf(state, c)),
+                    leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("日", Night.sun) }, onClick = { picking = true },
+                    divider = c.id.startsWith("aplus") || st != "passed",
+                )
+                if (c.id.startsWith("aplus")) {
+                    val core = if (c.id == "aplus2") 2 else 1
+                    val ids = APlus.cardsOf(core).map { it.id }.toSet()
+                    val known = state.aplus.count { it.id in ids && it.interval >= 7 }
+                    com.dudlatitat.nextchapter.ui.components.ListRow(
+                        "Study cards · $known/${ids.size} known",
+                        subtitle = when {
+                            st == "passed" && core == 1 -> "A few come back each day to keep it fresh"
+                            APlus.core(state) == core -> "Your A+ study on Life"
+                            else -> "Starts when Core 1 is passed"
+                        },
+                        leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("考", Night.violet) }, divider = false,
+                    )
+                } else if (st != "passed") {
+                    com.dudlatitat.nextchapter.ui.components.ListRow(
+                        if (c.status == "studying") "Studying this now ✓" else "Studying this now?",
+                        subtitle = if (c.status == "studying") "Tap to set back to planned" else "Tap when you start",
+                        leading = { com.dudlatitat.nextchapter.ui.components.IconBadge("读", Night.violet) }, divider = false,
+                        onClick = { vm.setCertStudying(c.id, c.status != "studying") },
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            if (st == "passed") {
+                TextButton(onClick = { vm.setCertPassed(c.id, false) }, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Not passed after all? Undo", color = Night.muted) }
+            } else {
+                com.dudlatitat.nextchapter.ui.components.PrimaryButton("I passed 🎉", { passing = true }, Modifier.fillMaxWidth(), color = Night.jade)
+            }
+        }
+    }
+    if (picking) PickDate(Career.dateOf(state, c), onDismiss = { picking = false }) { vm.setCertDate(c.id, it); picking = false }
+    if (passing) PassedDialog(state, vm, c.id) { passing = false }
+}
+
+/** "Did you pass?" → yes → a celebration that says what's next. */
+@Composable
+internal fun PassedDialog(state: AppState, vm: MainViewModel, id: String, onClose: () -> Unit) {
+    val c = Career.certs(state).firstOrNull { it.id == id } ?: return
+    val name = c.name.substringBefore(" (")
+    var done by remember { mutableStateOf(false) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        containerColor = Night.ground1,
+        title = { Text(if (done) "🎉 $name passed!" else "Passed $name?", style = MaterialTheme.typography.titleLarge, color = if (done) Night.jade else Night.ink) },
+        text = {
+            Text(
+                if (!done) "Nice. This marks it passed on Career path and ticks it on Move."
+                else when (id) {
+                    "aplus1" -> "了不起！ Core 2 starts now: ${APlus2.cards.size} new cards, weighted like the 220-1202 exam. Core 1 comes back a few cards a day so it stays fresh."
+                    "aplus2" -> "You're A+ certified. 了不起！ That's a real step toward IT work in 成都."
+                    else -> "了不起！ One more on the path."
+                },
+                style = MaterialTheme.typography.bodyMedium, color = Night.muted,
+            )
+        },
+        confirmButton = {
+            if (done) TextButton(onClick = onClose) { Text("Keep going", color = Night.jade) }
+            else TextButton(onClick = { vm.setCertPassed(id, true); done = true }) { Text("Yes, I passed", color = Night.jade) }
+        },
+        dismissButton = { if (!done) TextButton(onClick = onClose) { Text("Not yet", color = Night.muted) } },
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -707,7 +869,7 @@ fun MorningAPlus(state: AppState, vm: MainViewModel, onMore: () -> Unit) {
     }
     val card = APlus.queue(state).firstOrNull() ?: return
     var shown by remember(card.id) { mutableStateOf(false) }
-    Text("A+ card · ${APlus.domains.getValue(card.domain).first}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
+    Text("A+ card · ${APlus.domainName(card)}", style = MaterialTheme.typography.labelMedium, color = Night.muted)
     Column(Modifier.fillMaxWidth().animateContentSize().clickable { shown = true }) {
         Text(card.q, style = MaterialTheme.typography.titleMedium, color = Night.ink)
         if (shown) Text(card.a, style = MaterialTheme.typography.bodyLarge, color = Night.sun)
@@ -789,8 +951,8 @@ private fun StudyTimer(state: AppState, vm: MainViewModel) {
 
 /** 20 mixed questions, about a minute each like the real exam; misses come back in your reviews. */
 @Composable
-private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
-    val questions = remember { com.dudlatitat.nextchapter.data.PracticeTest.build(20) }
+private fun PracticeTestScreen(vm: MainViewModel, core: Int, onBack: () -> Unit) {
+    val questions = remember { com.dudlatitat.nextchapter.data.PracticeTest.build(20, core = core) }
     var index by remember { mutableIntStateOf(0) }
     var picked by remember { mutableStateOf<Int?>(null) }
     val missed = remember { mutableStateListOf<String>() }
@@ -857,7 +1019,7 @@ private fun PracticeTestScreen(vm: MainViewModel, onBack: () -> Unit) {
         val q = questions[index]
         Spacer(Modifier.height(8.dp))
         GlassCard(highlight = true) {
-            Text(APlus.domains.getValue(q.card.domain).first, style = MaterialTheme.typography.labelMedium, color = Night.violet)
+            Text(APlus.domainName(q.card), style = MaterialTheme.typography.labelMedium, color = Night.violet)
             Spacer(Modifier.height(8.dp))
             Text(q.card.q, style = MaterialTheme.typography.titleLarge, color = Night.ink)
         }

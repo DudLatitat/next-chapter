@@ -189,22 +189,49 @@ object APlus {
         q(5, "raid-fail", "RAID 5 array says degraded?", "One drive failed: replace it soon so the array rebuilds before another fails."),
     )
 
+    // ---- Which exam you're on: Core 1 until it's passed, then Core 2 ----
+
+    /** 1 until Core 1 is marked passed (Career path), then 2. */
+    fun core(s: AppState): Int = if (Career.status(s, "aplus1") == "passed") 2 else 1
+    fun cardsOf(core: Int): List<Q> = if (core == 2) APlus2.cards else core1
+    fun domainsOf(core: Int): Map<Int, Pair<String, Int>> = if (core == 2) APlus2.domains else domains
+    /** The cards you're studying now. */
+    fun deck(s: AppState): List<Q> = cardsOf(core(s))
+    fun domains(s: AppState): Map<Int, Pair<String, Int>> = domainsOf(core(s))
+    /** Every A+ card (both cores), for looking one up by id. */
+    val all: List<Q> by lazy { core1 + APlus2.cards }
+    fun find(id: String): Q? = all.firstOrNull { it.id == id }
+    /** A card's domain name, from its own core. */
+    fun domainName(q: Q): String = domainsOf(if (q.id.startsWith("c2:")) 2 else 1)[q.domain]?.first ?: ""
+    /** "A+ Core 1" / "A+ Core 2". */
+    fun examName(s: AppState): String = "A+ Core ${core(s)}"
+    /** The exam date for the core you're on: the cert's date in Career path (Core 1 also reads the older A+ date). */
+    fun examDate(s: AppState): String? {
+        val id = if (core(s) == 2) "aplus2" else "aplus1"
+        return Career.certs(s).firstOrNull { it.id == id }?.date ?: if (id == "aplus1") s.aplusExam else null
+    }
+    /** After passing Core 1, at most this many of its due cards come back a day, to keep it fresh. */
+    const val REFRESH = 3
+
     /** A card's saved review, or a fresh one. */
     fun review(state: AppState, id: String): Review = state.aplus.firstOrNull { it.id == id } ?: Review(id)
 
     /** Due reviews first, then today's share of new cards, taking turns through the domains. */
     fun queue(state: AppState, day: Long = today()): List<Q> {
         val reviews = state.aplus.associateBy { it.id }
-        val due = core1.filter { reviews[it.id]?.let { r -> r.firstSeen != null && r.due <= day } == true }
-            .sortedBy { reviews.getValue(it.id).due }
+        val deck = deck(state)
+        fun isDue(q: Q) = reviews[q.id]?.let { r -> r.firstSeen != null && r.due <= day } == true
+        val due = deck.filter(::isDue).sortedBy { reviews.getValue(it.id).due }
+        // On Core 2: a few due Core 1 cards as a light refresh.
+        val refresh = if (core(state) == 2) core1.filter(::isDue).sortedBy { reviews.getValue(it.id).due }.take(REFRESH) else emptyList()
         val introducedToday = state.aplus.count { it.firstSeen == day }
         val room = max(0, state.aplusPerDay - introducedToday)
-        val fresh = core1.filter { reviews[it.id]?.firstSeen == null }
+        val fresh = deck.filter { reviews[it.id]?.firstSeen == null }
         val byDomain = fresh.groupBy { it.domain }.values.map { it.toMutableList() }
         val mixed = buildList {
             while (byDomain.any { it.isNotEmpty() }) byDomain.forEach { l -> if (l.isNotEmpty()) add(l.removeAt(0)) }
         }
-        return due + mixed.take(room)
+        return due + refresh + mixed.take(room)
     }
 
     /** Grades one card with the same scheduler as the Chinese cards. */
@@ -223,19 +250,36 @@ object APlus {
     fun graded(s: AppState, id: String, g: Grade, day: Long = today()): AppState =
         s.copy(aplus = withReview(s.aplus, grade(review(s, id), g, day)))
 
-    /** Share of each domain's cards you know (remembered a week or more), 0–1. */
+    /** Cards of the current exam you know (remembered a week or more). */
+    fun known(state: AppState): Int {
+        val ids = deck(state).map { it.id }.toSet()
+        return state.aplus.count { it.id in ids && it.interval >= 7 }
+    }
+
+    /** 0–100: how much of the current exam's deck you know. */
+    fun readyPct(state: AppState): Int = deck(state).size.let { n -> if (n == 0) 0 else known(state) * 100 / n }
+
+    /** Whether you've started the current exam's cards. */
+    fun started(state: AppState): Boolean {
+        val ids = deck(state).map { it.id }.toSet()
+        return state.aplus.any { it.id in ids && it.firstSeen != null }
+    }
+
+    /** Share of each domain's cards you know (remembered a week or more), 0–1, for the current exam. */
     fun strength(state: AppState): Map<Int, Float> {
         val known = state.aplus.filter { it.interval >= 7 }.map { it.id }.toSet()
-        return domains.keys.associateWith { d ->
-            val cards = core1.filter { it.domain == d }
+        val deck = deck(state)
+        return domains(state).keys.associateWith { d ->
+            val cards = deck.filter { it.domain == d }
             if (cards.isEmpty()) 0f else cards.count { it.id in known } / cards.size.toFloat()
         }
     }
 
     /** The domain that most needs work, weighted by its share of the exam; null before you start. */
     fun weakest(state: AppState): Int? {
-        if (state.aplus.none { it.firstSeen != null }) return null
+        if (!started(state)) return null
         val s = strength(state)
-        return domains.keys.maxByOrNull { d -> (1f - (s[d] ?: 0f)) * domains.getValue(d).second }
+        val ds = domains(state)
+        return ds.keys.maxByOrNull { d -> (1f - (s[d] ?: 0f)) * ds.getValue(d).second }
     }
 }

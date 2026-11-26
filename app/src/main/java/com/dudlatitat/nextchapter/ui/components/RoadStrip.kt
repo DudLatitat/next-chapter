@@ -80,7 +80,16 @@ fun RoadStrip(state: AppState, modifier: Modifier = Modifier, rows: Boolean = tr
     if (marks.isEmpty()) return
     val end = marks.last().day
     Column(modifier.fillMaxWidth()) {
-        RoadLine(marks, day, end)
+        val past = remember(state, day) { Road.past(state, day) }
+        RoadLine(marks, day, end, Road.start(state, day), past)
+        if (past.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(Night.rose))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (past.size == 1) "1 visit so far" else "${past.size} visits so far",
+                style = MaterialTheme.typography.labelMedium, color = Night.rose,
+            )
+        }
         if (!rows) return@Column
         Spacer(Modifier.height(10.dp))
         val shown = (marks.dropLast(1).take(3) + marks.last()).distinct()
@@ -104,39 +113,53 @@ fun RoadStrip(state: AppState, modifier: Modifier = Modifier, rows: Boolean = tr
 }
 
 /**
- * Today on the left, 成都 on the right. The travelled-to part glows from ink to gold; each
- * milestone is a small badge on the line (pushed apart when dates are close); New Year ticks
- * mark the years underneath.
+ * Your first trip on the left (or today, before any), 成都 on the right. The stretch you've
+ * already travelled is solid, with a rose dot for each visit; the way ahead is dashed and glows
+ * to gold. Milestones are small badges on the line (pushed apart when dates are close), and New
+ * Year ticks mark the years.
  */
 @Composable
-private fun RoadLine(marks: List<Road.Mark>, day: Long, end: Long) {
-    val ticks = remember(day, end) { Road.yearTicks(day, end) }
+private fun RoadLine(marks: List<Road.Mark>, day: Long, end: Long, start: Long, past: List<Long>) {
+    val n = Road.share(day, start, end)
+    val ticks = remember(start, end, day) { Road.yearTicks(start, end).filter { kotlin.math.abs(it.second - n) > 0.1f } }
     BoxWithConstraints(Modifier.fillMaxWidth().height(58.dp)) {
         val w = maxWidth
         val pad = 14.dp
         val span = w - pad * 2
         val lineY = 22.dp
-        // "now" (0) goes in first so the first badge keeps clear of it.
-        val at = Road.spread(listOf(0f) + marks.map { it.at(day, end) }, (26f / span.value)).drop(1)
+        // "now" goes in first so the first badge keeps clear of it.
+        val at = Road.spread(listOf(n) + marks.map { Road.share(it.day, start, end) }, (26f / span.value)).drop(1)
         Canvas(Modifier.fillMaxWidth().height(58.dp)) {
             val y = lineY.toPx()
             val l = pad.toPx(); val r = size.width - pad.toPx()
-            // The road: dashed for the way ahead, a soft gold glow under it.
+            val nowX = l + n * (r - l)
+            // The way ahead: dashed, ink → violet → gold.
             drawLine(
-                Brush.horizontalGradient(listOf(Night.ink.copy(alpha = 0.5f), Night.violet.copy(alpha = 0.5f), Night.sun), startX = l, endX = r),
-                Offset(l, y), Offset(r, y), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round,
+                Brush.horizontalGradient(listOf(Night.ink.copy(alpha = 0.5f), Night.violet.copy(alpha = 0.5f), Night.sun), startX = nowX, endX = r),
+                Offset(nowX, y), Offset(r, y), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round,
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 6.dp.toPx())),
+            )
+            // Already travelled: solid rose → ink, a little thicker.
+            if (nowX > l) drawLine(
+                Brush.horizontalGradient(listOf(Night.rose.copy(alpha = 0.7f), Night.ink.copy(alpha = 0.85f)), startX = l, endX = nowX),
+                Offset(l, y), Offset(nowX, y), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round,
             )
             // Year ticks.
             ticks.forEach { (_, a) ->
                 val x = l + a * (r - l)
                 drawLine(Night.muted.copy(alpha = 0.5f), Offset(x, y + 6.dp.toPx()), Offset(x, y + 12.dp.toPx()), strokeWidth = 1.5.dp.toPx())
             }
+            // Visits so far.
+            past.forEach { p ->
+                val x = l + Road.share(p, start, end) * (r - l)
+                drawCircle(Night.ground2, 5.5.dp.toPx(), Offset(x, y))
+                drawCircle(Night.rose, 4.dp.toPx(), Offset(x, y))
+            }
             // 成都: a warm halo.
             drawCircle(Brush.radialGradient(listOf(Night.sun.copy(alpha = 0.45f), Color.Transparent), center = Offset(r, y), radius = 18.dp.toPx()), 18.dp.toPx(), Offset(r, y))
             // You are here.
-            drawCircle(Night.ink, 6.dp.toPx(), Offset(l, y))
-            drawCircle(Night.ink.copy(alpha = 0.25f), 10.dp.toPx(), Offset(l, y))
+            drawCircle(Night.ink.copy(alpha = 0.25f), 10.dp.toPx(), Offset(nowX, y))
+            drawCircle(Night.ink, 6.dp.toPx(), Offset(nowX, y))
         }
         // Milestone badges sit on the line.
         marks.forEachIndexed { i, m ->
@@ -147,8 +170,15 @@ private fun RoadLine(marks: List<Road.Mark>, day: Long, end: Long) {
                 contentAlignment = Alignment.Center,
             ) { Text(glyphOf(m.kind), color = Night.ground2, fontSize = (s.value * 0.5f).sp, maxLines = 1) }
         }
-        // Labels under the line: now, the years, 成都.
-        Text("now", style = MonoStyle.copy(fontSize = 11.sp), color = Night.muted, modifier = Modifier.offset(y = 38.dp))
+        // Labels under the line: the first visit's year, now, the years, 成都.
+        if (past.isNotEmpty() && n > 0.18f) Text(
+            "${java.time.LocalDate.ofEpochDay(start).year}", style = MonoStyle.copy(fontSize = 11.sp), color = Night.rose.copy(alpha = 0.8f),
+            modifier = Modifier.offset(y = 38.dp),
+        )
+        Text(
+            "now", style = MonoStyle.copy(fontSize = 11.sp), color = Night.ink, textAlign = TextAlign.Center,
+            modifier = Modifier.width(40.dp).offset(x = (pad + span * n - 20.dp).coerceAtLeast(0.dp), y = 38.dp),
+        )
         ticks.forEach { (y, a) ->
             Text(
                 "$y", style = MonoStyle.copy(fontSize = 11.sp), color = Night.muted, textAlign = TextAlign.Center,

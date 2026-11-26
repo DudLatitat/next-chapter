@@ -18,15 +18,16 @@ object ExamPlan {
     /** Review buffer before the exam: the last week is for review and practice tests only. */
     const val BUFFER_DAYS = 7
 
-    fun of(s: AppState, day: Long = today(), total: Int = APlus.core1.size): Plan? {
-        val exam = s.aplusExam?.let { runCatching { java.time.LocalDate.parse(it).toEpochDay() }.getOrNull() } ?: return null
+    fun of(s: AppState, day: Long = today(), total: Int = APlus.deck(s).size): Plan? {
+        val exam = APlus.examDate(s)?.let { runCatching { java.time.LocalDate.parse(it).toEpochDay() }.getOrNull() } ?: return null
         val left = exam - day
         if (left < 0) return null
-        val seen = s.aplus.count { it.firstSeen != null }
+        val ids = APlus.deck(s).map { it.id }.toSet()
+        val seen = s.aplus.count { it.id in ids && it.firstSeen != null }
         val unseen = (total - seen).coerceAtLeast(0)
         val days = (left - BUFFER_DAYS).coerceAtLeast(1)
         val need = if (unseen == 0) 0 else ((unseen + days - 1) / days).toInt().coerceIn(1, 30)
-        val known = s.aplus.count { it.interval >= 7 }
+        val known = s.aplus.count { it.id in ids && it.interval >= 7 }
         return Plan(left, need, need <= s.aplusPerDay, if (total == 0) 0 else known * 100 / total, unseen)
     }
 }
