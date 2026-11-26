@@ -19,7 +19,7 @@ object Pillars {
         val trip = daysUntil(s.nextTripDate())?.takeIf { it >= 0 }
         // Short values (they sit in a three-across grid); the name line says what they mean.
         return listOf(
-            if (ladder.next == null) Pillar(Id.TALK, "话", "Family ✓", "ready") else Pillar(Id.TALK, "话", "family rung", "${ladder.climbed + 1}/${ladder.rungs.size}"),
+            if (ladder.next == null) Pillar(Id.TALK, "话", "Family ✓", "ready") else Pillar(Id.TALK, "话", "family ladder", "${ladder.climbed + 1}/${ladder.rungs.size}"),
             if (known > 0) Pillar(Id.CAREER, "业", "A+ ready", "$aplusPct%") else Pillar(Id.CAREER, "业", "A+", "start"),
             when {
                 runway != null -> Pillar(Id.MONEY, "钱", "runway", "${"%.0f".format(java.util.Locale.US, runway)} mo")

@@ -121,7 +121,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 }
                 row("her", "她", Night.rose, listOf(state.herName, state.herCity).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { "Her name and city, work and home" }, false)
                 row("remind", "铃", Night.sun, if (state.reminderOn) "Practice reminder at ${timeLabel(state.reminderMinutes)} · never 7–8 pm" else "Practice reminder off · evening plan, wake time", false)
-                row("learn", "学", Night.jade, "${state.newPerDay} new phrases a day · voice · speaking check", false)
+                row("learn", "学", Night.jade, "${state.dailyReviews} for today · ${state.newPerDay} new a day · voice", false)
                 val lookNow = com.dudlatitat.nextchapter.ui.components.LocalLook.current
                 row("look", "看", Night.pearl, (if (lookNow?.glass?.value != false) "Glass on" else "Solid cards") + " · " + (if (lookNow?.calm?.value == true) "calm motion" else "full motion"), false)
                 row("trip", "旅", Night.violet, "Trip mode · use on my computer", false)
@@ -220,6 +220,18 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         }
         if (section == "learn") {
         SectionLabel("Learning")
+        GlassCard {
+            // How many reviews count as "today" (Chinese tab: "10 for today", Today's three).
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Phrases for today", style = MaterialTheme.typography.titleMedium, color = Night.ink)
+                    Text("Your daily review number. After it: \"keep going?\"", style = MaterialTheme.typography.bodySmall, color = Night.muted)
+                }
+                TextButton(onClick = { vm.updatePlan { it.copy(dailyReviews = (it.dailyReviews - 5).coerceAtLeast(5)) } }) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                Text("${state.dailyReviews}", style = MaterialTheme.typography.titleLarge.merge(com.dudlatitat.nextchapter.ui.theme.MonoStyle), color = Night.ink)
+                TextButton(onClick = { vm.updatePlan { it.copy(dailyReviews = (it.dailyReviews + 5).coerceAtMost(100)) } }) { Text("+", style = MaterialTheme.typography.titleLarge) }
+            }
+        }
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

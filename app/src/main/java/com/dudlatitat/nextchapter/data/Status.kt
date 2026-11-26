@@ -7,8 +7,8 @@ package com.dudlatitat.nextchapter.data
 object Status {
     fun chinese(s: AppState, day: Long = today()): List<String> = listOfNotNull(
         Stats.streak(s, day).takeIf { it > 0 }?.let { "🔥$it" },
-        Ready.family(s).let { l -> if (l.next == null) "ladder ✓" else "rung ${l.climbed + 1}/${l.rungs.size}" },
-        s.realUses.map { it.id }.toSet().size.takeIf { it > 0 }?.let { "★$it said for real" },
+        Ready.family(s).let { l -> if (l.next == null) "family ladder ✓" else "family ladder ${l.climbed + 1}/${l.rungs.size}" },
+        s.realUses.map { it.id }.toSet().size.takeIf { it > 0 }?.let { "★$it for real" },
     )
 
     fun life(s: AppState, day: Long = today()): List<String> {

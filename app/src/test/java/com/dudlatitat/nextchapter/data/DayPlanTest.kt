@@ -86,3 +86,17 @@ class SliceTest {
         assertEquals("never more than is due", 3, DayPlan.slice(AppState(cards = due(3), studyDays = listOf(d - 1), newPerDay = 0), d))
     }
 }
+
+class DailyNumberTest {
+    private val d = 20_500L
+    private fun due(n: Int) = (0 until n).map { Card("daily:c$it", "字$it", "zì", "w", "daily", firstSeen = 1, due = d - it, interval = 3, reps = 2) }
+
+    @Test fun yourNumberSetsTodaysSlice() {
+        val s = AppState(cards = due(57), studyDays = listOf(d - 1), newPerDay = 0, dailyReviews = 20)
+        assertEquals(20, DayPlan.slice(s, d))
+        assertEquals("Review 20 phrases", DayPlan.today(s, d).items[0].title)
+        assertEquals("keep going: your number again", 20, DayPlan.sessionSize(s.copy(days = mapOf(d to DayLog(reviews = 20))), d))
+        assertEquals("never below 5", 5, DayPlan.slice(s.copy(dailyReviews = 1), d))
+        assertEquals("comeback stays an easy 5", 5, DayPlan.slice(s.copy(studyDays = listOf(d - 4)), d))
+    }
+}

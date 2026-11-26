@@ -135,7 +135,6 @@ fun TodayScreen(
     }
     val rest: @Composable () -> Unit = {
         if (!calm) {
-            DayTimeline(state, nowMin)
             PillarStrip(state) { id ->
                 when (id) {
                     com.dudlatitat.nextchapter.data.Pillars.Id.TALK -> onOpenChinese()
@@ -298,16 +297,17 @@ private fun Header(state: AppState, vm: MainViewModel, @Suppress("UNUSED_PARAMET
         val P = com.dudlatitat.nextchapter.data.Places
         val atWork = P.atWork(state, today(), nowMin)
         if (T.open(state, today()) || atWork) androidx.compose.foundation.layout.FlowRow(
-            Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
+            // Every chip in the same 48dp slot, so they line up in neat rows.
             if (T.open(state, today())) {
                 val said = T.saidToday(state, today())
-                Pill(if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}", Night.rose, onClick = onTrip)
+                com.dudlatitat.nextchapter.ui.components.ChipSlot { Pill(if (said >= T.GOAL) "✈️ trip phrases ✓" else "✈️ trip phrases $said/${T.GOAL}", Night.rose, onClick = onTrip) }
             }
             if (atWork) {
-                Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet)
+                com.dudlatitat.nextchapter.ui.components.ChipSlot { Pill("💼 till ~${com.dudlatitat.nextchapter.ui.life.clockLabel(P.workEnd(state.arrivals, today()) ?: nowMin)}", Night.violet) }
                 if (nowMin >= (P.workStart(state.arrivals, today()) ?: nowMin) + P.MIN_AT_WORK) {
-                    Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() })
+                    com.dudlatitat.nextchapter.ui.components.ChipSlot { Pill("I'm home 🏠", Night.sun, onClick = { vm.arrivedHomeNow() }) }
                 }
             }
         }

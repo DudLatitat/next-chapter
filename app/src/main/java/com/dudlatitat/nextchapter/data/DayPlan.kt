@@ -30,6 +30,9 @@ object DayPlan {
     )
 
     const val REVIEWS = 10
+
+    /** Your daily review number (Settings), kept sensible. */
+    fun daily(s: AppState): Int = s.dailyReviews.coerceIn(5, 100)
     /** After a break: an easy few, not a pile (the rest come back over the next days). */
     const val COMEBACK_CAP = 5
 
@@ -46,13 +49,13 @@ object DayPlan {
     fun slice(s: AppState, day: Long = today()): Int {
         val reviewedToday = s.days[day]?.reviews ?: 0
         val due = Srs.queue(s, day).size
-        return minOf(if (missed(s, day) > 0) COMEBACK_CAP else REVIEWS, reviewedToday + due).coerceAtLeast(0)
+        return minOf(if (missed(s, day) > 0) minOf(COMEBACK_CAP, daily(s)) else daily(s), reviewedToday + due).coerceAtLeast(0)
     }
 
     /** How many cards a session holds: what's left of today's slice, or "keep going: 10 more" after it. */
     fun sessionSize(s: AppState, day: Long = today()): Int {
         val left = slice(s, day) - (s.days[day]?.reviews ?: 0)
-        return if (left > 0) left else REVIEWS
+        return if (left > 0) left else daily(s)
     }
 
     /** The game for today: the one played longest ago (never-played first); ties broken by the day. */
@@ -65,7 +68,7 @@ object DayPlan {
         val reviewedToday = s.days[day]?.reviews ?: 0
         val due = Srs.queue(s, day).size
         val miss = missed(s, day)
-        val goal = minOf(if (miss > 0) COMEBACK_CAP else REVIEWS, reviewedToday + due).coerceAtLeast(1)
+        val goal = minOf(if (miss > 0) minOf(COMEBACK_CAP, daily(s)) else daily(s), reviewedToday + due).coerceAtLeast(1)
         val caughtUp = due == 0
         val review = Item(
             Kind.REVIEW,

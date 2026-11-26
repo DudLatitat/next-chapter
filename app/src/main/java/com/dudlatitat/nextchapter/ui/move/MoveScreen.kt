@@ -149,26 +149,6 @@ private fun MoveHome(state: AppState, vm: MainViewModel, pageState: androidx.com
             }
         }
 
-        // Good times to talk this week (your free time × her waking hours, in real time zones).
-        item {
-            val zone = java.time.ZoneId.systemDefault()
-            val day = com.dudlatitat.nextchapter.data.today()
-            val windows = remember(day, zone) { com.dudlatitat.nextchapter.data.Calls.week(day, zone) }
-            val first = windows.firstOrNull()?.let { com.dudlatitat.nextchapter.data.Calls.describe(it, zone) }
-            com.dudlatitat.nextchapter.ui.components.Collapsible(
-                "move.calls", "Good times to talk", summary = first?.let { "${it.first} · ${it.second}" } ?: "This week",
-            ) {
-                windows.forEach { w ->
-                    val (mine, hers) = com.dudlatitat.nextchapter.data.Calls.describe(w, zone)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(mine, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.ink, modifier = Modifier.weight(1f))
-                        Text(hers, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.rose)
-                    }
-                }
-                Text("Your evenings and weekends where she's usually awake (8 am–11 pm her time). Daylight saving is counted.", style = MaterialTheme.typography.labelSmall, color = Night.muted)
-            }
-        }
-
         // Paperwork: the next step to start, worked back from the move date.
         com.dudlatitat.nextchapter.data.Paperwork.next(state)?.let { t ->
             item {

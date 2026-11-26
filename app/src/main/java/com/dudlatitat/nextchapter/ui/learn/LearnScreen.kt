@@ -180,7 +180,7 @@ private fun Overview(
     ) {
         item {
             val facts = remember(state, day) { com.dudlatitat.nextchapter.data.Status.chinese(state, day) }
-            com.dudlatitat.nextchapter.ui.components.TabHeader("Chinese", "中文", facts.map { com.dudlatitat.nextchapter.ui.components.Fact(it) })
+            com.dudlatitat.nextchapter.ui.components.TabHeader("Chinese", "中文", facts.map { com.dudlatitat.nextchapter.ui.components.Fact(it) }, showSearch = false)
         }
         item { val nav = com.dudlatitat.nextchapter.ui.components.LocalAppNav.current; SearchPill(onClick = nav.openSearch) }
         val hero: @Composable () -> Unit = {
@@ -206,7 +206,7 @@ private fun Overview(
                             }
                             else -> {
                                 Text("Today's done ✓", style = MaterialTheme.typography.headlineSmall, color = Night.jade)
-                                Text("Keep going? 10 more, if you feel like it.", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
+                                Text("Keep going? ${com.dudlatitat.nextchapter.data.DayPlan.daily(state)} more, if you feel like it.", style = MaterialTheme.typography.bodyMedium, color = Night.muted)
                             }
                         }
                     }
@@ -218,7 +218,7 @@ private fun Overview(
                         colors = ButtonDefaults.buttonColors(containerColor = if (queue.isEmpty()) Night.rose else Night.sun, contentColor = Night.ground2),
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null)
-                        Text(when { queue.isEmpty() -> " Play"; left > 0 -> " Practice"; else -> " 10 more" }, style = MaterialTheme.typography.titleMedium)
+                        Text(when { queue.isEmpty() -> " Play"; left > 0 -> " Practice"; else -> " ${com.dudlatitat.nextchapter.data.DayPlan.daily(state)} more" }, style = MaterialTheme.typography.titleMedium)
                     }
                 }
                 val real = state.realUses.map { it.id }.toSet().size

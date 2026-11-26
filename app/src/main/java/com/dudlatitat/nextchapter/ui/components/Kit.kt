@@ -212,25 +212,29 @@ val LocalAppNav = androidx.compose.runtime.staticCompositionLocalOf { AppNav({},
 /** One fact in a status line; tap to go where it's about. */
 class Fact(val text: String, val color: Color = Night.ink, val onClick: (() -> Unit)? = null)
 
-/** The terminal accent: one mono line of ≤3 facts, e.g. "▸ 41d to 成都 · rung 2/8 · 11mo runway". */
+/** The terminal accent: one mono line of ≤3 facts, evenly spaced, e.g. "41d to 成都 · family ladder 2/8". */
 @Composable
 fun StatusStrip(facts: List<Fact>, modifier: Modifier = Modifier) {
     if (facts.isEmpty()) return
     Row(modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-        Text("▸ ", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.sun)
         facts.take(3).forEachIndexed { i, f ->
-            if (i > 0) Text("  ·  ", style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = Night.muted)
+            // Same padding for every fact (tappable or not) and a fixed gap around each dot, so the line reads evenly.
+            if (i > 0) Box(Modifier.padding(horizontal = 12.dp).size(4.dp).clip(CircleShape).background(Night.muted.copy(alpha = 0.6f)))
             Text(
                 f.text, style = com.dudlatitat.nextchapter.ui.theme.MonoStyle, color = f.color, maxLines = 1,
-                modifier = if (f.onClick != null) Modifier.heightIn(min = 32.dp).pressClick(haptic = false, onClick = f.onClick).padding(vertical = 6.dp) else Modifier.padding(vertical = 6.dp),
+                modifier = Modifier.heightIn(min = 36.dp).then(if (f.onClick != null) Modifier.pressClick(haptic = false, onClick = f.onClick) else Modifier).padding(vertical = 8.dp),
             )
         }
     }
 }
 
+/** A fixed-height slot so a row of chips (tappable or not) lines up evenly. */
+@Composable
+fun ChipSlot(content: @Composable () -> Unit) = Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) { content() }
+
 /** A tab page's header: title (with its Chinese), 🔍 and ⚙, then the status line. */
 @Composable
-fun TabHeader(title: String, zh: String, facts: List<Fact> = emptyList(), modifier: Modifier = Modifier) {
+fun TabHeader(title: String, zh: String, facts: List<Fact> = emptyList(), modifier: Modifier = Modifier, showSearch: Boolean = true) {
     val nav = LocalAppNav.current
     Column(modifier.fillMaxWidth().padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -239,7 +243,7 @@ fun TabHeader(title: String, zh: String, facts: List<Fact> = emptyList(), modifi
                 Spacer(Modifier.width(10.dp))
                 Text(zh, style = MaterialTheme.typography.titleMedium, color = Night.muted, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
             }
-            androidx.compose.material3.IconButton(onClick = nav.openSearch) {
+            if (showSearch) androidx.compose.material3.IconButton(onClick = nav.openSearch) {
                 androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Search, "Search", tint = Night.ink.copy(alpha = 0.8f))
             }
             androidx.compose.material3.IconButton(onClick = nav.openSettings) {

@@ -290,4 +290,6 @@ data class AppState(
     val played: Map<String, Long> = emptyMap(),
     /** The day "done for today" was last claimed (the once-a-day payoff); 0 = never. */
     val celebrated: Long = 0,
+    /** How many reviews make "today" (Settings → Learning & voice); the rest wait for "keep going". */
+    val dailyReviews: Int = 10,
 )

@@ -105,7 +105,7 @@ fun PayoffPanel(before: AppState, after: AppState, modifier: Modifier = Modifier
         }
         result.climbed?.let { rung ->
             Spacer(Modifier.height(12.dp))
-            Text("✨ New rung: ${rung.hanzi} ${rung.title}", style = MaterialTheme.typography.titleSmall, color = Night.sun)
+            Text("✨ Family ladder, new step: ${rung.hanzi} ${rung.title}", style = MaterialTheme.typography.titleSmall, color = Night.sun)
         }
         if (result.ticked.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))

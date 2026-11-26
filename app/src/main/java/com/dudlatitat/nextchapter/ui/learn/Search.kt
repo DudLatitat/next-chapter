@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import com.dudlatitat.nextchapter.ui.components.frost
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -133,8 +134,18 @@ fun SearchScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit, onDeck:
                     Spacer(Modifier.height(16.dp))
                     Text("Try", style = MaterialTheme.typography.labelMedium, color = Night.muted)
                     Spacer(Modifier.height(6.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("are you home", "tired", "how much", "nihao", "吃", "mom", "miss you").forEach { s -> Pill(s, Night.sun, onClick = { q = s }) }
+                    // An even 2-column grid of same-size tiles (a wrapping row looked ragged).
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("are you home", "tired", "how much", "nihao", "吃", "mom", "miss you", "thank you").chunked(2).forEach { pair ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                pair.forEach { s ->
+                                    androidx.compose.foundation.layout.Box(
+                                        Modifier.weight(1f).heightIn(min = 48.dp).frost(RoundedCornerShape(14.dp)).pressClick { q = s },
+                                        contentAlignment = Alignment.Center,
+                                    ) { Text(s, style = MaterialTheme.typography.bodyMedium, color = Night.sun, maxLines = 1) }
+                                }
+                            }
+                        }
                     }
                 }
             }

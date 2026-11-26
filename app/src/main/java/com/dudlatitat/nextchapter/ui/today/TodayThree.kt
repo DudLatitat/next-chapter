@@ -148,7 +148,7 @@ fun ReadyLadder(state: AppState, onPiece: (String) -> Unit) {
     val next = ladder.next
     com.dudlatitat.nextchapter.ui.components.Collapsible(
         "learn.ready2", "准备好了吗 · Ready for her family",
-        summary = if (next == null) "Every rung climbed ✓" else "${ladder.climbed}/${ladder.rungs.size} · next: ${next.title}",
+        summary = if (next == null) "Every step climbed ✓" else "${ladder.climbed}/${ladder.rungs.size} · next: ${next.title}",
         defaultOpen = true,
     ) {
         // The ladder: one segment per rung, filled as you climb.
@@ -163,7 +163,7 @@ fun ReadyLadder(state: AppState, onPiece: (String) -> Unit) {
             Text("You can get through a whole visit in Chinese. 了不起！", style = MaterialTheme.typography.bodyMedium, color = Night.jade)
             return@Collapsible
         }
-        Text("Rung ${ladder.rungs.indexOf(next) + 1} · ${next.hanzi} ${next.title}", style = MaterialTheme.typography.titleSmall, color = Night.sun)
+        Text("Step ${ladder.rungs.indexOf(next) + 1} of ${ladder.rungs.size} · ${next.hanzi} ${next.title}", style = MaterialTheme.typography.titleSmall, color = Night.sun)
         Spacer(Modifier.height(6.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             next.pieces.forEach { p ->
