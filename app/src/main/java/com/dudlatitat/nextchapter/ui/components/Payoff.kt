@@ -76,8 +76,9 @@ private fun colorOf(kind: DayPlan.Kind) = when (kind) { DayPlan.Kind.REVIEW -> N
 /** A number that counts up from 0 when it appears (scores feel earned when they tick up). */
 @Composable
 fun CountUp(value: Int, style: androidx.compose.ui.text.TextStyle, color: Color, prefix: String = "", suffix: String = "") {
-    val n = remember { Animatable(0f) }
-    LaunchedEffect(value) { n.animateTo(value.toFloat(), tween(800, easing = FastOutSlowInEasing)) }
+    val still = LocalReduceMotion.current
+    val n = remember { Animatable(if (still) value.toFloat() else 0f) }
+    LaunchedEffect(value) { if (still) n.snapTo(value.toFloat()) else n.animateTo(value.toFloat(), tween(800, easing = FastOutSlowInEasing)) }
     Text(prefix + n.value.toInt() + suffix, style = style, color = color)
 }
 
@@ -132,13 +133,14 @@ fun PayoffPanel(before: AppState, after: AppState, modifier: Modifier = Modifier
 @Composable
 private fun MiniRing(r: Payoff.Ring, delayMs: Int) {
     val color = colorOf(r.kind)
+    val still = LocalReduceMotion.current
     val fill = remember { Animatable(r.from) }
     val pop = remember { Animatable(1f) }
     val spark = remember { Animatable(0f) }
     LaunchedEffect(r) {
         kotlinx.coroutines.delay(delayMs.toLong())
         fill.animateTo(r.to, tween(900, easing = FastOutSlowInEasing))
-        if (r.closed) {
+        if (r.closed && !still) {
             kotlinx.coroutines.coroutineScope {
                 launch { pop.animateTo(1.12f, spring(dampingRatio = 0.4f, stiffness = 400f)); pop.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 400f)) }
                 launch { spark.animateTo(1f, tween(600, easing = LinearEasing)) }
@@ -187,7 +189,7 @@ fun DayClaim(state: AppState, streak: Int, onClaim: () -> Unit) {
             .pressClick(haptic = false) { },
         contentAlignment = Alignment.Center,
     ) {
-        Lanterns(Modifier.fillMaxSize().graphicsLayer { alpha = glow.value })
+        if (!LocalReduceMotion.current) Lanterns(Modifier.fillMaxSize().graphicsLayer { alpha = glow.value })
         AnimatedVisibility(shown, enter = fadeIn(tween(500)) + slideInVertically(tween(600, easing = Motion.Emph)) { it / 6 }) {
             Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("🏮", fontSize = 64.sp)

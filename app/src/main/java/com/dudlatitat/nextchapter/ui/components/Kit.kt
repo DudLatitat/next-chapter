@@ -161,7 +161,14 @@ fun Gap(h: Dp = 12.dp) = Spacer(Modifier.height(h))
 // ---------------------------------------------------------------------------------------------
 
 /** On by default; Settings can turn it off for plain solid cards. */
-val LocalGlass = androidx.compose.runtime.staticCompositionLocalOf { true }
+val LocalGlass = androidx.compose.runtime.compositionLocalOf { true }
+
+/** Calm motion: no breathing glows, sparks or drifting lanterns (Settings → Look, or the phone's "remove animations"). */
+val LocalReduceMotion = androidx.compose.runtime.compositionLocalOf { false }
+
+/** The Look settings, so Settings can flip them and every screen follows at once. */
+class Look(val glass: androidx.compose.runtime.MutableState<Boolean>, val calm: androidx.compose.runtime.MutableState<Boolean>)
+val LocalLook = androidx.compose.runtime.staticCompositionLocalOf<Look?> { null }
 
 /** A tiny tile of random light specks, made once and repeated: the "grain" of frosted glass. */
 private val grain: androidx.compose.ui.graphics.ImageBitmap by lazy {

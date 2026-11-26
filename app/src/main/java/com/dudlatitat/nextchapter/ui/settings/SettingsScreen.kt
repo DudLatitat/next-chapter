@@ -105,7 +105,7 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = com.dudlatitat.nextchapter.ui.components.screenGutter(), vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val titles = mapOf("her" to "You & her", "remind" to "Reminders", "learn" to "Learning & voice", "trip" to "Trip & computer", "backup" to "Backup")
+        val titles = mapOf("her" to "You & her", "remind" to "Reminders", "learn" to "Learning & voice", "look" to "Look", "trip" to "Trip & computer", "backup" to "Backup")
         com.dudlatitat.nextchapter.ui.components.SubHeader(
             section?.let { titles[it] } ?: "Settings", onBack = back, zh = if (section == null) "设置" else null, handleBack = false,
         )
@@ -122,6 +122,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
                 row("her", "她", Night.rose, listOf(state.herName, state.herCity).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { "Her name and city, work and home" }, false)
                 row("remind", "铃", Night.sun, if (state.reminderOn) "Practice reminder at ${timeLabel(state.reminderMinutes)} · never 7–8 pm" else "Practice reminder off · evening plan, wake time", false)
                 row("learn", "学", Night.jade, "${state.newPerDay} new phrases a day · voice · speaking check", false)
+                val lookNow = com.dudlatitat.nextchapter.ui.components.LocalLook.current
+                row("look", "看", Night.pearl, (if (lookNow?.glass?.value != false) "Glass on" else "Solid cards") + " · " + (if (lookNow?.calm?.value == true) "calm motion" else "full motion"), false)
                 row("trip", "旅", Night.violet, "Trip mode · use on my computer", false)
                 row("backup", "存", Night.sun, "Save or restore everything", true)
             }
@@ -260,6 +262,15 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, onBack: () -> Unit) {
             }
         }
 
+        }
+        if (section == "look") {
+            val lk = com.dudlatitat.nextchapter.ui.components.LocalLook.current
+            val prefs = androidx.compose.runtime.remember { com.dudlatitat.nextchapter.ui.components.uiPrefs(context) }
+            if (lk != null) com.dudlatitat.nextchapter.ui.components.ListGroup {
+                LookSwitch("Glass effects", "Frosted, see-through cards. Off: plain solid cards.", lk.glass.value) { lk.glass.value = it; prefs.edit().putBoolean("look.glass", it).apply() }
+                LookSwitch("Calm motion", "No breathing glow, sparks or drifting lanterns.", lk.calm.value) { lk.calm.value = it; prefs.edit().putBoolean("look.calm", it).apply() }
+            }
+            Text("Fonts: Nunito, Fraunces and JetBrains Mono, all under the SIL Open Font License.", style = MaterialTheme.typography.labelSmall, color = Night.muted, modifier = Modifier.padding(top = 8.dp))
         }
         if (section == "trip") {
         SectionLabel("Trip mode")
@@ -414,5 +425,16 @@ private fun VoiceRow(title: String, sub: String, selected: Boolean, onPick: () -
             Text(title, style = MaterialTheme.typography.bodyLarge, color = Night.ink)
             Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
         }
+    }
+}
+
+@Composable
+private fun LookSwitch(title: String, sub: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, color = Night.ink)
+            Text(sub, style = MaterialTheme.typography.bodySmall, color = Night.muted)
+        }
+        Switch(checked = on, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = Night.sun, checkedThumbColor = MaterialTheme.colorScheme.onPrimary))
     }
 }

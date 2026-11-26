@@ -73,7 +73,8 @@ fun TodayThree(
         Spacer(Modifier.height(10.dp))
         val next = plan.items.indexOfFirst { !it.done }
         // After wind-down: no Go buttons, nothing breathing. Just where the day ended up.
-        plan.items.forEachIndexed { i, item -> QuestRow(item, isNext = !quiet && i == next, breathe = !calm && !quiet && i == next) { onItem(item) } }
+        val still = com.dudlatitat.nextchapter.ui.components.LocalReduceMotion.current
+        plan.items.forEachIndexed { i, item -> QuestRow(item, isNext = !quiet && i == next, breathe = !calm && !quiet && !still && i == next) { onItem(item) } }
         // Prayer: a quiet fourth row (it isn't one of the three, but it's part of the day).
         val prayed = day in state.prayedDays
         Row(

@@ -130,8 +130,25 @@ fun NextChapterApp(vm: MainViewModel, openStudy: Boolean = false, onStudyOpened:
     val claim = androidx.compose.runtime.remember(state, day) { com.dudlatitat.nextchapter.data.Payoff.claimDue(state, day) }
     val callTime = com.dudlatitat.nextchapter.data.Life.isCallTime(java.time.LocalTime.now())
 
+    // Look (Settings → Look): glass on unless turned off; calm motion if chosen or the phone has animations off.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val ui = androidx.compose.runtime.remember { com.dudlatitat.nextchapter.ui.components.uiPrefs(context) }
+    val look = androidx.compose.runtime.remember {
+        com.dudlatitat.nextchapter.ui.components.Look(
+            androidx.compose.runtime.mutableStateOf(ui.getBoolean("look.glass", true)),
+            androidx.compose.runtime.mutableStateOf(ui.getBoolean("look.calm", false)),
+        )
+    }
+    val systemCalm = androidx.compose.runtime.remember {
+        android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }
     val appNav = androidx.compose.runtime.remember { com.dudlatitat.nextchapter.ui.components.AppNav(openSearch = { searching = true }, openSettings = { settings = true }) }
-    androidx.compose.runtime.CompositionLocalProvider(com.dudlatitat.nextchapter.ui.components.LocalAppNav provides appNav) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.dudlatitat.nextchapter.ui.components.LocalAppNav provides appNav,
+        com.dudlatitat.nextchapter.ui.components.LocalLook provides look,
+        com.dudlatitat.nextchapter.ui.components.LocalGlass provides look.glass.value,
+        com.dudlatitat.nextchapter.ui.components.LocalReduceMotion provides (look.calm.value || systemCalm),
+    ) {
     com.dudlatitat.nextchapter.ui.components.ProvidePlanNav(planNav) {
     Box(Modifier.fillMaxSize()) {
         StarryBackdrop()
